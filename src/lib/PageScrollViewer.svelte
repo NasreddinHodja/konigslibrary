@@ -1,0 +1,67 @@
+<script lang="ts">
+  import { manga } from '$lib/state.svelte';
+  import { intersect } from '$lib/actions/intersect';
+
+  let container: HTMLDivElement;
+  let pageRefs: HTMLDivElement[] = $state([]);
+
+  let pageUrls: string[] = $state([]);
+
+  $effect(() => {
+    const chapter = manga.selectedChapter;
+    if (!chapter) return;
+
+    const urls = chapter.files.map((f: File) => URL.createObjectURL(f));
+    pageUrls = urls;
+    manga.currentPage = 0;
+
+    if (container) container.scrollTo({ top: 0 });
+
+    return () => {
+      urls.forEach((url: string) => URL.revokeObjectURL(url));
+    };
+  });
+
+  // When shouldScroll is set (sidebar page click), scroll to that page
+  $effect(() => {
+    if (manga.shouldScroll) {
+      pageRefs[manga.currentPage]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      manga.shouldScroll = false;
+    }
+  });
+
+  const handleKey = (event: KeyboardEvent) => {
+    if (event.key === 'ArrowDown' || event.key === 'ArrowRight') {
+      event.preventDefault();
+      if (manga.currentPage < pageUrls.length - 1) {
+        manga.currentPage++;
+        pageRefs[manga.currentPage]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    } else if (event.key === 'ArrowUp' || event.key === 'ArrowLeft') {
+      event.preventDefault();
+      if (manga.currentPage > 0) {
+        manga.currentPage--;
+        pageRefs[manga.currentPage]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }
+  };
+</script>
+
+<svelte:window onkeydown={handleKey} />
+
+<div
+  bind:this={container}
+  class="flex h-full flex-1 flex-col overflow-y-auto py-4 gap-2"
+>
+  {#each pageUrls as src, i}
+    <div
+      bind:this={pageRefs[i]}
+      class="flex w-full justify-center"
+      use:intersect={(visible) => {
+        if (visible) manga.currentPage = i;
+      }}
+    >
+      <img {src} alt="manga page" class="mx-auto" style="width: {manga.zoom * 100}%" />
+    </div>
+  {/each}
+</div>

@@ -1,0 +1,6 @@
+@import 'tailwindcss';
+
+body {
+  @apply bg-black text-white antialiased;
+  font-family: 'Source Code Pro', monospace;
+}

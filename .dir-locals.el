@@ -1,0 +1,5 @@
+((web-mode . ((web-mode-script-padding . 2)
+              (web-mode-style-padding . 2)
+              (eval . (apheleia-mode 1))))
+ (typescript-mode . ((eval . (apheleia-mode 1))))
+ (css-mode . ((eval . (apheleia-mode 1)))))
