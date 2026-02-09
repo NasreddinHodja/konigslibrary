@@ -61,7 +61,7 @@
         if (visible) manga.currentPage = i;
       }}
     >
-      <img {src} alt="manga page" class="mx-auto" style="width: {manga.zoom * 100}%" />
+      <img {src} alt="manga page" loading="lazy" class="mx-auto" style="width: {manga.zoom * 100}%" />
     </div>
   {/each}
 </div>

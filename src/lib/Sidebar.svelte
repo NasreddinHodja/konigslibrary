@@ -1,6 +1,6 @@
 <script lang="ts">
   import { Menu, X } from 'lucide-svelte';
-  import { manga, getChapters } from '$lib/state.svelte';
+  import { manga, setFiles, getChapters } from '$lib/state.svelte';
   import ChapterList from '$lib/ChapterList.svelte';
   import {
     handleTouchStart,
@@ -22,7 +22,7 @@
   const handleFiles = (event: Event) => {
     const input = event.target as HTMLInputElement;
     if (!input.files) return;
-    manga.files = Array.from(input.files);
+    setFiles(Array.from(input.files));
   };
 
   const handleTouchMove = createTouchMoveHandler(

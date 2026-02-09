@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { manga, getChapters, getLastChapter } from '$lib/state.svelte';
+  import { manga, setFiles, getChapters, getLastChapter } from '$lib/state.svelte';
 
   const chapters = $derived(getChapters());
 
@@ -25,7 +25,7 @@
         multiple
         onchange={(e) => {
           const input = e.target as HTMLInputElement;
-          if (input.files) manga.files = Array.from(input.files);
+          if (input.files) setFiles(Array.from(input.files));
         }}
         class="hidden"
         webkitdirectory
