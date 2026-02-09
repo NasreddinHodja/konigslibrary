@@ -1,4 +1,4 @@
 export type Chapter = {
   name: string;
-  files: File[];
+  pageCount: number;
 };

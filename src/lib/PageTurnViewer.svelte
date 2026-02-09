@@ -1,24 +1,28 @@
 <script lang="ts">
   import { fade } from 'svelte/transition';
-  import { manga } from '$lib/state.svelte';
+  import { manga, getChapterFiles } from '$lib/state.svelte';
 
-  let currentUrl: string | null = $state(null);
+  let pageUrls: string[] = $state([]);
+  let currentUrl: string | null = $derived(pageUrls[manga.currentPage] ?? null);
 
   $effect(() => {
     const chapter = manga.selectedChapter;
     if (!chapter) return;
 
-    const url = URL.createObjectURL(chapter.files[manga.currentPage]);
-    currentUrl = url;
+    let cancelled = false;
+    const urls: string[] = [];
+
+    getChapterFiles(chapter).then((blobs) => {
+      if (cancelled) return;
+      for (const blob of blobs) urls.push(URL.createObjectURL(blob));
+      pageUrls = urls;
+      manga.currentPage = 0;
+    });
 
     return () => {
-      URL.revokeObjectURL(url);
+      cancelled = true;
+      urls.forEach((url) => URL.revokeObjectURL(url));
     };
-  });
-
-  $effect(() => {
-    manga.selectedChapter?.files;
-    manga.currentPage = 0;
   });
 
   const prev = () => {
@@ -26,8 +30,7 @@
   };
 
   const next = () => {
-    const chapter = manga.selectedChapter;
-    if (chapter && manga.currentPage < chapter.files.length - 1) manga.currentPage++;
+    if (manga.currentPage < pageUrls.length - 1) manga.currentPage++;
   };
 
   const handleKey = (event: KeyboardEvent) => {

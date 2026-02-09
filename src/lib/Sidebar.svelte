@@ -1,6 +1,6 @@
 <script lang="ts">
   import { Menu, X } from 'lucide-svelte';
-  import { manga, setFiles, getChapters } from '$lib/state.svelte';
+  import { manga, setZip, getChapters } from '$lib/state.svelte';
   import ChapterList from '$lib/ChapterList.svelte';
   import {
     handleTouchStart,
@@ -19,10 +19,10 @@
     return () => window.removeEventListener('resize', check);
   });
 
-  const handleFiles = (event: Event) => {
+  const handleZip = async (event: Event) => {
     const input = event.target as HTMLInputElement;
-    if (!input.files) return;
-    setFiles(Array.from(input.files));
+    if (!input.files?.[0]) return;
+    await setZip(input.files[0]);
   };
 
   const handleTouchMove = createTouchMoveHandler(
@@ -68,11 +68,9 @@
         Upload manga
         <input
           type="file"
-          accept="image/*"
-          multiple
-          onchange={handleFiles}
+          accept=".zip,.cbz"
+          onchange={handleZip}
           class="hidden"
-          webkitdirectory
         />
       </label>
     </div>

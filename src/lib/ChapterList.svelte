@@ -6,15 +6,15 @@
 
   let expandedChapter: string | null = $state(null);
 
-  const toggleChapter = (chapter: (typeof chapters)[0]) => {
-    if (expandedChapter === chapter.name) {
+  const toggleChapter = (name: string) => {
+    if (expandedChapter === name) {
       expandedChapter = null;
       manga.selectedChapter = null;
     } else {
-      expandedChapter = chapter.name;
-      manga.selectedChapter = chapter;
+      expandedChapter = name;
+      manga.selectedChapter = name;
       manga.currentPage = 0;
-      saveLastChapter(chapter.name);
+      saveLastChapter(name);
       if (window.innerWidth < 768) manga.sidebarOpen = false;
     }
   };
@@ -27,7 +27,7 @@
       <button
         class="flex w-full cursor-pointer items-center justify-between border-2 px-3 py-2 text-left
           {isOpen ? 'border-white' : 'border-black hover:bg-white/10'}"
-        onclick={() => toggleChapter(chapter)}
+        onclick={() => toggleChapter(chapter.name)}
       >
         <span class="truncate">{chapter.name}</span>
         <span>{isOpen ? '▾' : '▸'}</span>
@@ -35,7 +35,7 @@
 
       {#if isOpen}
         <ul class="ml-6 mt-1 space-y-1 overflow-hidden" transition:slide={{ duration: 200 }}>
-          {#each chapter.files as _file, i}
+          {#each Array(chapter.pageCount) as _, i}
             <li>
               <button
                 class="w-full cursor-pointer truncate px-2 py-1 text-left text-sm

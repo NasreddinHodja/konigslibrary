@@ -1,13 +1,13 @@
 <script lang="ts">
-  import { manga, setFiles, getChapters, getLastChapter } from '$lib/state.svelte';
+  import { manga, setZip, getChapters, getLastChapter } from '$lib/state.svelte';
 
   const chapters = $derived(getChapters());
 
   $effect(() => {
     if (chapters.length > 0 && !manga.selectedChapter) {
       const lastName = getLastChapter();
-      const saved = lastName ? chapters.find((c) => c.name === lastName) : null;
-      manga.selectedChapter = saved ?? chapters[0];
+      const saved = lastName && chapters.find((c) => c.name === lastName) ? lastName : null;
+      manga.selectedChapter = saved ?? chapters[0].name;
     }
   });
   import PageScrollViewer from '$lib/PageScrollViewer.svelte';
@@ -21,14 +21,12 @@
       Upload manga
       <input
         type="file"
-        accept="image/*"
-        multiple
-        onchange={(e) => {
+        accept=".zip,.cbz"
+        onchange={async (e) => {
           const input = e.target as HTMLInputElement;
-          if (input.files) setFiles(Array.from(input.files));
+          if (input.files?.[0]) await setZip(input.files[0]);
         }}
         class="hidden"
-        webkitdirectory
       />
     </label>
   </div>
