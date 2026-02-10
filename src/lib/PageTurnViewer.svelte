@@ -1,9 +1,9 @@
 <script lang="ts">
-  import { fade } from 'svelte/transition';
   import { manga, getChapterFiles } from '$lib/state.svelte';
 
   let pageUrls: string[] = $state([]);
   let currentUrl: string | null = $derived(pageUrls[manga.currentPage] ?? null);
+  let preloaded: HTMLImageElement[] = [];
 
   $effect(() => {
     const chapter = manga.selectedChapter;
@@ -15,12 +15,20 @@
     getChapterFiles(chapter).then((blobs) => {
       if (cancelled) return;
       for (const blob of blobs) urls.push(URL.createObjectURL(blob));
+      // Preload and fully decode all images so page turns are instant
+      preloaded = urls.map((url) => {
+        const img = new Image();
+        img.src = url;
+        img.decode().catch(() => {});
+        return img;
+      });
       pageUrls = urls;
       manga.currentPage = 0;
     });
 
     return () => {
       cancelled = true;
+      preloaded = [];
       urls.forEach((url) => URL.revokeObjectURL(url));
     };
   });
@@ -63,12 +71,7 @@
 >
   {#key manga.currentPage}
     {#if currentUrl}
-      <img
-        transition:fade={{ duration: 150 }}
-        src={currentUrl}
-        alt="manga page"
-        class="max-h-full object-contain"
-      />
+      <img src={currentUrl} alt="manga page" class="max-h-full object-contain" />
     {/if}
   {/key}
 </div>
