@@ -57,7 +57,7 @@
 
 <div
   bind:this={container}
-  class="flex h-full flex-1 flex-col overflow-y-auto py-4 gap-2"
+  class="flex h-full flex-1 select-none flex-col overflow-y-auto py-4 gap-2"
 >
   {#each pageUrls as src, i}
     <div

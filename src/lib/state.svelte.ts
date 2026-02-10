@@ -11,7 +11,7 @@ export const manga = $state({
   currentPage: 0,
   shouldScroll: false,
   zoom: 1,
-  scrollMode: true,
+  scrollMode: localStorage.getItem('kl:scrollMode') !== 'false',
   sidebarOpen: true
 });
 

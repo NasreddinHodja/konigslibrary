@@ -100,7 +100,7 @@
 
       <button
         class="w-full border-2 px-3 py-2 text-sm hover:bg-white/20"
-        onclick={() => (manga.scrollMode = !manga.scrollMode)}
+        onclick={() => { manga.scrollMode = !manga.scrollMode; localStorage.setItem('kl:scrollMode', String(manga.scrollMode)); }}
       >
         {manga.scrollMode ? 'Scroll Mode' : 'Page Turn'}
       </button>
