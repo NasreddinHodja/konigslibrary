@@ -24,7 +24,14 @@
   import PageScrollViewer from '$lib/PageScrollViewer.svelte';
   import PageTurnViewer from '$lib/PageTurnViewer.svelte';
   import Sidebar from '$lib/Sidebar.svelte';
+
+  const handleDrop = async (e: DragEvent) => {
+    const file = e.dataTransfer?.files[0];
+    if (file && /\.(zip|cbz)$/i.test(file.name)) await setZip(file);
+  };
 </script>
+
+<svelte:document ondragover|preventDefault={() => {}} ondrop|preventDefault={handleDrop} />
 
 {#if chapters.length === 0}
   <div class="flex h-screen items-center justify-center">

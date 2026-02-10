@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Menu, X } from 'lucide-svelte';
+  import { Menu, X, Minus, Plus, ArrowRightLeft, ScrollText, BookOpen } from 'lucide-svelte';
   import { manga, setZip, getChapters } from '$lib/state.svelte';
   import ChapterList from '$lib/ChapterList.svelte';
   import {
@@ -93,7 +93,7 @@
           class="px-3 py-1 hover:bg-white/20"
           onclick={() => (manga.zoom = Math.max(0.5, manga.zoom - 0.1))}
         >
-          −
+          <Minus size={16} />
         </button>
         <span class="w-16 text-center text-sm opacity-80">
           {manga.zoom.toFixed(2)}x
@@ -102,15 +102,27 @@
           class="px-3 py-1 hover:bg-white/20"
           onclick={() => (manga.zoom = Math.min(1, manga.zoom + 0.1))}
         >
-          +
+          <Plus size={16} />
         </button>
       </div>
 
       <button
-        class="w-full border-2 px-3 py-2 text-sm hover:bg-white/20"
+        class="flex w-full items-center justify-center gap-2 border-2 px-3 py-2 text-sm hover:bg-white/20"
         onclick={() => { manga.scrollMode = !manga.scrollMode; localStorage.setItem('kl:scrollMode', String(manga.scrollMode)); }}
       >
-        {manga.scrollMode ? 'Scroll Mode' : 'Page Turn'}
+        {#if manga.scrollMode}
+          <ScrollText size={16} /> Scroll Mode
+        {:else}
+          <BookOpen size={16} /> Page Turn
+        {/if}
+      </button>
+
+      <button
+        class="flex w-full items-center justify-center gap-2 border-2 px-3 py-2 text-sm hover:bg-white/20"
+        onclick={() => { manga.rtl = !manga.rtl; localStorage.setItem('kl:rtl', String(manga.rtl)); }}
+      >
+        <ArrowRightLeft size={16} />
+        {manga.rtl ? 'Right to Left' : 'Left to Right'}
       </button>
     </div>
   </div>

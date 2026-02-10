@@ -12,6 +12,7 @@ export const manga = $state({
   shouldScroll: false,
   zoom: 1,
   scrollMode: typeof localStorage !== 'undefined' ? localStorage.getItem('kl:scrollMode') !== 'false' : true,
+  rtl: typeof localStorage !== 'undefined' ? localStorage.getItem('kl:rtl') === 'true' : false,
   sidebarOpen: true
 });
 

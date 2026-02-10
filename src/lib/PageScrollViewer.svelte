@@ -57,19 +57,33 @@
     ).then(() => target.scrollIntoView({ block: 'center' }));
   });
 
+  const scrollNext = () => {
+    if (manga.currentPage < pageUrls.length - 1) {
+      manga.currentPage++;
+      pageRefs[manga.currentPage]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  };
+
+  const scrollPrev = () => {
+    if (manga.currentPage > 0) {
+      manga.currentPage--;
+      pageRefs[manga.currentPage]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  };
+
   const handleKey = (event: KeyboardEvent) => {
-    if (event.key === 'ArrowDown' || event.key === 'ArrowRight') {
+    if (event.key === 'ArrowDown') {
       event.preventDefault();
-      if (manga.currentPage < pageUrls.length - 1) {
-        manga.currentPage++;
-        pageRefs[manga.currentPage]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }
-    } else if (event.key === 'ArrowUp' || event.key === 'ArrowLeft') {
+      scrollNext();
+    } else if (event.key === 'ArrowUp') {
       event.preventDefault();
-      if (manga.currentPage > 0) {
-        manga.currentPage--;
-        pageRefs[manga.currentPage]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }
+      scrollPrev();
+    } else if (event.key === 'ArrowRight') {
+      event.preventDefault();
+      manga.rtl ? scrollPrev() : scrollNext();
+    } else if (event.key === 'ArrowLeft') {
+      event.preventDefault();
+      manga.rtl ? scrollNext() : scrollPrev();
     }
   };
 </script>

@@ -1,6 +1,7 @@
 <script lang="ts">
   import { tick } from 'svelte';
   import { slide } from 'svelte/transition';
+  import { ChevronDown, ChevronRight } from 'lucide-svelte';
   import { manga, getChapters } from '$lib/state.svelte';
   import { ANIM_DURATION } from '$lib/constants';
 
@@ -47,7 +48,7 @@
         onclick={(e) => toggleChapter(chapter.name, e.currentTarget)}
       >
         <span class="truncate">{chapter.name}</span>
-        <span>{isOpen ? '▾' : '▸'}</span>
+        {#if isOpen}<ChevronDown size={16} />{:else}<ChevronRight size={16} />{/if}
       </button>
 
       {#if isOpen}

@@ -41,17 +41,23 @@
   };
 
   const handleKey = (event: KeyboardEvent) => {
-    if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
+    if (event.key === 'ArrowLeft') {
+      event.preventDefault();
+      manga.rtl ? next() : prev();
+    } else if (event.key === 'ArrowRight') {
+      event.preventDefault();
+      manga.rtl ? prev() : next();
+    } else if (event.key === 'ArrowUp') {
       event.preventDefault();
       prev();
-    } else if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
+    } else if (event.key === 'ArrowDown') {
       event.preventDefault();
       next();
     }
   };
 
-  const handleClickPrev = () => prev();
-  const handleClickNext = () => next();
+  const handleClickLeft = () => (manga.rtl ? next() : prev());
+  const handleClickRight = () => (manga.rtl ? prev() : next());
 </script>
 
 <svelte:window onkeydown={handleKey} />
@@ -64,6 +70,6 @@
       <img src={currentUrl} alt="manga page" class="max-h-full object-contain" />
     {/if}
   {/key}
-  <div class="absolute inset-y-0 left-0 w-1/2 cursor-w-resize" onclick={handleClickPrev}></div>
-  <div class="absolute inset-y-0 right-0 w-1/2 cursor-e-resize" onclick={handleClickNext}></div>
+  <div class="absolute inset-y-0 left-0 w-1/2" class:cursor-e-resize={manga.rtl} class:cursor-w-resize={!manga.rtl} onclick={handleClickLeft}></div>
+  <div class="absolute inset-y-0 right-0 w-1/2" class:cursor-w-resize={manga.rtl} class:cursor-e-resize={!manga.rtl} onclick={handleClickRight}></div>
 </div>
