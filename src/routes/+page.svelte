@@ -1,14 +1,23 @@
 <script lang="ts">
-  import { manga, setZip, getChapters, getLastChapter } from '$lib/state.svelte';
+  import { manga, setZip, getChapters, getProgress, saveProgress } from '$lib/state.svelte';
 
   const chapters = $derived(getChapters());
 
   $effect(() => {
     if (chapters.length > 0 && !manga.selectedChapter) {
-      const lastName = getLastChapter();
-      const saved = lastName && chapters.find((c) => c.name === lastName) ? lastName : null;
-      manga.selectedChapter = saved ?? chapters[0].name;
+      const saved = getProgress();
+      if (saved && chapters.find((c) => c.name === saved.chapter)) {
+        manga.selectedChapter = saved.chapter;
+        manga.currentPage = saved.page;
+        manga.shouldScroll = true;
+      } else {
+        manga.selectedChapter = chapters[0].name;
+      }
     }
+  });
+
+  $effect(() => {
+    if (manga.selectedChapter) saveProgress();
   });
   import PageScrollViewer from '$lib/PageScrollViewer.svelte';
   import PageTurnViewer from '$lib/PageTurnViewer.svelte';

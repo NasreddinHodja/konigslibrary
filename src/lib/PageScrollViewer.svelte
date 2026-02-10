@@ -18,8 +18,7 @@
       if (cancelled) return;
       for (const blob of blobs) urls.push(URL.createObjectURL(blob));
       pageUrls = urls;
-      manga.currentPage = 0;
-      if (container) container.scrollTo({ top: 0 });
+      manga.shouldScroll = true;
     });
 
     return () => {
@@ -28,12 +27,34 @@
     };
   });
 
-  // when shouldscroll is set (sidebar page click), scroll to that page
+  // when shouldscroll is set (sidebar page click or progress restore), scroll to that page
   $effect(() => {
-    if (manga.shouldScroll) {
-      pageRefs[manga.currentPage]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      manga.shouldScroll = false;
+    if (!manga.shouldScroll) return;
+    manga.shouldScroll = false;
+    const idx = manga.currentPage;
+    const target = pageRefs[idx];
+    if (!target) return;
+
+    // Wait for images up to target to load so their heights are established
+    const pending = pageRefs
+      .slice(0, idx + 1)
+      .map((d) => d?.querySelector('img'))
+      .filter((img): img is HTMLImageElement => !!img && !img.complete);
+
+    if (pending.length === 0) {
+      target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
     }
+
+    Promise.all(
+      pending.map(
+        (img) =>
+          new Promise<void>((r) => {
+            img.addEventListener('load', () => r(), { once: true });
+            img.addEventListener('error', () => r(), { once: true });
+          })
+      )
+    ).then(() => target.scrollIntoView({ block: 'center' }));
   });
 
   const handleKey = (event: KeyboardEvent) => {

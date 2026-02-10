@@ -23,7 +23,6 @@
         return img;
       });
       pageUrls = urls;
-      manga.currentPage = 0;
     });
 
     return () => {

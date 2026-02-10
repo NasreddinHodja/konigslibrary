@@ -3,7 +3,10 @@ export const intersect = (
   callback: (visible: boolean) => void,
 ) => {
   const observer = new IntersectionObserver(
-    ([entry]) => callback(entry.isIntersecting),
+    ([entry]) => {
+      if (entry.boundingClientRect.height === 0) return;
+      callback(entry.isIntersecting);
+    },
     {
       threshold: 0.5,
     },

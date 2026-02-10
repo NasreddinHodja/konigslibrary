@@ -63,11 +63,25 @@ export async function getChapterFiles(name: string): Promise<Blob[]> {
 
 export const getChapters = () => _chapters;
 
-export const saveLastChapter = (name: string) => {
-  if (mangaName) localStorage.setItem(`kl:${mangaName}`, name);
+export const saveProgress = () => {
+  if (mangaName && manga.selectedChapter) {
+    localStorage.setItem(
+      `kl:${mangaName}`,
+      JSON.stringify({ chapter: manga.selectedChapter, page: manga.currentPage })
+    );
+  }
 };
 
-export const getLastChapter = (): string | null => {
+export const getProgress = (): { chapter: string; page: number } | null => {
   if (!mangaName) return null;
-  return localStorage.getItem(`kl:${mangaName}`);
+  const raw = localStorage.getItem(`kl:${mangaName}`);
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw);
+    if (parsed.chapter) return parsed;
+  } catch {
+    // migrate old format (plain chapter name string)
+    return { chapter: raw, page: 0 };
+  }
+  return null;
 };
