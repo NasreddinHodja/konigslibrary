@@ -3,8 +3,10 @@
 
   const chapters = $derived(getChapters());
 
+  let initialized = false;
   $effect(() => {
-    if (chapters.length > 0 && !manga.selectedChapter) {
+    if (chapters.length > 0 && !initialized) {
+      initialized = true;
       const saved = getProgress();
       if (saved && chapters.find((c) => c.name === saved.chapter)) {
         manga.selectedChapter = saved.chapter;
