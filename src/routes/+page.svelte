@@ -31,7 +31,7 @@
     </label>
   </div>
 {:else}
-  <div class="flex h-screen">
+  <div class="flex h-screen select-none">
     <Sidebar />
 
     {#if manga.selectedChapter}

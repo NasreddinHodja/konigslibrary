@@ -66,7 +66,7 @@
 <!-- svelte-ignore a11y_click_events_have_key_events -->
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
-  class="flex h-full flex-1 cursor-pointer items-center justify-center bg-black"
+  class="flex h-full flex-1 cursor-pointer select-none items-center justify-center bg-black"
   onclick={handleClick}
 >
   {#key manga.currentPage}
