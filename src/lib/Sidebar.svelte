@@ -51,8 +51,16 @@
   class="fixed top-0 left-0 z-50 flex h-full w-72 flex-col border-r-2 bg-black shadow-xl transition-transform duration-300"
   style="transform: translateX({manga.sidebarOpen ? '0' : isMobile ? '-100%' : 'calc(-100% + 3.25rem)'})"
 >
+  <!-- svelte-ignore a11y_click_events_have_key_events -->
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
+  {#if !manga.sidebarOpen && !isMobile}
+    <div
+      class="absolute inset-0 z-10 cursor-pointer"
+      onclick={() => (manga.sidebarOpen = true)}
+    ></div>
+  {/if}
   <button
-    class="absolute top-2 right-2 z-10 p-2 hover:bg-white/10"
+    class="absolute top-2 right-2 z-20 p-2 hover:bg-white/10"
     onclick={() => (manga.sidebarOpen = !manga.sidebarOpen)}
   >
     {#if manga.sidebarOpen}<X size={20} />{:else}<Menu size={20} />{/if}
