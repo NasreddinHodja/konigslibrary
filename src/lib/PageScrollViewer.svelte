@@ -28,7 +28,7 @@
     };
   });
 
-  // When shouldScroll is set (sidebar page click), scroll to that page
+  // when shouldscroll is set (sidebar page click), scroll to that page
   $effect(() => {
     if (manga.shouldScroll) {
       pageRefs[manga.currentPage]?.scrollIntoView({ behavior: 'smooth', block: 'center' });

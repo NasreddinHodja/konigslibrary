@@ -22,7 +22,7 @@ export async function indexZip(file: File): Promise<ZipEntry[]> {
   const tailBuf = await file.slice(file.size - tailSize).arrayBuffer();
   const tail = new DataView(tailBuf);
 
-  // Scan backwards for EOCD signature
+  // scan backwards for EOCD signature
   let eocdOffset = -1;
   for (let i = tailBuf.byteLength - 22; i >= 0; i--) {
     if (tail.getUint32(i, true) === EOCD_SIG) {
@@ -65,7 +65,7 @@ export async function indexZip(file: File): Promise<ZipEntry[]> {
     const commentLen = cd.getUint16(pos + 32, true);
     let localHeaderOffset: number = cd.getUint32(pos + 42, true);
 
-    // Parse ZIP64 extra field when needed
+    // parse ZIP64 extra field when needed
     if (compressedSize === 0xffffffff || uncompressedSize === 0xffffffff || localHeaderOffset === 0xffffffff) {
       let exPos = pos + 46 + nameLen;
       const exEnd = exPos + extraLen;

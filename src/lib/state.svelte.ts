@@ -11,7 +11,7 @@ export const manga = $state({
   currentPage: 0,
   shouldScroll: false,
   zoom: 1,
-  scrollMode: localStorage.getItem('kl:scrollMode') !== 'false',
+  scrollMode: typeof localStorage !== 'undefined' ? localStorage.getItem('kl:scrollMode') !== 'false' : true,
   sidebarOpen: true
 });
 
@@ -23,7 +23,7 @@ export async function setZip(file: File) {
 
   const imageEntries = entries.filter((e) => IMAGE_EXT.test(e.name));
 
-  // Detect depth: if all images share a common root dir, that's the manga name
+  // detect depth: if all images share a common root dir, that's the manga name
   // and we group by the next level (depth 1). Otherwise group by first level (depth 0).
   const firstDirs = new Set(imageEntries.map((e) => e.name.split('/')[0]));
   const hasCommonRoot = firstDirs.size === 1 && imageEntries.every((e) => e.name.split('/').length >= 3);

@@ -15,7 +15,7 @@
     getChapterFiles(chapter).then((blobs) => {
       if (cancelled) return;
       for (const blob of blobs) urls.push(URL.createObjectURL(blob));
-      // Preload and fully decode all images so page turns are instant
+
       preloaded = urls.map((url) => {
         const img = new Image();
         img.src = url;
@@ -51,27 +51,20 @@
     }
   };
 
-  const handleClick = (event: MouseEvent) => {
-    const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
-    if (event.clientX < rect.left + rect.width / 2) {
-      prev();
-    } else {
-      next();
-    }
-  };
+  const handleClickPrev = () => prev();
+  const handleClickNext = () => next();
 </script>
 
 <svelte:window onkeydown={handleKey} />
 
 <!-- svelte-ignore a11y_click_events_have_key_events -->
 <!-- svelte-ignore a11y_no_static_element_interactions -->
-<div
-  class="flex h-full flex-1 cursor-pointer select-none items-center justify-center bg-black"
-  onclick={handleClick}
->
+<div class="relative flex h-full flex-1 select-none items-center justify-center bg-black">
   {#key manga.currentPage}
     {#if currentUrl}
       <img src={currentUrl} alt="manga page" class="max-h-full object-contain" />
     {/if}
   {/key}
+  <div class="absolute inset-y-0 left-0 w-1/2 cursor-w-resize" onclick={handleClickPrev}></div>
+  <div class="absolute inset-y-0 right-0 w-1/2 cursor-e-resize" onclick={handleClickNext}></div>
 </div>
