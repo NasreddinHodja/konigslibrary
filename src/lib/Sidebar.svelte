@@ -1,6 +1,8 @@
 <script lang="ts">
+  import { slide } from 'svelte/transition';
   import { Menu, X, Minus, Plus } from 'lucide-svelte';
   import { manga, setZip } from '$lib/state.svelte';
+  import { ANIM_DURATION, ANIM_EASE } from '$lib/constants';
   import ChapterList from '$lib/ChapterList.svelte';
   import Toggle from '$lib/ui/Toggle.svelte';
   import Button from '$lib/ui/Button.svelte';
@@ -48,7 +50,7 @@
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <aside
-  class="fixed top-0 left-0 z-50 flex h-full w-80 flex-col border-r-2 bg-black shadow-xl transition-transform duration-300"
+  class="duration-anim fixed top-0 left-0 z-50 flex h-full w-80 flex-col border-r-2 bg-black shadow-xl transition-transform ease-anim"
   style="transform: translateX({manga.sidebarOpen
     ? '0'
     : isMobile
@@ -70,7 +72,7 @@
   </div>
 
   <div
-    class="flex flex-1 flex-col overflow-hidden transition-opacity duration-300"
+    class="duration-anim flex flex-1 flex-col overflow-hidden transition-opacity ease-anim"
     style="opacity: {manga.sidebarOpen ? '1' : '0'}; pointer-events: {manga.sidebarOpen
       ? 'auto'
       : 'none'}"
@@ -88,47 +90,62 @@
     </div>
 
     <div class="flex shrink-0 flex-col gap-4 border-t border-white/20 p-4">
-      <div class="flex items-center justify-center gap-2">
-        <Button size="icon" onclick={() => (manga.zoom = Math.max(0.5, manga.zoom - 0.1))}>
-          <Minus size={16} />
-        </Button>
-        <span class="w-16 text-center text-sm opacity-80">
-          {manga.zoom.toFixed(2)}x
-        </span>
-        <Button size="icon" onclick={() => (manga.zoom = Math.min(1, manga.zoom + 0.1))}>
-          <Plus size={16} />
-        </Button>
-      </div>
+      {#if manga.scrollMode}
+        <div
+          class="flex items-center justify-center gap-2"
+          transition:slide={{ duration: ANIM_DURATION, easing: ANIM_EASE }}
+        >
+          <Button size="icon" onclick={() => (manga.zoom = Math.max(0.5, manga.zoom - 0.1))}>
+            <Minus size={16} />
+          </Button>
+          <span class="w-16 text-center text-sm opacity-80">
+            {manga.zoom.toFixed(2)}x
+          </span>
+          <Button size="icon" onclick={() => (manga.zoom = Math.min(1, manga.zoom + 0.1))}>
+            <Plus size={16} />
+          </Button>
+        </div>
+      {/if}
       <div class="flex flex-col gap-3">
+        {#if !manga.scrollMode}
+          <div
+            class="flex flex-col gap-3"
+            transition:slide={{ duration: ANIM_DURATION, easing: ANIM_EASE }}
+          >
+            <Toggle
+              labelA="LTR"
+              labelB="RTL"
+              active={manga.rtl}
+              onclick={() => {
+                manga.rtl = !manga.rtl;
+                localStorage.setItem('kl:rtl', String(manga.rtl));
+              }}
+            />
+            <Toggle
+              labelA="Single"
+              labelB="Double"
+              active={manga.doublePage}
+              onclick={() => {
+                manga.doublePage = !manga.doublePage;
+                localStorage.setItem('kl:doublePage', String(manga.doublePage));
+                if (manga.doublePage) {
+                  manga.scrollMode = false;
+                  localStorage.setItem('kl:scrollMode', 'false');
+                }
+              }}
+            />
+          </div>
+        {/if}
         <Toggle
-          labelA="Page"
+          labelA="Turn"
           labelB="Scroll"
           active={manga.scrollMode}
+          locked={manga.doublePage}
           onclick={() => {
             manga.scrollMode = !manga.scrollMode;
             localStorage.setItem('kl:scrollMode', String(manga.scrollMode));
           }}
         />
-        <Toggle
-          labelA="LTR"
-          labelB="RTL"
-          active={manga.rtl}
-          onclick={() => {
-            manga.rtl = !manga.rtl;
-            localStorage.setItem('kl:rtl', String(manga.rtl));
-          }}
-        />
-        {#if !manga.scrollMode}
-          <Toggle
-            labelA="Single"
-            labelB="Double"
-            active={manga.doublePage}
-            onclick={() => {
-              manga.doublePage = !manga.doublePage;
-              localStorage.setItem('kl:doublePage', String(manga.doublePage));
-            }}
-          />
-        {/if}
       </div>
     </div>
   </div>

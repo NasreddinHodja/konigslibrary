@@ -1,9 +1,8 @@
 <script lang="ts">
-  import { tick } from 'svelte';
   import { slide } from 'svelte/transition';
   import { ChevronDown, ChevronRight } from 'lucide-svelte';
   import { manga, getChapters } from '$lib/state.svelte';
-  import { ANIM_DURATION } from '$lib/constants';
+  import { ANIM_DURATION, ANIM_EASE } from '$lib/constants';
 
   const chapters = $derived(getChapters());
   let listEl: HTMLUListElement;
@@ -17,7 +16,7 @@
     }
   });
 
-  const toggleChapter = async (name: string, btn: HTMLElement) => {
+  const toggleChapter = (name: string, btn: HTMLElement) => {
     const scroller = btn.closest('.overflow-y-auto') as HTMLElement | null;
     const btnY = btn.getBoundingClientRect().top;
 
@@ -31,9 +30,13 @@
     }
 
     if (scroller) {
-      await tick();
-      const drift = btn.getBoundingClientRect().top - btnY;
-      if (drift !== 0) scroller.scrollTop += drift;
+      const start = performance.now();
+      const pin = () => {
+        const drift = btn.getBoundingClientRect().top - btnY;
+        if (drift !== 0) scroller.scrollTop += drift;
+        if (performance.now() - start < ANIM_DURATION) requestAnimationFrame(pin);
+      };
+      requestAnimationFrame(pin);
     }
   };
 </script>
@@ -53,7 +56,10 @@
       </button>
 
       {#if isOpen}
-        <ul class="mt-1 space-y-1 overflow-hidden" in:slide={{ duration: ANIM_DURATION }}>
+        <ul
+          class="mt-1 space-y-1 overflow-hidden"
+          transition:slide={{ duration: ANIM_DURATION, easing: ANIM_EASE }}
+        >
           {#each Array.from({ length: chapter.pageCount }, (_, i) => i) as i (i)}
             <li>
               <button
