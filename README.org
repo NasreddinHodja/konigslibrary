@@ -1,0 +1,31 @@
+#+TITLE: konigslibrary
+#+DESCRIPTION: Client-side manga reader
+
+* About
+
+konigslibrary is a browser-based manga reader. Upload a ZIP or CBZ file and read entirely client-side.
+
+* Keyboard Shortcuts
+
+| Key        | Scroll Mode | Page-Turn Mode          |
+|------------+-------------+-------------------------|
+| =←= / =→=  | prev / next | prev / next (RTL-aware) |
+| =↑= / =↓=  | prev / next | prev / next             |
+| =z= (hold) | —           | zoom to cursor          |
+
+Click left/right halves of the page-turn viewer to navigate.
+
+* Getting Started
+
+#+begin_src sh
+pnpm install
+pnpm run dev
+#+end_src
+
+| Command           | Description               |
+|-------------------+---------------------------|
+| =pnpm run dev=    | Start dev server          |
+| =pnpm run build=  | Production build          |
+| =pnpm run check=  | Svelte type checking      |
+| =pnpm run lint=   | Prettier + ESLint check   |
+| =pnpm run format= | Auto-format with Prettier |
