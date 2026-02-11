@@ -1,0 +1,23 @@
+<script lang="ts">
+  import type { Snippet } from 'svelte';
+
+  let {
+    size = 'md',
+    onclick,
+    children
+  }: {
+    size?: 'lg' | 'md' | 'icon';
+    onclick?: () => void;
+    children: Snippet;
+  } = $props();
+
+  const classes: Record<string, string> = {
+    lg: 'border-2 px-6 py-3 hover:bg-white/20',
+    md: 'border-2 px-3 py-2 hover:bg-white/20',
+    icon: 'p-2 hover:bg-white/20'
+  };
+</script>
+
+<button class={classes[size]} {onclick}>
+  {@render children()}
+</button>

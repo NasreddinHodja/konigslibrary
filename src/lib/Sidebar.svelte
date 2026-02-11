@@ -1,7 +1,10 @@
 <script lang="ts">
-  import { Menu, X, Minus, Plus, ArrowRightLeft, ScrollText, BookOpen } from 'lucide-svelte';
+  import { Menu, X, Minus, Plus } from 'lucide-svelte';
   import { manga, setZip } from '$lib/state.svelte';
   import ChapterList from '$lib/ChapterList.svelte';
+  import Toggle from '$lib/ui/Toggle.svelte';
+  import Button from '$lib/ui/Button.svelte';
+  import Backdrop from '$lib/ui/Backdrop.svelte';
   import {
     handleTouchStart,
     handleTouchEnd,
@@ -40,12 +43,7 @@
 />
 
 {#if manga.sidebarOpen}
-  <!-- svelte-ignore a11y_click_events_have_key_events -->
-  <!-- svelte-ignore a11y_no_static_element_interactions -->
-  <div
-    class="fixed inset-0 z-40 bg-black/50 transition-opacity duration-300"
-    onclick={() => (manga.sidebarOpen = false)}
-  ></div>
+  <Backdrop onclick={() => (manga.sidebarOpen = false)} />
 {/if}
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -65,12 +63,11 @@
       onclick={() => (manga.sidebarOpen = true)}
     ></div>
   {/if}
-  <button
-    class="absolute top-2 right-2 z-20 p-2 hover:bg-white/10"
-    onclick={() => (manga.sidebarOpen = !manga.sidebarOpen)}
-  >
-    {#if manga.sidebarOpen}<X size={20} />{:else}<Menu size={20} />{/if}
-  </button>
+  <div class="absolute top-2 right-2 z-20">
+    <Button size="icon" onclick={() => (manga.sidebarOpen = !manga.sidebarOpen)}>
+      {#if manga.sidebarOpen}<X size={20} />{:else}<Menu size={20} />{/if}
+    </Button>
+  </div>
 
   <div
     class="flex flex-1 flex-col overflow-hidden transition-opacity duration-300"
@@ -80,8 +77,8 @@
   >
     <div class="space-y-4 p-6 pt-14">
       <h2 class="text-xl font-bold">KONIGSLIBRARY</h2>
-      <label class="block w-full cursor-pointer border-2 px-3 py-2 text-left hover:bg-white/20">
-        Upload manga
+      <label class="block w-full cursor-pointer text-left">
+        <Button size="md">Upload manga</Button>
         <input type="file" accept=".zip,.cbz" onchange={handleZip} class="hidden" />
       </label>
     </div>
@@ -92,46 +89,36 @@
 
     <div class="flex shrink-0 flex-col gap-4 border-t border-white/20 p-4">
       <div class="flex items-center justify-center gap-2">
-        <button
-          class="px-3 py-1 hover:bg-white/20"
-          onclick={() => (manga.zoom = Math.max(0.5, manga.zoom - 0.1))}
-        >
+        <Button size="icon" onclick={() => (manga.zoom = Math.max(0.5, manga.zoom - 0.1))}>
           <Minus size={16} />
-        </button>
+        </Button>
         <span class="w-16 text-center text-sm opacity-80">
           {manga.zoom.toFixed(2)}x
         </span>
-        <button
-          class="px-3 py-1 hover:bg-white/20"
-          onclick={() => (manga.zoom = Math.min(1, manga.zoom + 0.1))}
-        >
+        <Button size="icon" onclick={() => (manga.zoom = Math.min(1, manga.zoom + 0.1))}>
           <Plus size={16} />
-        </button>
+        </Button>
       </div>
-      <button
-        class="flex w-full items-center justify-center gap-2 border-2 px-3 py-2 text-sm hover:bg-white/20"
-        onclick={() => {
-          manga.scrollMode = !manga.scrollMode;
-          localStorage.setItem('kl:scrollMode', String(manga.scrollMode));
-        }}
-      >
-        {#if manga.scrollMode}
-          <ScrollText size={16} /> Scroll Mode
-        {:else}
-          <BookOpen size={16} /> Page Turn
-        {/if}
-      </button>
-
-      <button
-        class="flex w-full items-center justify-center gap-2 border-2 px-3 py-2 text-sm hover:bg-white/20"
-        onclick={() => {
-          manga.rtl = !manga.rtl;
-          localStorage.setItem('kl:rtl', String(manga.rtl));
-        }}
-      >
-        <ArrowRightLeft size={16} />
-        {manga.rtl ? 'Right to Left' : 'Left to Right'}
-      </button>
+      <div class="flex flex-col gap-3">
+        <Toggle
+          labelA="Page"
+          labelB="Scroll"
+          active={manga.scrollMode}
+          onclick={() => {
+            manga.scrollMode = !manga.scrollMode;
+            localStorage.setItem('kl:scrollMode', String(manga.scrollMode));
+          }}
+        />
+        <Toggle
+          labelA="LTR"
+          labelB="RTL"
+          active={manga.rtl}
+          onclick={() => {
+            manga.rtl = !manga.rtl;
+            localStorage.setItem('kl:rtl', String(manga.rtl));
+          }}
+        />
+      </div>
     </div>
   </div>
 </aside>

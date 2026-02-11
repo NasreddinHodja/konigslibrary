@@ -9,6 +9,8 @@
   import PageScrollViewer from '$lib/PageScrollViewer.svelte';
   import PageTurnViewer from '$lib/PageTurnViewer.svelte';
   import Sidebar from '$lib/Sidebar.svelte';
+  import Button from '$lib/ui/Button.svelte';
+  import EmptyState from '$lib/ui/EmptyState.svelte';
 
   const handleDrop = async (e: DragEvent) => {
     const file = e.dataTransfer?.files[0];
@@ -26,8 +28,8 @@
 
 {#if chapters.length === 0}
   <div class="flex h-screen items-center justify-center">
-    <label class="cursor-pointer border-2 px-6 py-3 hover:bg-white/20">
-      Upload manga
+    <label class="cursor-pointer">
+      <Button size="lg">Upload manga</Button>
       <input
         type="file"
         accept=".zip,.cbz"
@@ -50,14 +52,9 @@
         <PageTurnViewer />
       {/if}
     {:else}
-      <div class="flex flex-1 items-center justify-center">
-        <button
-          class="border-2 px-6 py-3 hover:bg-white/20"
-          onclick={() => (manga.sidebarOpen = true)}
-        >
-          Select a chapter
-        </button>
-      </div>
+      <EmptyState>
+        <Button size="lg" onclick={() => (manga.sidebarOpen = true)}>Select a chapter</Button>
+      </EmptyState>
     {/if}
   </div>
 {/if}
