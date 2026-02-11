@@ -3,10 +3,12 @@
 
   let {
     size = 'md',
+    as = 'button',
     onclick,
     children
   }: {
     size?: 'lg' | 'md' | 'icon';
+    as?: 'button' | 'span';
     onclick?: () => void;
     children: Snippet;
   } = $props();
@@ -18,6 +20,12 @@
   };
 </script>
 
-<button class={classes[size]} {onclick}>
-  {@render children()}
-</button>
+{#if as === 'span'}
+  <span class={classes[size]}>
+    {@render children()}
+  </span>
+{:else}
+  <button class={classes[size]} {onclick}>
+    {@render children()}
+  </button>
+{/if}

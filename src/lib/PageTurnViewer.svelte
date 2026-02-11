@@ -1,7 +1,9 @@
 <script lang="ts">
   import { manga, getChapterFiles } from '$lib/state.svelte';
+  import Spinner from '$lib/ui/Spinner.svelte';
 
   let pageUrls: string[] = $state([]);
+  let loading = $state(false);
   let currentUrl: string | null = $derived(pageUrls[manga.currentPage] ?? null);
   // eslint-disable-next-line @typescript-eslint/no-unused-vars -- holds refs to prevent GC during preload
   let preloaded: HTMLImageElement[] = [];
@@ -12,6 +14,8 @@
 
     let cancelled = false;
     const urls: string[] = [];
+    loading = true;
+    pageUrls = [];
 
     getChapterFiles(chapter).then((blobs) => {
       if (cancelled) return;
@@ -24,6 +28,7 @@
         return img;
       });
       pageUrls = urls;
+      loading = false;
     });
 
     return () => {
@@ -74,11 +79,15 @@
 <!-- svelte-ignore a11y_click_events_have_key_events -->
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div class="relative flex h-full flex-1 items-center justify-center bg-black select-none">
-  {#key manga.currentPage}
-    {#if currentUrl}
-      <img src={currentUrl} alt="manga page" class="max-h-full object-contain" />
-    {/if}
-  {/key}
+  {#if loading}
+    <Spinner />
+  {:else}
+    {#key manga.currentPage}
+      {#if currentUrl}
+        <img src={currentUrl} alt="manga page" class="max-h-full object-contain" />
+      {/if}
+    {/key}
+  {/if}
   <div class="absolute inset-y-0 left-0 w-1/2 cursor-w-resize" onclick={handleClickLeft}></div>
   <div class="absolute inset-y-0 right-0 w-1/2 cursor-e-resize" onclick={handleClickRight}></div>
 </div>

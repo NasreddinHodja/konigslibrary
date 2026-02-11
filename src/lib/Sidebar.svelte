@@ -76,9 +76,9 @@
       : 'none'}"
   >
     <div class="space-y-4 p-6 pt-14">
-      <h2 class="text-xl font-bold">KONIGSLIBRARY</h2>
+      <h2 class="text-xl font-bold pb-3">KONIGSLIBRARY</h2>
       <label class="block w-full cursor-pointer text-left">
-        <Button size="md">Upload manga</Button>
+        <Button size="md" as="span">Upload manga</Button>
         <input type="file" accept=".zip,.cbz" onchange={handleZip} class="hidden" />
       </label>
     </div>

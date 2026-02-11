@@ -1,11 +1,13 @@
 <script lang="ts">
   import { manga, getChapterFiles } from '$lib/state.svelte';
   import { intersect } from '$lib/actions/intersect';
+  import Spinner from '$lib/ui/Spinner.svelte';
 
   let container: HTMLDivElement;
   let pageRefs: HTMLDivElement[] = $state([]);
 
   let pageUrls: string[] = $state([]);
+  let loading = $state(false);
 
   $effect(() => {
     const chapter = manga.selectedChapter;
@@ -13,11 +15,14 @@
 
     let cancelled = false;
     const urls: string[] = [];
+    loading = true;
+    pageUrls = [];
 
     getChapterFiles(chapter).then((blobs) => {
       if (cancelled) return;
       for (const blob of blobs) urls.push(URL.createObjectURL(blob));
       pageUrls = urls;
+      loading = false;
       manga.shouldScroll = true;
     });
 
@@ -91,6 +96,10 @@
 </script>
 
 <svelte:window onkeydown={handleKey} />
+
+{#if loading}
+  <Spinner />
+{/if}
 
 <div
   bind:this={container}

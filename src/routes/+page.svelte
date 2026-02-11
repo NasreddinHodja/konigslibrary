@@ -29,7 +29,7 @@
 {#if chapters.length === 0}
   <div class="flex h-screen items-center justify-center">
     <label class="cursor-pointer">
-      <Button size="lg">Upload manga</Button>
+      <Button size="lg" as="span">Upload manga</Button>
       <input
         type="file"
         accept=".zip,.cbz"
