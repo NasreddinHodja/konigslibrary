@@ -48,6 +48,7 @@
         onclick={(e) => toggleChapter(chapter.name, e.currentTarget)}
       >
         <span class="truncate">{chapter.name}</span>
+        <span class="ml-2 shrink-0 text-white/60">({chapter.pageCount})</span>
         {#if isOpen}<ChevronDown size={16} />{:else}<ChevronRight size={16} />{/if}
       </button>
 

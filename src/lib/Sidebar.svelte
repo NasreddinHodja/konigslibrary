@@ -50,7 +50,7 @@
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <aside
-  class="fixed top-0 left-0 z-50 flex h-full w-72 flex-col border-r-2 bg-black shadow-xl transition-transform duration-300"
+  class="fixed top-0 left-0 z-50 flex h-full w-80 flex-col border-r-2 bg-black shadow-xl transition-transform duration-300"
   style="transform: translateX({manga.sidebarOpen
     ? '0'
     : isMobile
@@ -108,7 +108,6 @@
           <Plus size={16} />
         </button>
       </div>
-
       <button
         class="flex w-full items-center justify-center gap-2 border-2 px-3 py-2 text-sm hover:bg-white/20"
         onclick={() => {
