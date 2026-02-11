@@ -70,6 +70,6 @@
       <img src={currentUrl} alt="manga page" class="max-h-full object-contain" />
     {/if}
   {/key}
-  <div class="absolute inset-y-0 left-0 w-1/2" class:cursor-e-resize={manga.rtl} class:cursor-w-resize={!manga.rtl} onclick={handleClickLeft}></div>
-  <div class="absolute inset-y-0 right-0 w-1/2" class:cursor-w-resize={manga.rtl} class:cursor-e-resize={!manga.rtl} onclick={handleClickRight}></div>
+  <div class="absolute inset-y-0 left-0 w-1/2 cursor-w-resize" onclick={handleClickLeft}></div>
+  <div class="absolute inset-y-0 right-0 w-1/2 cursor-e-resize" onclick={handleClickRight}></div>
 </div>

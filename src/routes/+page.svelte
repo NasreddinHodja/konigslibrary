@@ -1,22 +1,7 @@
 <script lang="ts">
-  import { manga, setZip, getChapters, getProgress, saveProgress } from '$lib/state.svelte';
+  import { manga, setZip, getChapters, saveProgress } from '$lib/state.svelte';
 
   const chapters = $derived(getChapters());
-
-  let initialized = false;
-  $effect(() => {
-    if (chapters.length > 0 && !initialized) {
-      initialized = true;
-      const saved = getProgress();
-      if (saved && chapters.find((c) => c.name === saved.chapter)) {
-        manga.selectedChapter = saved.chapter;
-        manga.currentPage = saved.page;
-        manga.shouldScroll = true;
-      } else {
-        manga.selectedChapter = chapters[0].name;
-      }
-    }
-  });
 
   $effect(() => {
     if (manga.selectedChapter) saveProgress();
@@ -31,7 +16,7 @@
   };
 </script>
 
-<svelte:document ondragover|preventDefault={() => {}} ondrop|preventDefault={handleDrop} />
+<svelte:document ondragover={(e) => e.preventDefault()} ondrop={(e) => { e.preventDefault(); handleDrop(e); }} />
 
 {#if chapters.length === 0}
   <div class="flex h-screen items-center justify-center">

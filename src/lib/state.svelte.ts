@@ -19,6 +19,9 @@ export const manga = $state({
 const IMAGE_EXT = /\.(jpe?g|png|gif|webp|avif|bmp)$/i;
 
 export async function setZip(file: File) {
+  manga.selectedChapter = null;
+  manga.currentPage = 0;
+
   zipFile = file;
   const entries = await indexZip(file);
 
@@ -53,6 +56,15 @@ export async function setZip(file: File) {
   _chapters = Array.from(grouped.entries())
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([name, chapterEntries]) => ({ name, pageCount: chapterEntries.length }));
+
+  const saved = getProgress();
+  if (saved && _chapters.find((c) => c.name === saved.chapter)) {
+    manga.selectedChapter = saved.chapter;
+    manga.currentPage = saved.page;
+    manga.shouldScroll = true;
+  } else if (_chapters.length > 0) {
+    manga.selectedChapter = _chapters[0].name;
+  }
 }
 
 export async function getChapterFiles(name: string): Promise<Blob[]> {
