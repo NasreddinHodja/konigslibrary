@@ -95,7 +95,29 @@
     }
   };
 
+  let zoomHeld = $state(false);
+  let spreadEl: HTMLDivElement | undefined = $state();
+  let spreadRect: DOMRect | null = $state(null);
+  let clientX = $state(0);
+  let clientY = $state(0);
+
+  const ZOOM_LEVEL = 2;
+
+  let originX = $derived.by(() => {
+    const r = spreadRect;
+    return r ? ((clientX - r.left) / r.width) * 100 : 50;
+  });
+  let originY = $derived.by(() => {
+    const r = spreadRect;
+    return r ? ((clientY - r.top) / r.height) * 100 : 50;
+  });
+
   const handleKey = (event: KeyboardEvent) => {
+    if (event.key === 'z') {
+      zoomHeld = true;
+      return;
+    }
+    if (zoomHeld) return;
     if (event.key === 'ArrowLeft') {
       event.preventDefault();
       if (manga.rtl) next();
@@ -113,28 +135,53 @@
     }
   };
 
+  const handleKeyUp = (event: KeyboardEvent) => {
+    if (event.key === 'z') zoomHeld = false;
+  };
+
+  const handleBlur = () => {
+    zoomHeld = false;
+  };
+
+  const handleMouseMove = (event: MouseEvent) => {
+    clientX = event.clientX;
+    clientY = event.clientY;
+    if (!zoomHeld && spreadEl) {
+      spreadRect = spreadEl.getBoundingClientRect();
+    }
+  };
+
   const handleClickLeft = () => {
+    if (zoomHeld) return;
     if (manga.rtl) next();
     else prev();
   };
   const handleClickRight = () => {
+    if (zoomHeld) return;
     if (manga.rtl) prev();
     else next();
   };
 </script>
 
-<svelte:window onkeydown={handleKey} />
+<svelte:window onkeydown={handleKey} onkeyup={handleKeyUp} onblur={handleBlur} />
 
 <!-- svelte-ignore a11y_click_events_have_key_events -->
 <!-- svelte-ignore a11y_no_static_element_interactions -->
-<div class="relative flex h-full flex-1 items-center justify-center bg-black select-none">
+<div
+  class="relative flex h-full flex-1 items-center justify-center bg-black select-none"
+  class:overflow-hidden={zoomHeld}
+  onmousemove={handleMouseMove}
+>
   {#if loading}
     <Spinner />
   {:else}
     {#key currentSpreadIdx}
       <div
-        class="flex h-full items-center justify-center"
+        bind:this={spreadEl}
+        class="flex h-full items-center justify-center transition-transform duration-150 ease-out"
         style:flex-direction={manga.rtl ? 'row-reverse' : 'row'}
+        style:transform={zoomHeld ? `scale(${ZOOM_LEVEL})` : 'none'}
+        style:transform-origin="{originX}% {originY}%"
       >
         {#each currentSpread as pageIdx (pageIdx)}
           <img
@@ -147,6 +194,16 @@
       </div>
     {/key}
   {/if}
-  <div class="absolute inset-y-0 left-0 w-1/2 cursor-w-resize" onclick={handleClickLeft}></div>
-  <div class="absolute inset-y-0 right-0 w-1/2 cursor-e-resize" onclick={handleClickRight}></div>
+  <div
+    class="absolute inset-y-0 left-0 w-1/2"
+    class:cursor-zoom-in={zoomHeld}
+    class:cursor-w-resize={!zoomHeld}
+    onclick={handleClickLeft}
+  ></div>
+  <div
+    class="absolute inset-y-0 right-0 w-1/2"
+    class:cursor-zoom-in={zoomHeld}
+    class:cursor-e-resize={!zoomHeld}
+    onclick={handleClickRight}
+  ></div>
 </div>
