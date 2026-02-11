@@ -12,7 +12,7 @@
     if (manga.sidebarOpen && listEl) {
       setTimeout(() => {
         const active = listEl.querySelector('.underline') as HTMLElement | null;
-        active?.scrollIntoView({ block: 'nearest' });
+        active?.scrollIntoView({ block: 'center', behavior: 'smooth' });
       }, ANIM_DURATION + 10);
     }
   });
