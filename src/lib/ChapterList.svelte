@@ -39,7 +39,7 @@
 </script>
 
 <ul bind:this={listEl} class="space-y-2">
-  {#each chapters as chapter}
+  {#each chapters as chapter (chapter.name)}
     {@const isOpen = manga.selectedChapter === chapter.name}
     <li>
       <button
@@ -53,10 +53,10 @@
 
       {#if isOpen}
         <ul class="mt-1 space-y-1 overflow-hidden" in:slide={{ duration: ANIM_DURATION }}>
-          {#each Array(chapter.pageCount) as _, i}
+          {#each Array.from({ length: chapter.pageCount }, (_, i) => i) as i (i)}
             <li>
               <button
-                class="w-full cursor-pointer truncate pl-6 pr-2 py-1 text-left text-sm
+                class="w-full cursor-pointer truncate py-1 pr-2 pl-6 text-left text-sm
                   {manga.currentPage === i ? 'underline' : 'hover:bg-white/10'}"
                 onclick={() => {
                   manga.currentPage = i;

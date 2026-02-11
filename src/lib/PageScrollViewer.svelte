@@ -80,10 +80,12 @@
       scrollPrev();
     } else if (event.key === 'ArrowRight') {
       event.preventDefault();
-      manga.rtl ? scrollPrev() : scrollNext();
+      if (manga.rtl) scrollPrev();
+      else scrollNext();
     } else if (event.key === 'ArrowLeft') {
       event.preventDefault();
-      manga.rtl ? scrollNext() : scrollPrev();
+      if (manga.rtl) scrollNext();
+      else scrollPrev();
     }
   };
 </script>
@@ -92,9 +94,9 @@
 
 <div
   bind:this={container}
-  class="flex h-full flex-1 select-none flex-col overflow-y-auto py-4 gap-2"
+  class="flex h-full flex-1 flex-col gap-2 overflow-y-auto py-4 select-none"
 >
-  {#each pageUrls as src, i}
+  {#each pageUrls as src, i (src)}
     <div
       bind:this={pageRefs[i]}
       class="flex w-full justify-center"
@@ -102,7 +104,13 @@
         if (visible) manga.currentPage = i;
       }}
     >
-      <img {src} alt="manga page" loading="lazy" class="mx-auto" style="width: {manga.zoom * 100}%" />
+      <img
+        {src}
+        alt="manga page"
+        loading="lazy"
+        class="mx-auto"
+        style="width: {manga.zoom * 100}%"
+      />
     </div>
   {/each}
 </div>

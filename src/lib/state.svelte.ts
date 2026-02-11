@@ -11,7 +11,8 @@ export const manga = $state({
   currentPage: 0,
   shouldScroll: false,
   zoom: 1,
-  scrollMode: typeof localStorage !== 'undefined' ? localStorage.getItem('kl:scrollMode') !== 'false' : true,
+  scrollMode:
+    typeof localStorage !== 'undefined' ? localStorage.getItem('kl:scrollMode') !== 'false' : true,
   rtl: typeof localStorage !== 'undefined' ? localStorage.getItem('kl:rtl') === 'true' : false,
   sidebarOpen: true
 });
@@ -29,8 +30,10 @@ export async function setZip(file: File) {
 
   // detect depth: if all images share a common root dir, that's the manga name
   // and we group by the next level (depth 1). Otherwise group by first level (depth 0).
+  // eslint-disable-next-line svelte/prefer-svelte-reactivity -- local, non-reactive
   const firstDirs = new Set(imageEntries.map((e) => e.name.split('/')[0]));
-  const hasCommonRoot = firstDirs.size === 1 && imageEntries.every((e) => e.name.split('/').length >= 3);
+  const hasCommonRoot =
+    firstDirs.size === 1 && imageEntries.every((e) => e.name.split('/').length >= 3);
   const depth = hasCommonRoot ? 1 : 0;
 
   if (hasCommonRoot) {
@@ -39,6 +42,7 @@ export async function setZip(file: File) {
     mangaName = file.name.replace(/\.(zip|cbz)$/i, '');
   }
 
+  // eslint-disable-next-line svelte/prefer-svelte-reactivity -- local, non-reactive
   const grouped = new Map<string, ZipEntry[]>();
   for (const entry of imageEntries) {
     const segs = entry.name.split('/');

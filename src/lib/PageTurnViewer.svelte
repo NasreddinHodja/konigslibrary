@@ -3,6 +3,7 @@
 
   let pageUrls: string[] = $state([]);
   let currentUrl: string | null = $derived(pageUrls[manga.currentPage] ?? null);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- holds refs to prevent GC during preload
   let preloaded: HTMLImageElement[] = [];
 
   $effect(() => {
@@ -43,10 +44,12 @@
   const handleKey = (event: KeyboardEvent) => {
     if (event.key === 'ArrowLeft') {
       event.preventDefault();
-      manga.rtl ? next() : prev();
+      if (manga.rtl) next();
+      else prev();
     } else if (event.key === 'ArrowRight') {
       event.preventDefault();
-      manga.rtl ? prev() : next();
+      if (manga.rtl) prev();
+      else next();
     } else if (event.key === 'ArrowUp') {
       event.preventDefault();
       prev();
@@ -56,15 +59,21 @@
     }
   };
 
-  const handleClickLeft = () => (manga.rtl ? next() : prev());
-  const handleClickRight = () => (manga.rtl ? prev() : next());
+  const handleClickLeft = () => {
+    if (manga.rtl) next();
+    else prev();
+  };
+  const handleClickRight = () => {
+    if (manga.rtl) prev();
+    else next();
+  };
 </script>
 
 <svelte:window onkeydown={handleKey} />
 
 <!-- svelte-ignore a11y_click_events_have_key_events -->
 <!-- svelte-ignore a11y_no_static_element_interactions -->
-<div class="relative flex h-full flex-1 select-none items-center justify-center bg-black">
+<div class="relative flex h-full flex-1 items-center justify-center bg-black select-none">
   {#key manga.currentPage}
     {#if currentUrl}
       <img src={currentUrl} alt="manga page" class="max-h-full object-contain" />

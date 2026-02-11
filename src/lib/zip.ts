@@ -66,7 +66,11 @@ export async function indexZip(file: File): Promise<ZipEntry[]> {
     let localHeaderOffset: number = cd.getUint32(pos + 42, true);
 
     // parse ZIP64 extra field when needed
-    if (compressedSize === 0xffffffff || uncompressedSize === 0xffffffff || localHeaderOffset === 0xffffffff) {
+    if (
+      compressedSize === 0xffffffff ||
+      uncompressedSize === 0xffffffff ||
+      localHeaderOffset === 0xffffffff
+    ) {
       let exPos = pos + 46 + nameLen;
       const exEnd = exPos + extraLen;
       while (exPos + 4 <= exEnd) {
@@ -74,9 +78,17 @@ export async function indexZip(file: File): Promise<ZipEntry[]> {
         const sz = cd.getUint16(exPos + 2, true);
         if (id === 0x0001) {
           let fp = exPos + 4;
-          if (uncompressedSize === 0xffffffff) { uncompressedSize = getUint64(cd, fp); fp += 8; }
-          if (compressedSize === 0xffffffff) { compressedSize = getUint64(cd, fp); fp += 8; }
-          if (localHeaderOffset === 0xffffffff) { localHeaderOffset = getUint64(cd, fp); }
+          if (uncompressedSize === 0xffffffff) {
+            uncompressedSize = getUint64(cd, fp);
+            fp += 8;
+          }
+          if (compressedSize === 0xffffffff) {
+            compressedSize = getUint64(cd, fp);
+            fp += 8;
+          }
+          if (localHeaderOffset === 0xffffffff) {
+            localHeaderOffset = getUint64(cd, fp);
+          }
           break;
         }
         exPos += 4 + sz;
@@ -87,7 +99,13 @@ export async function indexZip(file: File): Promise<ZipEntry[]> {
     const name = new TextDecoder().decode(nameBytes);
 
     if (!name.endsWith('/')) {
-      entries.push({ name, compressedSize, uncompressedSize, compressionMethod, localHeaderOffset });
+      entries.push({
+        name,
+        compressedSize,
+        uncompressedSize,
+        compressionMethod,
+        localHeaderOffset
+      });
     }
 
     pos += 46 + nameLen + extraLen + commentLen;
@@ -97,7 +115,9 @@ export async function indexZip(file: File): Promise<ZipEntry[]> {
 }
 
 export async function extractEntry(file: File, entry: ZipEntry): Promise<Blob> {
-  const lhBuf = await file.slice(entry.localHeaderOffset, entry.localHeaderOffset + 30).arrayBuffer();
+  const lhBuf = await file
+    .slice(entry.localHeaderOffset, entry.localHeaderOffset + 30)
+    .arrayBuffer();
   const lh = new DataView(lhBuf);
   const nameLen = lh.getUint16(26, true);
   const extraLen = lh.getUint16(28, true);

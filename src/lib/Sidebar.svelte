@@ -1,14 +1,12 @@
 <script lang="ts">
   import { Menu, X, Minus, Plus, ArrowRightLeft, ScrollText, BookOpen } from 'lucide-svelte';
-  import { manga, setZip, getChapters } from '$lib/state.svelte';
+  import { manga, setZip } from '$lib/state.svelte';
   import ChapterList from '$lib/ChapterList.svelte';
   import {
     handleTouchStart,
     handleTouchEnd,
     createTouchMoveHandler
   } from '$lib/actions/edgeSwipe.svelte';
-
-  const chapters = $derived(getChapters());
 
   let isMobile = $state(false);
 
@@ -26,8 +24,12 @@
   };
 
   const handleTouchMove = createTouchMoveHandler(
-    () => { manga.sidebarOpen = true; },
-    () => { manga.sidebarOpen = false; }
+    () => {
+      manga.sidebarOpen = true;
+    },
+    () => {
+      manga.sidebarOpen = false;
+    }
   );
 </script>
 
@@ -49,7 +51,11 @@
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <aside
   class="fixed top-0 left-0 z-50 flex h-full w-72 flex-col border-r-2 bg-black shadow-xl transition-transform duration-300"
-  style="transform: translateX({manga.sidebarOpen ? '0' : isMobile ? '-100%' : 'calc(-100% + 3.25rem)'})"
+  style="transform: translateX({manga.sidebarOpen
+    ? '0'
+    : isMobile
+      ? '-100%'
+      : 'calc(-100% + 3.25rem)'})"
 >
   <!-- svelte-ignore a11y_click_events_have_key_events -->
   <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -68,18 +74,15 @@
 
   <div
     class="flex flex-1 flex-col overflow-hidden transition-opacity duration-300"
-    style="opacity: {manga.sidebarOpen ? '1' : '0'}; pointer-events: {manga.sidebarOpen ? 'auto' : 'none'}"
+    style="opacity: {manga.sidebarOpen ? '1' : '0'}; pointer-events: {manga.sidebarOpen
+      ? 'auto'
+      : 'none'}"
   >
     <div class="space-y-4 p-6 pt-14">
       <h2 class="text-xl font-bold">KONIGSLIBRARY</h2>
       <label class="block w-full cursor-pointer border-2 px-3 py-2 text-left hover:bg-white/20">
         Upload manga
-        <input
-          type="file"
-          accept=".zip,.cbz"
-          onchange={handleZip}
-          class="hidden"
-        />
+        <input type="file" accept=".zip,.cbz" onchange={handleZip} class="hidden" />
       </label>
     </div>
 
@@ -108,7 +111,10 @@
 
       <button
         class="flex w-full items-center justify-center gap-2 border-2 px-3 py-2 text-sm hover:bg-white/20"
-        onclick={() => { manga.scrollMode = !manga.scrollMode; localStorage.setItem('kl:scrollMode', String(manga.scrollMode)); }}
+        onclick={() => {
+          manga.scrollMode = !manga.scrollMode;
+          localStorage.setItem('kl:scrollMode', String(manga.scrollMode));
+        }}
       >
         {#if manga.scrollMode}
           <ScrollText size={16} /> Scroll Mode
@@ -119,7 +125,10 @@
 
       <button
         class="flex w-full items-center justify-center gap-2 border-2 px-3 py-2 text-sm hover:bg-white/20"
-        onclick={() => { manga.rtl = !manga.rtl; localStorage.setItem('kl:rtl', String(manga.rtl)); }}
+        onclick={() => {
+          manga.rtl = !manga.rtl;
+          localStorage.setItem('kl:rtl', String(manga.rtl));
+        }}
       >
         <ArrowRightLeft size={16} />
         {manga.rtl ? 'Right to Left' : 'Left to Right'}

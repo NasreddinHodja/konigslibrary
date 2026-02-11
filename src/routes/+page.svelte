@@ -16,7 +16,13 @@
   };
 </script>
 
-<svelte:document ondragover={(e) => e.preventDefault()} ondrop={(e) => { e.preventDefault(); handleDrop(e); }} />
+<svelte:document
+  ondragover={(e) => e.preventDefault()}
+  ondrop={(e) => {
+    e.preventDefault();
+    handleDrop(e);
+  }}
+/>
 
 {#if chapters.length === 0}
   <div class="flex h-screen items-center justify-center">
