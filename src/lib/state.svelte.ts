@@ -14,6 +14,8 @@ export const manga = $state({
   scrollMode:
     typeof localStorage !== 'undefined' ? localStorage.getItem('kl:scrollMode') !== 'false' : true,
   rtl: typeof localStorage !== 'undefined' ? localStorage.getItem('kl:rtl') === 'true' : false,
+  doublePage:
+    typeof localStorage !== 'undefined' ? localStorage.getItem('kl:doublePage') === 'true' : false,
   sidebarOpen: true
 });
 

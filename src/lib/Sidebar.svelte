@@ -53,7 +53,7 @@
     ? '0'
     : isMobile
       ? '-100%'
-      : 'calc(-100% + 3.25rem)'})"
+      : 'calc(-100% + var(--sidebar-peek))'})"
 >
   <!-- svelte-ignore a11y_click_events_have_key_events -->
   <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -76,7 +76,7 @@
       : 'none'}"
   >
     <div class="space-y-4 p-6 pt-14">
-      <h2 class="text-xl font-bold pb-3">KONIGSLIBRARY</h2>
+      <h2 class="pb-3 text-xl font-bold">KONIGSLIBRARY</h2>
       <label class="block w-full cursor-pointer text-left">
         <Button size="md" as="span">Upload manga</Button>
         <input type="file" accept=".zip,.cbz" onchange={handleZip} class="hidden" />
@@ -118,6 +118,17 @@
             localStorage.setItem('kl:rtl', String(manga.rtl));
           }}
         />
+        {#if !manga.scrollMode}
+          <Toggle
+            labelA="Single"
+            labelB="Double"
+            active={manga.doublePage}
+            onclick={() => {
+              manga.doublePage = !manga.doublePage;
+              localStorage.setItem('kl:doublePage', String(manga.doublePage));
+            }}
+          />
+        {/if}
       </div>
     </div>
   </div>

@@ -42,7 +42,7 @@
     </label>
   </div>
 {:else}
-  <div class="flex h-screen select-none">
+  <div class="flex h-screen select-none md:pl-(--sidebar-peek)">
     <Sidebar />
 
     {#if manga.selectedChapter}

@@ -1,5 +1,9 @@
 @import 'tailwindcss';
 
+:root {
+  --sidebar-peek: 3.25rem;
+}
+
 body {
   @apply bg-black text-white antialiased;
   font-family: 'Source Code Pro', monospace;
