@@ -1,7 +1,7 @@
 <script lang="ts">
   import { manga, getChapterFiles } from '$lib/state.svelte';
   import { intersect } from '$lib/actions/intersect';
-  import Spinner from '$lib/ui/Spinner.svelte';
+  import Loader from '$lib/ui/Loader.svelte';
 
   let container: HTMLDivElement;
   let pageRefs: HTMLDivElement[] = $state([]);
@@ -102,7 +102,7 @@
   class="flex h-full flex-1 flex-col gap-2 overflow-y-auto py-4 select-none"
 >
   {#if loading}
-    <Spinner />
+    <Loader />
   {:else}
     {#each pageUrls as src, i (src)}
       <div

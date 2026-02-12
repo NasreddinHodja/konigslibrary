@@ -1,7 +1,7 @@
 <script lang="ts">
   import { SvelteSet } from 'svelte/reactivity';
   import { manga, getChapterFiles } from '$lib/state.svelte';
-  import Spinner from '$lib/ui/Spinner.svelte';
+  import Loader from '$lib/ui/Loader.svelte';
 
   let pageUrls: string[] = $state([]);
   let loading = $state(false);
@@ -173,7 +173,7 @@
   onmousemove={handleMouseMove}
 >
   {#if loading}
-    <Spinner />
+    <Loader />
   {:else}
     {#key currentSpreadIdx}
       <div
