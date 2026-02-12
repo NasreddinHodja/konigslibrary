@@ -97,29 +97,29 @@
 
 <svelte:window onkeydown={handleKey} />
 
-{#if loading}
-  <Spinner />
-{/if}
-
 <div
   bind:this={container}
   class="flex h-full flex-1 flex-col gap-2 overflow-y-auto py-4 select-none"
 >
-  {#each pageUrls as src, i (src)}
-    <div
-      bind:this={pageRefs[i]}
-      class="flex w-full justify-center"
-      use:intersect={(visible) => {
-        if (visible) manga.currentPage = i;
-      }}
-    >
-      <img
-        {src}
-        alt="manga page"
-        loading="lazy"
-        class="mx-auto"
-        style="width: {manga.zoom * 100}%"
-      />
-    </div>
-  {/each}
+  {#if loading}
+    <Spinner />
+  {:else}
+    {#each pageUrls as src, i (src)}
+      <div
+        bind:this={pageRefs[i]}
+        class="flex w-full justify-center"
+        use:intersect={(visible) => {
+          if (visible) manga.currentPage = i;
+        }}
+      >
+        <img
+          {src}
+          alt="manga page"
+          loading="lazy"
+          class="mx-auto"
+          style="width: {manga.zoom * 100}%"
+        />
+      </div>
+    {/each}
+  {/if}
 </div>
