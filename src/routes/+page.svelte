@@ -11,11 +11,15 @@
   import Sidebar from '$lib/Sidebar.svelte';
   import Button from '$lib/ui/Button.svelte';
   import EmptyState from '$lib/ui/EmptyState.svelte';
+  import LibraryBrowser from '$lib/LibraryBrowser.svelte';
+  import SettingsPanel from '$lib/SettingsPanel.svelte';
 
   const handleDrop = async (e: DragEvent) => {
     const file = e.dataTransfer?.files[0];
     if (file && /\.(zip|cbz)$/i.test(file.name)) await setZip(file);
   };
+
+  let showSettings = $state(false);
 </script>
 
 <svelte:document
@@ -27,7 +31,7 @@
 />
 
 {#if chapters.length === 0}
-  <div class="flex h-screen items-center justify-center">
+  <div class="flex min-h-screen flex-col items-center justify-center gap-8 p-8">
     <label class="cursor-pointer">
       <Button size="lg" as="span">Upload manga</Button>
       <input
@@ -40,6 +44,41 @@
         class="hidden"
       />
     </label>
+
+    <LibraryBrowser />
+
+    <div class="flex flex-col items-center gap-3">
+      <p class="max-w-sm text-center text-sm opacity-60">
+        Run locally to serve manga from your PC to any device on your network
+      </p>
+      <div class="flex gap-4">
+        <a
+          href="/download/konigslibrary.sh"
+          download
+          class="border-2 border-white/20 px-4 py-2 text-sm hover:border-white/60"
+        >
+          Linux / Mac
+        </a>
+        <a
+          href="/download/konigslibrary.bat"
+          download
+          class="border-2 border-white/20 px-4 py-2 text-sm hover:border-white/60"
+        >
+          Windows
+        </a>
+      </div>
+    </div>
+
+    <button
+      class="mt-4 text-sm opacity-40 hover:opacity-80"
+      onclick={() => (showSettings = !showSettings)}
+    >
+      {showSettings ? 'Hide settings' : 'Settings'}
+    </button>
+
+    {#if showSettings}
+      <SettingsPanel />
+    {/if}
   </div>
 {:else}
   <div class="flex h-screen select-none md:pl-(--sidebar-peek)">

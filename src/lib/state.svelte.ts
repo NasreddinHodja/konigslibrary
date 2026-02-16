@@ -1,10 +1,13 @@
-import type { Chapter } from '$lib/types';
+import type { Chapter, ServerChapter } from '$lib/types';
 import { indexZip, extractEntry, type ZipEntry } from '$lib/zip';
 
 let _chapters: Chapter[] = $state.raw([]);
 let mangaName: string | null = $state(null);
 let zipFile: File | null = $state(null);
 let zipEntries = $state.raw(new Map<string, ZipEntry[]>());
+let sourceMode: 'upload' | 'library' = $state('upload');
+let libraryManga: string = $state('');
+let libraryChapters: ServerChapter[] = $state.raw([]);
 
 export const manga = $state({
   selectedChapter: null as string | null,
@@ -24,6 +27,9 @@ const IMAGE_EXT = /\.(jpe?g|png|gif|webp|avif|bmp)$/i;
 export async function setZip(file: File) {
   manga.selectedChapter = null;
   manga.currentPage = 0;
+  sourceMode = 'upload';
+  libraryManga = '';
+  libraryChapters = [];
 
   zipFile = file;
   const entries = await indexZip(file);
@@ -73,14 +79,71 @@ export async function setZip(file: File) {
   }
 }
 
-export async function getChapterFiles(name: string): Promise<Blob[]> {
-  if (!zipFile) return [];
+export async function setLibraryManga(slug: string, name: string) {
+  manga.selectedChapter = null;
+  manga.currentPage = 0;
+  sourceMode = 'library';
+  libraryManga = slug;
+  zipFile = null;
+  zipEntries = new Map();
+  mangaName = name;
+
+  const res = await fetch(`/api/library/${slug}/chapters`);
+  const chapters: ServerChapter[] = await res.json();
+  libraryChapters = chapters;
+
+  _chapters = chapters.map((c) => ({ name: c.name, pageCount: c.pageCount }));
+
+  const saved = getProgress();
+  if (saved && _chapters.find((c) => c.name === saved.chapter)) {
+    manga.selectedChapter = saved.chapter;
+    manga.currentPage = saved.page;
+    manga.shouldScroll = true;
+  } else if (_chapters.length > 0) {
+    manga.selectedChapter = _chapters[0].name;
+  }
+}
+
+export type ChapterUrls = { urls: string[]; revoke: boolean };
+
+export async function getChapterUrls(name: string): Promise<ChapterUrls> {
+  if (sourceMode === 'library') {
+    const chapter = libraryChapters.find((c) => c.name === name);
+    if (!chapter) return { urls: [], revoke: false };
+
+    const urls = chapter.pages.map((page) => {
+      if (chapter.slug) {
+        return `/api/library/${libraryManga}/${chapter.slug}/${encodeURIComponent(page)}`;
+      }
+      return `/api/library/${libraryManga}/${encodeURIComponent(page)}`;
+    });
+    return { urls, revoke: false };
+  }
+
+  // Upload mode: extract blobs and create object URLs
+  if (!zipFile) return { urls: [], revoke: true };
   const entries = zipEntries.get(name);
-  if (!entries) return [];
-  return Promise.all(entries.map((e) => extractEntry(zipFile!, e)));
+  if (!entries) return { urls: [], revoke: true };
+  const blobs = await Promise.all(entries.map((e) => extractEntry(zipFile!, e)));
+  const urls = blobs.map((b) => URL.createObjectURL(b));
+  return { urls, revoke: true };
+}
+
+export function clearManga() {
+  manga.selectedChapter = null;
+  manga.currentPage = 0;
+  manga.shouldScroll = false;
+  _chapters = [];
+  mangaName = null;
+  zipFile = null;
+  zipEntries = new Map();
+  sourceMode = 'upload';
+  libraryManga = '';
+  libraryChapters = [];
 }
 
 export const getChapters = () => _chapters;
+export const getSourceMode = () => sourceMode;
 
 export const saveProgress = () => {
   if (mangaName && manga.selectedChapter) {

@@ -1,6 +1,6 @@
 <script lang="ts">
   import { SvelteSet } from 'svelte/reactivity';
-  import { manga, getChapterFiles } from '$lib/state.svelte';
+  import { manga, getChapterUrls } from '$lib/state.svelte';
   import Loader from '$lib/ui/Loader.svelte';
 
   let pageUrls: string[] = $state([]);
@@ -46,17 +46,19 @@
     if (!chapter) return;
 
     let cancelled = false;
-    const urls: string[] = [];
+    let revoke = false;
+    let urls: string[] = [];
     loading = true;
     pageUrls = [];
     widePages = new SvelteSet();
 
-    getChapterFiles(chapter).then(async (blobs) => {
+    getChapterUrls(chapter).then(async (result) => {
       if (cancelled) return;
+      urls = result.urls;
+      revoke = result.revoke;
+
       const imgs: HTMLImageElement[] = [];
-      for (const blob of blobs) {
-        const url = URL.createObjectURL(blob);
-        urls.push(url);
+      for (const url of urls) {
         const img = new Image();
         img.src = url;
         imgs.push(img);
@@ -79,7 +81,7 @@
     return () => {
       cancelled = true;
       preloaded = [];
-      urls.forEach((url) => URL.revokeObjectURL(url));
+      if (revoke) urls.forEach((url) => URL.revokeObjectURL(url));
     };
   });
 

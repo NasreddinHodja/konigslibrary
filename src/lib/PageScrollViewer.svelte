@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { manga, getChapterFiles } from '$lib/state.svelte';
+  import { manga, getChapterUrls } from '$lib/state.svelte';
   import { intersect } from '$lib/actions/intersect';
   import Loader from '$lib/ui/Loader.svelte';
 
@@ -14,13 +14,15 @@
     if (!chapter) return;
 
     let cancelled = false;
-    const urls: string[] = [];
+    let revoke = false;
+    let urls: string[] = [];
     loading = true;
     pageUrls = [];
 
-    getChapterFiles(chapter).then((blobs) => {
+    getChapterUrls(chapter).then((result) => {
       if (cancelled) return;
-      for (const blob of blobs) urls.push(URL.createObjectURL(blob));
+      urls = result.urls;
+      revoke = result.revoke;
       pageUrls = urls;
       loading = false;
       manga.shouldScroll = true;
@@ -28,7 +30,7 @@
 
     return () => {
       cancelled = true;
-      urls.forEach((url) => URL.revokeObjectURL(url));
+      if (revoke) urls.forEach((url) => URL.revokeObjectURL(url));
     };
   });
 

@@ -1,6 +1,10 @@
 #+TITLE: konigslibrary
 #+DESCRIPTION: Client-side manga reader
 
+1. i want it to be easy for the end user to do it themselves without knowing programming
+2. what is changing the adaptor from auto to node doing? what does the adaptor do?
+3.
+
 * About
 
 konigslibrary is a browser-based manga reader. Upload a ZIP or CBZ file and read entirely client-side.

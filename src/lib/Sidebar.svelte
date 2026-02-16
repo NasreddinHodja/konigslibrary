@@ -1,7 +1,7 @@
 <script lang="ts">
   import { slide } from 'svelte/transition';
-  import { Menu, X, Minus, Plus } from 'lucide-svelte';
-  import { manga, setZip } from '$lib/state.svelte';
+  import { Menu, X, Minus, Plus, ArrowLeft } from 'lucide-svelte';
+  import { manga, setZip, clearManga } from '$lib/state.svelte';
   import { ANIM_DURATION, ANIM_EASE } from '$lib/constants';
   import ChapterList from '$lib/ChapterList.svelte';
   import Toggle from '$lib/ui/Toggle.svelte';
@@ -79,10 +79,15 @@
   >
     <div class="space-y-4 p-6 pt-14">
       <h2 class="pb-3 text-xl font-bold">KONIGSLIBRARY</h2>
-      <label class="block w-full cursor-pointer text-left">
-        <Button size="md" as="span">Upload manga</Button>
-        <input type="file" accept=".zip,.cbz" onchange={handleZip} class="hidden" />
-      </label>
+      <div class="flex items-stretch justify-between">
+        <Button size="md" onclick={clearManga}>
+          <ArrowLeft size={16} class="inline" /> Back
+        </Button>
+        <label class="flex cursor-pointer">
+          <Button size="md" as="span">Upload</Button>
+          <input type="file" accept=".zip,.cbz" onchange={handleZip} class="hidden" />
+        </label>
+      </div>
     </div>
 
     <div class="flex-1 space-y-2 overflow-y-auto px-6">
