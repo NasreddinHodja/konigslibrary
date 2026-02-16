@@ -20,6 +20,22 @@
   };
 
   let showSettings = $state(false);
+
+  let isMobile = $derived(
+    typeof window !== 'undefined' && 'ontouchstart' in window
+  );
+
+  function enterFullscreen() {
+    if (isMobile && !document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(() => {});
+    }
+  }
+
+  $effect(() => {
+    if (!manga.selectedChapter && document.fullscreenElement) {
+      document.exitFullscreen().catch(() => {});
+    }
+  });
 </script>
 
 <svelte:document
@@ -81,7 +97,8 @@
     {/if}
   </div>
 {:else}
-  <div class="flex h-screen select-none md:pl-(--sidebar-peek)">
+  <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
+  <div class="flex h-screen select-none md:pl-(--sidebar-peek)" onclick={enterFullscreen}>
     <Sidebar />
 
     {#if manga.selectedChapter}

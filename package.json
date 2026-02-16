@@ -12,7 +12,7 @@
     "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
     "lint": "prettier --check . && eslint .",
     "format": "prettier --write .",
-    "serve": "node build",
+    "serve": "node server.js",
     "build:local": "LOCAL_BUILD=1 vite build"
   },
   "devDependencies": {
