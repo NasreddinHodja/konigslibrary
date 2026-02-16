@@ -3,28 +3,36 @@
 
   let mangaDir = $state('');
   let saved = $state(false);
+  let error: string | null = $state(null);
   let loading = $state(true);
 
   $effect(() => {
     fetch('/api/settings')
       .then((r) => r.json())
-      .then((data) => {
+      .then((data: { mangaDir?: string }) => {
         mangaDir = data.mangaDir || '';
         loading = false;
       })
       .catch(() => {
+        error = 'Could not load settings';
         loading = false;
       });
   });
 
   const save = async () => {
     saved = false;
-    await fetch('/api/settings', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ mangaDir })
-    });
-    saved = true;
+    error = null;
+    try {
+      const res = await fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mangaDir })
+      });
+      if (!res.ok) throw new Error();
+      saved = true;
+    } catch {
+      error = 'Failed to save settings';
+    }
   };
 </script>
 
@@ -43,6 +51,9 @@
       <Button size="md" onclick={save}>Save</Button>
       {#if saved}
         <span class="text-sm opacity-60">Saved — reload to see library</span>
+      {/if}
+      {#if error}
+        <span class="text-sm text-red-400">{error}</span>
       {/if}
     </div>
   {/if}

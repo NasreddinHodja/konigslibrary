@@ -1,11 +1,5 @@
 <script lang="ts">
   import { manga, setZip, getChapters, saveProgress } from '$lib/state.svelte';
-
-  const chapters = $derived(getChapters());
-
-  $effect(() => {
-    if (manga.selectedChapter) saveProgress();
-  });
   import PageScrollViewer from '$lib/PageScrollViewer.svelte';
   import PageTurnViewer from '$lib/PageTurnViewer.svelte';
   import Sidebar from '$lib/Sidebar.svelte';
@@ -14,6 +8,16 @@
   import LibraryBrowser from '$lib/LibraryBrowser.svelte';
   import SettingsPanel from '$lib/SettingsPanel.svelte';
 
+  const chapters = $derived(getChapters());
+
+  let saveTimer: ReturnType<typeof setTimeout> | undefined;
+  $effect(() => {
+    if (!manga.selectedChapter) return;
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(saveProgress, 300);
+    return () => clearTimeout(saveTimer);
+  });
+
   const handleDrop = async (e: DragEvent) => {
     const file = e.dataTransfer?.files[0];
     if (file && /\.(zip|cbz)$/i.test(file.name)) await setZip(file);
@@ -21,9 +25,7 @@
 
   let showSettings = $state(false);
 
-  let isMobile = $derived(
-    typeof window !== 'undefined' && 'ontouchstart' in window
-  );
+  let isMobile = $derived(typeof window !== 'undefined' && 'ontouchstart' in window);
 
   function enterFullscreen() {
     if (isMobile && !document.fullscreenElement) {
@@ -97,8 +99,12 @@
     {/if}
   </div>
 {:else}
-  <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
-  <div class="flex h-screen select-none md:pl-(--sidebar-peek)" onclick={enterFullscreen}>
+  <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions a11y_no_noninteractive_element_interactions -->
+  <div
+    class="flex h-screen select-none md:pl-(--sidebar-peek)"
+    onclick={enterFullscreen}
+    role="presentation"
+  >
     <Sidebar />
 
     {#if manga.selectedChapter}

@@ -20,6 +20,9 @@
     : 'cursor-pointer'}"
   onclick={locked ? undefined : onclick}
   disabled={locked}
+  role="switch"
+  aria-checked={active}
+  aria-label="{labelA} / {labelB}"
 >
   <span class="flex justify-between text-sm">
     <span class={active ? 'opacity-40' : ''}>{labelA}</span>

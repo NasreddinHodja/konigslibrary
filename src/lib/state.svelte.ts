@@ -1,5 +1,9 @@
 import type { Chapter, ServerChapter } from '$lib/types';
 import { indexZip, extractEntry, type ZipEntry } from '$lib/zip';
+import { detectDepth, groupByChapter } from '$lib/chapters';
+import { LS_SCROLL_MODE, LS_RTL, LS_DOUBLE_PAGE, LS_PROGRESS_PREFIX } from '$lib/constants';
+
+const browser = typeof localStorage !== 'undefined';
 
 let _chapters: Chapter[] = $state.raw([]);
 let mangaName: string | null = $state(null);
@@ -14,11 +18,9 @@ export const manga = $state({
   currentPage: 0,
   shouldScroll: false,
   zoom: 1,
-  scrollMode:
-    typeof localStorage !== 'undefined' ? localStorage.getItem('kl:scrollMode') !== 'false' : true,
-  rtl: typeof localStorage !== 'undefined' ? localStorage.getItem('kl:rtl') === 'true' : false,
-  doublePage:
-    typeof localStorage !== 'undefined' ? localStorage.getItem('kl:doublePage') === 'true' : false,
+  scrollMode: browser ? localStorage.getItem(LS_SCROLL_MODE) !== 'false' : true,
+  rtl: browser ? localStorage.getItem(LS_RTL) === 'true' : false,
+  doublePage: browser ? localStorage.getItem(LS_DOUBLE_PAGE) === 'true' : false,
   sidebarOpen: true
 });
 
@@ -27,42 +29,19 @@ const IMAGE_EXT = /\.(jpe?g|png|gif|webp|avif|bmp)$/i;
 export async function setZip(file: File) {
   manga.selectedChapter = null;
   manga.currentPage = 0;
+  manga.shouldScroll = false;
   sourceMode = 'upload';
   libraryManga = '';
   libraryChapters = [];
 
   zipFile = file;
   const entries = await indexZip(file);
-
   const imageEntries = entries.filter((e) => IMAGE_EXT.test(e.name));
 
-  // detect depth: if all images share a common root dir, that's the manga name
-  // and we group by the next level (depth 1). Otherwise group by first level (depth 0).
-  // eslint-disable-next-line svelte/prefer-svelte-reactivity -- local, non-reactive
-  const firstDirs = new Set(imageEntries.map((e) => e.name.split('/')[0]));
-  const hasCommonRoot =
-    firstDirs.size === 1 && imageEntries.every((e) => e.name.split('/').length >= 3);
-  const depth = hasCommonRoot ? 1 : 0;
+  const { depth, commonRoot } = detectDepth(imageEntries.map((e) => e.name));
+  mangaName = commonRoot ?? file.name.replace(/\.(zip|cbz)$/i, '');
 
-  if (hasCommonRoot) {
-    mangaName = [...firstDirs][0];
-  } else {
-    mangaName = file.name.replace(/\.(zip|cbz)$/i, '');
-  }
-
-  // eslint-disable-next-line svelte/prefer-svelte-reactivity -- local, non-reactive
-  const grouped = new Map<string, ZipEntry[]>();
-  for (const entry of imageEntries) {
-    const segs = entry.name.split('/');
-    const chapter = segs.length > depth + 1 ? segs[depth] : '';
-    if (!grouped.has(chapter)) grouped.set(chapter, []);
-    grouped.get(chapter)!.push(entry);
-  }
-
-  for (const [, chapterEntries] of grouped) {
-    chapterEntries.sort((a, b) => a.name.localeCompare(b.name));
-  }
-
+  const grouped = groupByChapter(imageEntries, depth);
   zipEntries = grouped;
 
   _chapters = Array.from(grouped.entries())
@@ -82,10 +61,11 @@ export async function setZip(file: File) {
 export async function setLibraryManga(slug: string, name: string) {
   manga.selectedChapter = null;
   manga.currentPage = 0;
+  manga.shouldScroll = false;
   sourceMode = 'library';
   libraryManga = slug;
   zipFile = null;
-  zipEntries = new Map();
+  zipEntries = new Map(); // eslint-disable-line svelte/prefer-svelte-reactivity
   mangaName = name;
 
   const res = await fetch(`/api/library/${slug}/chapters`);
@@ -120,12 +100,18 @@ export async function getChapterUrls(name: string): Promise<ChapterUrls> {
     return { urls, revoke: false };
   }
 
-  // Upload mode: extract blobs and create object URLs
   if (!zipFile) return { urls: [], revoke: true };
   const entries = zipEntries.get(name);
   if (!entries) return { urls: [], revoke: true };
-  const blobs = await Promise.all(entries.map((e) => extractEntry(zipFile!, e)));
-  const urls = blobs.map((b) => URL.createObjectURL(b));
+
+  const urls: string[] = [];
+  try {
+    const blobs = await Promise.all(entries.map((e) => extractEntry(zipFile!, e)));
+    for (const b of blobs) urls.push(URL.createObjectURL(b));
+  } catch {
+    urls.forEach((url) => URL.revokeObjectURL(url));
+    return { urls: [], revoke: false };
+  }
   return { urls, revoke: true };
 }
 
@@ -136,7 +122,7 @@ export function clearManga() {
   _chapters = [];
   mangaName = null;
   zipFile = null;
-  zipEntries = new Map();
+  zipEntries = new Map(); // eslint-disable-line svelte/prefer-svelte-reactivity
   sourceMode = 'upload';
   libraryManga = '';
   libraryChapters = [];
@@ -146,23 +132,21 @@ export const getChapters = () => _chapters;
 export const getSourceMode = () => sourceMode;
 
 export const saveProgress = () => {
-  if (mangaName && manga.selectedChapter) {
-    localStorage.setItem(
-      `kl:${mangaName}`,
-      JSON.stringify({ chapter: manga.selectedChapter, page: manga.currentPage })
-    );
-  }
+  if (!browser || !mangaName || !manga.selectedChapter) return;
+  localStorage.setItem(
+    `${LS_PROGRESS_PREFIX}${mangaName}`,
+    JSON.stringify({ chapter: manga.selectedChapter, page: manga.currentPage })
+  );
 };
 
 export const getProgress = (): { chapter: string; page: number } | null => {
-  if (!mangaName) return null;
-  const raw = localStorage.getItem(`kl:${mangaName}`);
+  if (!browser || !mangaName) return null;
+  const raw = localStorage.getItem(`${LS_PROGRESS_PREFIX}${mangaName}`);
   if (!raw) return null;
   try {
     const parsed = JSON.parse(raw);
     if (parsed.chapter) return parsed;
   } catch {
-    // migrate old format (plain chapter name string)
     return { chapter: raw, page: 0 };
   }
   return null;

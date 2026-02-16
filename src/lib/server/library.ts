@@ -2,7 +2,8 @@ import { readdir, readFile, writeFile, stat } from 'node:fs/promises';
 import { join, resolve, extname } from 'node:path';
 import { existsSync } from 'node:fs';
 import type { LibraryEntry, ServerChapter } from '$lib/types';
-import { indexZipFile, extractEntryFromFile, type NodeZipEntry } from './zip-node';
+import { indexZipFile, extractEntryFromFile } from './zip-node';
+import { detectDepth, groupByChapter } from '$lib/chapters';
 
 const IMAGE_EXT = /\.(jpe?g|png|gif|webp|avif|bmp)$/i;
 const ZIP_EXT = /\.(zip|cbz)$/i;
@@ -142,23 +143,8 @@ async function listChaptersFromZip(zipPath: string): Promise<ServerChapter[]> {
   const entries = await indexZipFile(zipPath);
   const imageEntries = entries.filter((e) => IMAGE_EXT.test(e.name));
 
-  // Same depth detection as client-side
-  const firstDirs = new Set(imageEntries.map((e) => e.name.split('/')[0]));
-  const hasCommonRoot =
-    firstDirs.size === 1 && imageEntries.every((e) => e.name.split('/').length >= 3);
-  const depth = hasCommonRoot ? 1 : 0;
-
-  const grouped = new Map<string, NodeZipEntry[]>();
-  for (const entry of imageEntries) {
-    const segs = entry.name.split('/');
-    const chapter = segs.length > depth + 1 ? segs[depth] : '';
-    if (!grouped.has(chapter)) grouped.set(chapter, []);
-    grouped.get(chapter)!.push(entry);
-  }
-
-  for (const [, chapterEntries] of grouped) {
-    chapterEntries.sort((a, b) => a.name.localeCompare(b.name));
-  }
+  const { depth } = detectDepth(imageEntries.map((e) => e.name));
+  const grouped = groupByChapter(imageEntries, depth);
 
   return Array.from(grouped.entries())
     .sort(([a], [b]) => a.localeCompare(b))

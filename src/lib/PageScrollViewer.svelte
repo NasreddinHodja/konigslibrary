@@ -79,6 +79,7 @@
   };
 
   const handleKey = (event: KeyboardEvent) => {
+    if (event.altKey || event.ctrlKey || event.metaKey) return;
     if (event.key === 'ArrowDown') {
       event.preventDefault();
       scrollNext();
@@ -116,10 +117,18 @@
       >
         <img
           {src}
-          alt="manga page"
+          alt="Page {i + 1} of {pageUrls.length}"
           loading="lazy"
           class="mx-auto"
           style="width: {manga.zoom * 100}%"
+          onerror={(e) => {
+            const img = e.currentTarget as HTMLImageElement;
+            img.style.display = 'none';
+            img.insertAdjacentHTML(
+              'afterend',
+              '<p class="py-8 text-sm opacity-40">Failed to load page</p>'
+            );
+          }}
         />
       </div>
     {/each}

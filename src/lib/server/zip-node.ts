@@ -1,24 +1,15 @@
 import { open, type FileHandle } from 'node:fs/promises';
 import { inflateRawSync } from 'node:zlib';
+import {
+  type BaseZipEntry,
+  EOCD_SIG,
+  ZIP64_EOCD_LOC_SIG,
+  ZIP64_EOCD_SIG,
+  getUint64,
+  parseCentralDirectory
+} from '$lib/zip-parse';
 
-export type NodeZipEntry = {
-  name: string;
-  compressedSize: number;
-  uncompressedSize: number;
-  compressionMethod: number;
-  localHeaderOffset: number;
-};
-
-const EOCD_SIG = 0x06054b50;
-const ZIP64_EOCD_LOC_SIG = 0x07064b50;
-const ZIP64_EOCD_SIG = 0x06064b50;
-const CD_SIG = 0x02014b50;
-
-function getUint64(dv: DataView, offset: number): number {
-  const lo = dv.getUint32(offset, true);
-  const hi = dv.getUint32(offset + 4, true);
-  return lo + hi * 0x100000000;
-}
+export type NodeZipEntry = BaseZipEntry;
 
 async function readAt(fh: FileHandle, offset: number, length: number): Promise<Buffer> {
   const buf = Buffer.alloc(length);
@@ -62,66 +53,8 @@ export async function indexZipFile(filePath: string): Promise<NodeZipEntry[]> {
     }
 
     const cdBuf = await readAt(fh, cdOffset, cdSize);
-    const cd = new DataView(cdBuf.buffer, cdBuf.byteOffset, cdBuf.byteLength);
-
-    const entries: NodeZipEntry[] = [];
-    let pos = 0;
-    while (pos < cdBuf.byteLength) {
-      if (cd.getUint32(pos, true) !== CD_SIG) break;
-
-      const compressionMethod = cd.getUint16(pos + 10, true);
-      let compressedSize: number = cd.getUint32(pos + 20, true);
-      let uncompressedSize: number = cd.getUint32(pos + 24, true);
-      const nameLen = cd.getUint16(pos + 28, true);
-      const extraLen = cd.getUint16(pos + 30, true);
-      const commentLen = cd.getUint16(pos + 32, true);
-      let localHeaderOffset: number = cd.getUint32(pos + 42, true);
-
-      if (
-        compressedSize === 0xffffffff ||
-        uncompressedSize === 0xffffffff ||
-        localHeaderOffset === 0xffffffff
-      ) {
-        let exPos = pos + 46 + nameLen;
-        const exEnd = exPos + extraLen;
-        while (exPos + 4 <= exEnd) {
-          const id = cd.getUint16(exPos, true);
-          const sz = cd.getUint16(exPos + 2, true);
-          if (id === 0x0001) {
-            let fp = exPos + 4;
-            if (uncompressedSize === 0xffffffff) {
-              uncompressedSize = getUint64(cd, fp);
-              fp += 8;
-            }
-            if (compressedSize === 0xffffffff) {
-              compressedSize = getUint64(cd, fp);
-              fp += 8;
-            }
-            if (localHeaderOffset === 0xffffffff) {
-              localHeaderOffset = getUint64(cd, fp);
-            }
-            break;
-          }
-          exPos += 4 + sz;
-        }
-      }
-
-      const name = cdBuf.subarray(pos + 46, pos + 46 + nameLen).toString('utf-8');
-
-      if (!name.endsWith('/')) {
-        entries.push({
-          name,
-          compressedSize,
-          uncompressedSize,
-          compressionMethod,
-          localHeaderOffset
-        });
-      }
-
-      pos += 46 + nameLen + extraLen + commentLen;
-    }
-
-    return entries;
+    const ab = new Uint8Array(cdBuf).buffer as ArrayBuffer;
+    return parseCentralDirectory(ab);
   } finally {
     await fh.close();
   }

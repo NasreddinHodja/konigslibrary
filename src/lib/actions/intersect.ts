@@ -1,3 +1,5 @@
+import { INTERSECT_THRESHOLD } from '$lib/constants';
+
 export const intersect = (node: HTMLElement, callback: (visible: boolean) => void) => {
   const observer = new IntersectionObserver(
     ([entry]) => {
@@ -5,7 +7,7 @@ export const intersect = (node: HTMLElement, callback: (visible: boolean) => voi
       callback(entry.isIntersecting);
     },
     {
-      threshold: 0.5
+      threshold: INTERSECT_THRESHOLD
     }
   );
   observer.observe(node);

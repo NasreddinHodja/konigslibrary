@@ -2,7 +2,7 @@
   import { slide } from 'svelte/transition';
   import { Menu, X, Minus, Plus, ArrowLeft } from 'lucide-svelte';
   import { manga, setZip, clearManga } from '$lib/state.svelte';
-  import { ANIM_DURATION, ANIM_EASE } from '$lib/constants';
+  import { ANIM_DURATION, ANIM_EASE, LS_RTL, LS_DOUBLE_PAGE, LS_SCROLL_MODE } from '$lib/constants';
   import ChapterList from '$lib/ChapterList.svelte';
   import Toggle from '$lib/ui/Toggle.svelte';
   import Button from '$lib/ui/Button.svelte';
@@ -48,7 +48,6 @@
   <Backdrop onclick={() => (manga.sidebarOpen = false)} />
 {/if}
 
-<!-- svelte-ignore a11y_no_static_element_interactions -->
 <aside
   class="duration-anim fixed top-0 left-0 z-50 flex h-full w-80 flex-col border-r-2 bg-black shadow-xl transition-transform ease-anim"
   style="transform: translateX({manga.sidebarOpen
@@ -57,13 +56,12 @@
       ? '-100%'
       : 'calc(-100% + var(--sidebar-peek))'})"
 >
-  <!-- svelte-ignore a11y_click_events_have_key_events -->
-  <!-- svelte-ignore a11y_no_static_element_interactions -->
   {#if !manga.sidebarOpen && !isMobile}
-    <div
+    <button
       class="absolute inset-0 z-10 cursor-pointer"
+      aria-label="Open sidebar"
       onclick={() => (manga.sidebarOpen = true)}
-    ></div>
+    ></button>
   {/if}
   <div class="absolute top-2 right-2 z-20">
     <Button size="icon" onclick={() => (manga.sidebarOpen = !manga.sidebarOpen)}>
@@ -123,7 +121,7 @@
               active={manga.rtl}
               onclick={() => {
                 manga.rtl = !manga.rtl;
-                localStorage.setItem('kl:rtl', String(manga.rtl));
+                localStorage.setItem(LS_RTL, String(manga.rtl));
               }}
             />
             <Toggle
@@ -132,10 +130,10 @@
               active={manga.doublePage}
               onclick={() => {
                 manga.doublePage = !manga.doublePage;
-                localStorage.setItem('kl:doublePage', String(manga.doublePage));
+                localStorage.setItem(LS_DOUBLE_PAGE, String(manga.doublePage));
                 if (manga.doublePage) {
                   manga.scrollMode = false;
-                  localStorage.setItem('kl:scrollMode', 'false');
+                  localStorage.setItem(LS_SCROLL_MODE, 'false');
                 }
               }}
             />
@@ -148,7 +146,7 @@
           locked={manga.doublePage}
           onclick={() => {
             manga.scrollMode = !manga.scrollMode;
-            localStorage.setItem('kl:scrollMode', String(manga.scrollMode));
+            localStorage.setItem(LS_SCROLL_MODE, String(manga.scrollMode));
           }}
         />
       </div>

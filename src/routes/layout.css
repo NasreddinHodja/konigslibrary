@@ -1,7 +1,7 @@
 @import 'tailwindcss';
 
 @theme {
-  --ease-anim: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-anim: cubic-bezier(0.25, 1, 0.5, 1);
   --duration-anim: 300ms;
 }
 

@@ -1,13 +1,14 @@
 <script lang="ts">
   import { SvelteSet } from 'svelte/reactivity';
   import { manga, getChapterUrls } from '$lib/state.svelte';
+  import { PAGE_TURN_ZOOM } from '$lib/constants';
   import Loader from '$lib/ui/Loader.svelte';
 
   let pageUrls: string[] = $state([]);
   let loading = $state(false);
   // eslint-disable-next-line svelte/no-unnecessary-state-wrap -- reassigned on chapter change
   let widePages: SvelteSet<number> = $state(new SvelteSet());
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- holds refs to prevent GC during preload
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- prevents GC during preload
   let preloaded: HTMLImageElement[] = [];
 
   let spreads: number[][] = $derived.by(() => {
@@ -103,8 +104,6 @@
   let clientX = $state(0);
   let clientY = $state(0);
 
-  const ZOOM_LEVEL = 2;
-
   let originX = $derived.by(() => {
     const r = spreadRect;
     return r ? ((clientX - r.left) / r.width) * 100 : 50;
@@ -115,6 +114,7 @@
   });
 
   const handleKey = (event: KeyboardEvent) => {
+    if (event.altKey || event.ctrlKey || event.metaKey) return;
     if (event.key === 'z') {
       zoomHeld = true;
       return;
@@ -167,12 +167,12 @@
 
 <svelte:window onkeydown={handleKey} onkeyup={handleKeyUp} onblur={handleBlur} />
 
-<!-- svelte-ignore a11y_click_events_have_key_events -->
-<!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
   class="relative flex h-full flex-1 items-center justify-center bg-black select-none"
   class:overflow-hidden={zoomHeld}
   onmousemove={handleMouseMove}
+  role="img"
+  aria-label="Page {manga.currentPage + 1} of {pageUrls.length}"
 >
   {#if loading}
     <Loader />
@@ -182,13 +182,13 @@
         bind:this={spreadEl}
         class="flex h-full items-center justify-center transition-transform duration-150 ease-out"
         style:flex-direction={manga.rtl ? 'row-reverse' : 'row'}
-        style:transform={zoomHeld ? `scale(${ZOOM_LEVEL})` : 'none'}
+        style:transform={zoomHeld ? `scale(${PAGE_TURN_ZOOM})` : 'none'}
         style:transform-origin="{originX}% {originY}%"
       >
         {#each currentSpread as pageIdx (pageIdx)}
           <img
             src={pageUrls[pageIdx]}
-            alt="manga page"
+            alt="Page {pageIdx + 1} of {pageUrls.length}"
             class="max-h-full object-contain"
             class:max-w-[50%]={currentSpread.length === 2}
           />
@@ -196,16 +196,18 @@
       </div>
     {/key}
   {/if}
-  <div
+  <button
     class="absolute inset-y-0 left-0 w-1/2"
     class:cursor-zoom-in={zoomHeld}
     class:cursor-w-resize={!zoomHeld}
+    aria-label="Previous page"
     onclick={handleClickLeft}
-  ></div>
-  <div
+  ></button>
+  <button
     class="absolute inset-y-0 right-0 w-1/2"
     class:cursor-zoom-in={zoomHeld}
     class:cursor-e-resize={!zoomHeld}
+    aria-label="Next page"
     onclick={handleClickRight}
-  ></div>
+  ></button>
 </div>

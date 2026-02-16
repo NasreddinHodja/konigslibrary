@@ -1,5 +1,4 @@
-const MIN_HORIZONTAL = 30; // min horizontal movement to count as swipe
-const MAX_VERTICAL = 50; // max vertical movement (prevents conflict with scroll)
+import { SWIPE_MIN_HORIZONTAL, SWIPE_MAX_VERTICAL } from '$lib/constants';
 
 let startX = 0;
 let startY = 0;
@@ -24,12 +23,12 @@ export const createTouchMoveHandler = (onSwipeRight: () => void, onSwipeLeft: ()
     const dx = touch.clientX - startX;
     const dy = Math.abs(touch.clientY - startY);
 
-    if (dy > MAX_VERTICAL) return;
+    if (dy > SWIPE_MAX_VERTICAL) return;
 
-    if (dx > MIN_HORIZONTAL) {
+    if (dx > SWIPE_MIN_HORIZONTAL) {
       swiping = false;
       onSwipeRight();
-    } else if (dx < -MIN_HORIZONTAL) {
+    } else if (dx < -SWIPE_MIN_HORIZONTAL) {
       swiping = false;
       onSwipeLeft();
     }
