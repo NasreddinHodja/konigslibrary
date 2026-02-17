@@ -3,6 +3,7 @@
   import { intersect } from '$lib/actions/intersect';
   import Loader from '$lib/ui/Loader.svelte';
 
+
   let container: HTMLDivElement;
   let pageRefs: HTMLDivElement[] = $state([]);
 

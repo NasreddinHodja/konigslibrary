@@ -169,6 +169,20 @@ export function clearManga() {
 export const getChapters = () => _chapters;
 export const getSourceMode = () => sourceMode;
 
+export function getNextChapter(): string | null {
+  const idx = _chapters.findIndex((c) => c.name === manga.selectedChapter);
+  if (idx < 0 || idx >= _chapters.length - 1) return null;
+  return _chapters[idx + 1].name;
+}
+
+export function goToNextChapter() {
+  const next = getNextChapter();
+  if (!next) return;
+  manga.selectedChapter = next;
+  manga.currentPage = 0;
+  manga.shouldScroll = false;
+}
+
 export const saveProgress = () => {
   if (!browser || !mangaName || !manga.selectedChapter) return;
   localStorage.setItem(

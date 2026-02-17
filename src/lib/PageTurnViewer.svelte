@@ -3,6 +3,7 @@
   import { manga, getChapterUrls } from '$lib/state.svelte';
   import { PAGE_TURN_ZOOM } from '$lib/constants';
   import Loader from '$lib/ui/Loader.svelte';
+  import EndOfChapter from '$lib/EndOfChapter.svelte';
 
   let pageUrls: string[] = $state([]);
   let loading = $state(false);
@@ -41,6 +42,7 @@
   );
 
   let currentSpread: number[] = $derived(spreads[currentSpreadIdx] ?? []);
+  let showEndScreen = $state(false);
 
   $effect(() => {
     const chapter = manga.selectedChapter;
@@ -52,6 +54,7 @@
     loading = true;
     pageUrls = [];
     widePages = new SvelteSet();
+    showEndScreen = false;
 
     getChapterUrls(chapter).then(async (result) => {
       if (cancelled) return;
@@ -87,14 +90,21 @@
   });
 
   const prev = () => {
+    if (showEndScreen) {
+      showEndScreen = false;
+      return;
+    }
     if (currentSpreadIdx > 0) {
       manga.currentPage = spreads[currentSpreadIdx - 1][0];
     }
   };
 
   const next = () => {
+    if (showEndScreen) return;
     if (currentSpreadIdx < spreads.length - 1) {
       manga.currentPage = spreads[currentSpreadIdx + 1][0];
+    } else if (currentSpreadIdx === spreads.length - 1) {
+      showEndScreen = true;
     }
   };
 
@@ -176,6 +186,8 @@
 >
   {#if loading}
     <Loader />
+  {:else if showEndScreen}
+    <EndOfChapter onback={() => (showEndScreen = false)} />
   {:else}
     {#key currentSpreadIdx}
       <div
@@ -196,18 +208,20 @@
       </div>
     {/key}
   {/if}
-  <button
-    class="absolute inset-y-0 left-0 w-1/2"
-    class:cursor-zoom-in={zoomHeld}
-    class:cursor-w-resize={!zoomHeld}
-    aria-label="Previous page"
-    onclick={handleClickLeft}
-  ></button>
-  <button
-    class="absolute inset-y-0 right-0 w-1/2"
-    class:cursor-zoom-in={zoomHeld}
-    class:cursor-e-resize={!zoomHeld}
-    aria-label="Next page"
-    onclick={handleClickRight}
-  ></button>
+  {#if !showEndScreen}
+    <button
+      class="absolute inset-y-0 left-0 w-1/2"
+      class:cursor-zoom-in={zoomHeld}
+      class:cursor-w-resize={!zoomHeld}
+      aria-label="Previous page"
+      onclick={handleClickLeft}
+    ></button>
+    <button
+      class="absolute inset-y-0 right-0 w-1/2"
+      class:cursor-zoom-in={zoomHeld}
+      class:cursor-e-resize={!zoomHeld}
+      aria-label="Next page"
+      onclick={handleClickRight}
+    ></button>
+  {/if}
 </div>
