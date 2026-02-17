@@ -32,3 +32,12 @@ export function apiUrl(path: string): string {
   const base = getServerUrl().replace(/\/+$/, '');
   return base ? `${base}${path}` : path;
 }
+
+export async function checkLocalServer(): Promise<boolean> {
+  try {
+    const res = await fetch(apiUrl('/api/settings'));
+    return res.ok;
+  } catch {
+    return false;
+  }
+}

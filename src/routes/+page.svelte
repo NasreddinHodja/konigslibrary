@@ -9,11 +9,22 @@
   import NativeLibraryBrowser from '$lib/NativeLibraryBrowser.svelte';
   import SettingsPanel from '$lib/SettingsPanel.svelte';
   import { isNative } from '$lib/platform';
-  import { getServerUrl, setServerUrl } from '$lib/constants';
+  import { getServerUrl, setServerUrl, checkLocalServer } from '$lib/constants';
+  import { CircleHelp } from 'lucide-svelte';
 
   const native = isNative();
   const chapters = $derived(getChapters());
   let serverUrl = $state(getServerUrl());
+  let localServer = $state(false);
+  let probing = $state(!native);
+
+  $effect(() => {
+    if (native) return;
+    checkLocalServer().then((ok) => {
+      localServer = ok;
+      probing = false;
+    });
+  });
 
   let saveTimer: ReturnType<typeof setTimeout> | undefined;
   $effect(() => {
@@ -56,6 +67,15 @@
 />
 
 {#if chapters.length === 0}
+  {#if !native}
+    <a
+      href="/about"
+      class="fixed top-4 right-4 z-10 opacity-40 hover:opacity-80"
+      aria-label="How to use"
+    >
+      <CircleHelp size={24} />
+    </a>
+  {/if}
   <div class="flex min-h-screen flex-col items-center justify-center gap-8 p-8">
     <label class="cursor-pointer">
       <Button size="lg" as="span">Upload manga</Button>
@@ -91,36 +111,19 @@
       </div>
       <LibraryBrowser />
       <NativeLibraryBrowser />
-    {:else}
+    {:else if probing}
+      <!-- waiting for server probe -->
+    {:else if localServer}
       <LibraryBrowser />
 
       <div class="flex flex-col items-center gap-3">
-        <p class="max-w-sm text-center text-sm opacity-60">
-          Run locally to serve manga from your PC to any device on your network
-        </p>
-        <div class="flex flex-wrap justify-center gap-4">
-          <a
-            href="/download/konigslibrary.sh"
-            download
-            class="whitespace-nowrap border-2 border-white/20 px-4 py-2 text-sm hover:border-white/60"
-          >
-            Linux / Mac
-          </a>
-          <a
-            href="/download/konigslibrary.bat"
-            download
-            class="whitespace-nowrap border-2 border-white/20 px-4 py-2 text-sm hover:border-white/60"
-          >
-            Windows
-          </a>
-          <a
-            href="/download/konigslibrary.apk"
-            download
-            class="whitespace-nowrap border-2 border-white/20 px-4 py-2 text-sm hover:border-white/60"
-          >
-            Android
-          </a>
-        </div>
+        <a
+          href="/download/konigslibrary.apk"
+          download
+          class="border-2 border-white/20 px-4 py-2 text-sm whitespace-nowrap hover:border-white/60"
+        >
+          Android APK
+        </a>
       </div>
 
       <button
@@ -133,6 +136,35 @@
       {#if showSettings}
         <SettingsPanel />
       {/if}
+    {:else}
+      <div class="flex flex-col items-center gap-3">
+        <p class="max-w-sm text-center text-sm opacity-60">
+          Run locally to serve manga from your PC to any device on your network
+        </p>
+        <div class="flex flex-wrap justify-center gap-4">
+          <a
+            href="/download/konigslibrary.sh"
+            download
+            class="border-2 border-white/20 px-4 py-2 text-sm whitespace-nowrap hover:border-white/60"
+          >
+            Linux / Mac
+          </a>
+          <a
+            href="/download/konigslibrary.bat"
+            download
+            class="border-2 border-white/20 px-4 py-2 text-sm whitespace-nowrap hover:border-white/60"
+          >
+            Windows
+          </a>
+          <a
+            href="/download/konigslibrary.apk"
+            download
+            class="border-2 border-white/20 px-4 py-2 text-sm whitespace-nowrap hover:border-white/60"
+          >
+            Android
+          </a>
+        </div>
+      </div>
     {/if}
   </div>
 {:else}

@@ -2,46 +2,26 @@
 
 A manga reader that runs in your browser. Upload ZIP/CBZ files and read them with scroll or page-turn mode, chapter navigation, zoom, and automatic progress saving.
 
-## Quick Start (Browser Only)
+## Usage
+
+### Browser only
 
 Go to the hosted version and drop a ZIP/CBZ file in. No install needed, everything runs in your browser.
 
-## Local Server
+### Android app
 
-The local server lets you point Konigslibrary at a manga folder on your computer. It serves your files over your home network so you can read on your phone, tablet, or any device.
+Download the APK from the site, install it, and upload ZIPs directly on your phone.
 
-On mobile, the reader automatically enters fullscreen when you start reading — no browser chrome, just your manga. Swipe down from the top to exit fullscreen.
+### Local server + Android
 
-### One-Click Setup
+Serve your manga library from your computer and browse it from any device on your network.
 
-Download one of these scripts. They handle everything — Node.js, building, and starting the server.
+1. Download the server script for your OS (Linux/Mac `.sh` or Windows `.bat`) from the site
+2. Put it in an empty folder and run it — it handles Node.js, building, and starting the server
+3. Open the local URL in your browser and set your manga directory in Settings
+4. On your phone, install the APK, enter your server's IP address, and browse your library
 
-- **Linux / macOS**: download `konigslibrary.sh`, put it in an empty folder, and run it:
-  ```
-  chmod +x konigslibrary.sh
-  ./konigslibrary.sh
-  ```
-- **Windows**: download `konigslibrary.bat`, put it in an empty folder, and double-click it.
-
-The server prints something like this:
-
-```
-Konigslibrary running on:
-  Local:   http://localhost:3000
-  Network: http://192.168.1.50:3000
-```
-
-Open the Local URL on your computer to use the app. Set your manga folder in the settings.
-
-### Reading on Your Phone
-
-Your phone needs to be on the same WiFi network as your computer.
-
-1. Open the Network URL on your phone (e.g. `http://192.168.1.50:3000`)
-2. Optionally use Chrome menu > **Add to Home Screen** for quick access
-3. Select a manga and chapter — the reader goes fullscreen automatically
-
-### For Developers
+## For Developers
 
 Requires Node.js 22+.
 
@@ -53,10 +33,16 @@ npm run build:local
 npm run serve
 ```
 
-- `npm run build:local` — builds with `adapter-node` (sets `LOCAL_BUILD=1`)
+- `npm run dev` — dev server
+- `npm run build` — production build (adapter-auto, for Vercel)
+- `npm run build:local` — local server build (adapter-node, sets `LOCAL_BUILD=1`)
 - `npm run serve` — starts the server on port 3000, bound to `0.0.0.0`
+- `npm run check` — Svelte type checking
+- `npm run lint` — Prettier + ESLint
+- `npm run format` — auto-format with Prettier
 
 Set your manga directory:
+
 ```bash
 MANGA_DIR=/path/to/manga npm run serve
 ```
@@ -64,6 +50,7 @@ MANGA_DIR=/path/to/manga npm run serve
 Or configure it through the app's settings page (saves to `konigslibrary.json`).
 
 Custom port:
+
 ```bash
 PORT=8080 npm run serve
 ```
