@@ -1,35 +1,113 @@
 #+TITLE: konigslibrary
-#+DESCRIPTION: Client-side manga reader
-
-1. i want it to be easy for the end user to do it themselves without knowing programming
-2. what is changing the adaptor from auto to node doing? what does the adaptor do?
-3.
+#+DESCRIPTION: Browser-based manga reader
 
 * About
 
-konigslibrary is a browser-based manga reader. Upload a ZIP or CBZ file and read entirely client-side.
+konigslibrary is a manga reader that runs in your browser. It works in two modes:
+
+- *Deployed* — visit the hosted site, upload a ZIP/CBZ, and read. Everything is client-side, nothing leaves your browser.
+- *Local server* — run on your own machine to serve manga from a directory. Access from any device on your network, including the Android app.
+
+* Usage
+
+** Online (no install)
+
+Visit the deployed site and upload a ZIP or CBZ file.
+
+** Local Server (one-click)
+
+Download and run the starter script — it handles everything (downloads Node.js if needed, builds the app, starts the server):
+
+*** Linux / macOS
+
+#+begin_src sh
+curl -fSL https://github.com/NasreddinHodja/konigslibrary/raw/main/static/download/konigslibrary.sh -o konigslibrary.sh
+chmod +x konigslibrary.sh
+./konigslibrary.sh
+#+end_src
+
+*** Windows
+
+Download =konigslibrary.bat= from the repo's =static/download/= directory and double-click it.
+
+*** What happens
+
+1. Downloads Node.js 22 (if not already installed)
+2. Downloads the source, installs dependencies, builds with =adapter-node=
+3. Starts the server on =http://localhost:3000=
+4. Auto-opens your browser
+
+The server prints LAN addresses so other devices on your network can connect.
+
+** Local Server (manual)
+
+If you already have Node.js >= 22 and pnpm:
+
+#+begin_src sh
+pnpm install
+pnpm build:local
+pnpm serve
+#+end_src
+
+Set =MANGA_DIR= to point at your manga directory:
+
+#+begin_src sh
+MANGA_DIR=~/Manga pnpm serve
+#+end_src
+
+Or configure it through the Settings panel in the web UI — saved to =konigslibrary.json=.
+
+** Android
+
+The Android app connects to a running local server. Build the APK with:
+
+#+begin_src sh
+pnpm build:android
+#+end_src
+
+Or download the pre-built APK from the deployed site.
+
+** Environment Variables
+
+| Variable      | Default     | Description                      |
+|---------------+-------------+----------------------------------|
+| =MANGA_DIR=  | (from config) | Path to your manga directory   |
+| =PORT=       | =3000=      | Server port                      |
+| =HOST=       | =0.0.0.0=   | Bind address                     |
+| =LOCAL_BUILD= | (unset)    | Set to =1= for local server build |
 
 * Keyboard Shortcuts
 
-| Key        | Scroll Mode | Page-Turn Mode          |
-|------------+-------------+-------------------------|
+| Key         | Scroll Mode | Page-Turn Mode          |
+|-------------+-------------+-------------------------|
 | =←= / =→=  | prev / next | prev / next (RTL-aware) |
 | =↑= / =↓=  | prev / next | prev / next             |
 | =z= (hold) | —           | zoom to cursor          |
 
 Click left/right halves of the page-turn viewer to navigate.
 
-* Getting Started
+* Development
 
 #+begin_src sh
 pnpm install
-pnpm run dev
+pnpm dev
 #+end_src
 
-| Command           | Description               |
-|-------------------+---------------------------|
-| =pnpm run dev=    | Start dev server          |
-| =pnpm run build=  | Production build          |
-| =pnpm run check=  | Svelte type checking      |
-| =pnpm run lint=   | Prettier + ESLint check   |
-| =pnpm run format= | Auto-format with Prettier |
+| Command              | Description                     |
+|----------------------+---------------------------------|
+| =pnpm dev=           | Start dev server                |
+| =pnpm build=         | Production build (adapter-auto) |
+| =pnpm build:local=   | Local server build (adapter-node) |
+| =pnpm serve=         | Start local server              |
+| =pnpm check=         | Svelte type checking            |
+| =pnpm lint=          | Prettier + ESLint check         |
+| =pnpm format=        | Auto-format with Prettier       |
+| =pnpm build:android= | Build Android APK               |
+
+** Tech Stack
+
+- Svelte 5 + SvelteKit 2
+- Tailwind CSS 4
+- TypeScript 5.9
+- Vite 7
+- Capacitor (Android)
