@@ -1,6 +1,7 @@
 <script lang="ts">
   import { SvelteSet } from 'svelte/reactivity';
   import { manga, getChapterUrls } from '$lib/state.svelte';
+  import { resolveKey } from '$lib/keybindings.svelte';
   import { PAGE_TURN_ZOOM } from '$lib/constants';
   import Loader from '$lib/ui/Loader.svelte';
   import EndOfChapter from '$lib/EndOfChapter.svelte';
@@ -125,30 +126,34 @@
 
   const handleKey = (event: KeyboardEvent) => {
     if (event.altKey || event.ctrlKey || event.metaKey) return;
-    if (event.key === 'z') {
+    const tag = (event.target as HTMLElement)?.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+    const action = resolveKey(event.key);
+    if (action === 'holdZoom') {
       zoomHeld = true;
       return;
     }
     if (zoomHeld) return;
-    if (event.key === 'ArrowLeft') {
+    if (action === 'nextPage') {
       event.preventDefault();
-      if (manga.rtl) next();
-      else prev();
-    } else if (event.key === 'ArrowRight') {
+      next();
+    } else if (action === 'prevPage') {
+      event.preventDefault();
+      prev();
+    } else if (action === 'nextPageRTL') {
       event.preventDefault();
       if (manga.rtl) prev();
       else next();
-    } else if (event.key === 'ArrowUp') {
+    } else if (action === 'prevPageRTL') {
       event.preventDefault();
-      prev();
-    } else if (event.key === 'ArrowDown') {
-      event.preventDefault();
-      next();
+      if (manga.rtl) next();
+      else prev();
     }
   };
 
   const handleKeyUp = (event: KeyboardEvent) => {
-    if (event.key === 'z') zoomHeld = false;
+    if (resolveKey(event.key) === 'holdZoom') zoomHeld = false;
   };
 
   const handleBlur = () => {

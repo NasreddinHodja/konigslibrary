@@ -20,7 +20,7 @@
       </button>
     {/if}
     <button
-      class="flex items-center gap-2 border-2 border-white px-6 py-3 text-sm font-bold transition-opacity hover:opacity-80 disabled:opacity-30 disabled:cursor-not-allowed"
+      class="flex items-center gap-2 border-2 border-white px-6 py-3 text-sm font-bold transition-opacity hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-30"
       disabled={!nextChapter}
       onclick={goToNextChapter}
     >

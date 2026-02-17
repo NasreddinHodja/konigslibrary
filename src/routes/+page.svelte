@@ -1,5 +1,19 @@
 <script lang="ts">
-  import { manga, setZip, getChapters, saveProgress } from '$lib/state.svelte';
+  import {
+    manga,
+    setZip,
+    getChapters,
+    saveProgress,
+    clearManga,
+    goToNextChapter,
+    goToPrevChapter,
+    toggleScrollMode,
+    toggleRtl,
+    toggleDoublePage,
+    zoomIn,
+    zoomOut
+  } from '$lib/state.svelte';
+  import { resolveKey } from '$lib/keybindings.svelte';
   import PageScrollViewer from '$lib/PageScrollViewer.svelte';
   import PageTurnViewer from '$lib/PageTurnViewer.svelte';
   import Sidebar from '$lib/Sidebar.svelte';
@@ -8,7 +22,7 @@
   import LibraryBrowser from '$lib/LibraryBrowser.svelte';
   import NativeLibraryBrowser from '$lib/NativeLibraryBrowser.svelte';
   import OfflineBrowser from '$lib/ui/OfflineBrowser.svelte';
-  import SettingsPanel from '$lib/SettingsPanel.svelte';
+  import KeyboardHelp from '$lib/KeyboardHelp.svelte';
   import { isNative } from '$lib/platform';
   import { getServerUrl, setServerUrl, isLocalServer } from '$lib/constants';
   import { CircleHelp } from 'lucide-svelte';
@@ -17,6 +31,7 @@
   const native = isNative();
   const chapters = $derived(getChapters());
   let serverUrl = $state(getServerUrl());
+  let helpOpen = $state(false);
 
   let saveTimer: ReturnType<typeof setTimeout> | undefined;
   $effect(() => {
@@ -30,8 +45,6 @@
     const file = e.dataTransfer?.files[0];
     if (file && /\.(zip|cbz)$/i.test(file.name)) await setZip(file);
   };
-
-  let showSettings = $state(false);
 
   let isMobile = $derived(typeof window !== 'undefined' && 'ontouchstart' in window);
 
@@ -48,7 +61,65 @@
       document.exitFullscreen().catch(() => {});
     }
   });
+
+  const handleGlobalKey = (event: KeyboardEvent) => {
+    if (event.altKey || event.ctrlKey || event.metaKey) return;
+    const tag = (event.target as HTMLElement)?.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+    if (chapters.length === 0) return;
+
+    const action = resolveKey(event.key);
+    if (!action) return;
+
+    if (action === 'showHelp') {
+      event.preventDefault();
+      helpOpen = !helpOpen;
+      return;
+    }
+
+    if (helpOpen) {
+      if (action === 'closeSidebar') {
+        event.preventDefault();
+        helpOpen = false;
+      }
+      return;
+    }
+
+    if (action === 'closeSidebar') {
+      event.preventDefault();
+      manga.sidebarOpen = false;
+    } else if (action === 'toggleSidebar') {
+      event.preventDefault();
+      manga.sidebarOpen = !manga.sidebarOpen;
+    } else if (action === 'back') {
+      event.preventDefault();
+      clearManga();
+    } else if (action === 'nextChapter') {
+      event.preventDefault();
+      goToNextChapter();
+    } else if (action === 'prevChapter') {
+      event.preventDefault();
+      goToPrevChapter();
+    } else if (action === 'toggleMode' && manga.sidebarOpen) {
+      event.preventDefault();
+      toggleScrollMode();
+    } else if (action === 'toggleRtl' && manga.sidebarOpen) {
+      event.preventDefault();
+      toggleRtl();
+    } else if (action === 'toggleDoublePage' && manga.sidebarOpen) {
+      event.preventDefault();
+      toggleDoublePage();
+    } else if (action === 'zoomIn') {
+      event.preventDefault();
+      zoomIn();
+    } else if (action === 'zoomOut') {
+      event.preventDefault();
+      zoomOut();
+    }
+  };
 </script>
+
+<svelte:window onkeydown={handleGlobalKey} />
 
 <svelte:document
   ondragover={(e) => e.preventDefault()}
@@ -60,6 +131,10 @@
 
 <ToastStack />
 
+{#if helpOpen}
+  <KeyboardHelp onclose={() => (helpOpen = false)} />
+{/if}
+
 {#if chapters.length === 0}
   {#if !native}
     <a
@@ -70,7 +145,9 @@
       <CircleHelp size={24} />
     </a>
   {/if}
-  <div class="flex min-h-screen flex-col items-center justify-center gap-8 p-8 pt-[calc(2rem+env(safe-area-inset-top))] pb-[calc(2rem+env(safe-area-inset-bottom))]">
+  <div
+    class="flex min-h-screen flex-col items-center justify-center gap-8 p-8 pt-[calc(2rem+env(safe-area-inset-top))] pb-[calc(2rem+env(safe-area-inset-bottom))]"
+  >
     <label class="cursor-pointer">
       <Button size="lg" as="span">Upload manga</Button>
       <input
@@ -120,16 +197,7 @@
         </a>
       </div>
 
-      <button
-        class="mt-4 text-sm opacity-40 hover:opacity-80"
-        onclick={() => (showSettings = !showSettings)}
-      >
-        {showSettings ? 'Hide settings' : 'Settings'}
-      </button>
-
-      {#if showSettings}
-        <SettingsPanel />
-      {/if}
+      <a href="/settings" class="mt-4 text-sm opacity-40 hover:opacity-80">Settings</a>
     {:else}
       <OfflineBrowser />
       <div class="flex flex-col items-center gap-3">

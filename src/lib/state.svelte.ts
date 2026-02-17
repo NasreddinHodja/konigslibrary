@@ -218,12 +218,53 @@ export function getNextChapter(): string | null {
   return _chapters[idx + 1].name;
 }
 
+export function getPrevChapter(): string | null {
+  const idx = _chapters.findIndex((c) => c.name === manga.selectedChapter);
+  if (idx <= 0) return null;
+  return _chapters[idx - 1].name;
+}
+
 export function goToNextChapter() {
   const next = getNextChapter();
   if (!next) return;
   manga.selectedChapter = next;
   manga.currentPage = 0;
   manga.shouldScroll = false;
+}
+
+export function goToPrevChapter() {
+  const prev = getPrevChapter();
+  if (!prev) return;
+  manga.selectedChapter = prev;
+  manga.currentPage = 0;
+  manga.shouldScroll = false;
+}
+
+export function toggleScrollMode() {
+  manga.scrollMode = !manga.scrollMode;
+  if (browser) localStorage.setItem(LS_SCROLL_MODE, String(manga.scrollMode));
+}
+
+export function toggleRtl() {
+  manga.rtl = !manga.rtl;
+  if (browser) localStorage.setItem(LS_RTL, String(manga.rtl));
+}
+
+export function toggleDoublePage() {
+  manga.doublePage = !manga.doublePage;
+  if (browser) localStorage.setItem(LS_DOUBLE_PAGE, String(manga.doublePage));
+  if (manga.doublePage) {
+    manga.scrollMode = false;
+    if (browser) localStorage.setItem(LS_SCROLL_MODE, 'false');
+  }
+}
+
+export function zoomIn() {
+  manga.zoom = Math.min(1, +(manga.zoom + 0.1).toFixed(2));
+}
+
+export function zoomOut() {
+  manga.zoom = Math.max(0.5, +(manga.zoom - 0.1).toFixed(2));
 }
 
 export const saveProgress = () => {

@@ -21,7 +21,17 @@
 </script>
 
 {#if as === 'span'}
-  <span class={classes[size]}>
+  <span
+    class={classes[size]}
+    tabindex="0"
+    role="button"
+    onkeydown={(e: KeyboardEvent) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        (e.currentTarget as HTMLElement).closest('label')?.click();
+      }
+    }}
+  >
     {@render children()}
   </span>
 {:else}

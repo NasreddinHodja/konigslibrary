@@ -1,8 +1,8 @@
 <script lang="ts">
   import { manga, getChapterUrls } from '$lib/state.svelte';
+  import { resolveKey } from '$lib/keybindings.svelte';
   import { intersect } from '$lib/actions/intersect';
   import Loader from '$lib/ui/Loader.svelte';
-
 
   let container: HTMLDivElement;
   let pageRefs: HTMLDivElement[] = $state([]);
@@ -81,17 +81,21 @@
 
   const handleKey = (event: KeyboardEvent) => {
     if (event.altKey || event.ctrlKey || event.metaKey) return;
-    if (event.key === 'ArrowDown') {
+    const tag = (event.target as HTMLElement)?.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+    const action = resolveKey(event.key);
+    if (action === 'nextPage') {
       event.preventDefault();
       scrollNext();
-    } else if (event.key === 'ArrowUp') {
+    } else if (action === 'prevPage') {
       event.preventDefault();
       scrollPrev();
-    } else if (event.key === 'ArrowRight') {
+    } else if (action === 'nextPageRTL') {
       event.preventDefault();
       if (manga.rtl) scrollPrev();
       else scrollNext();
-    } else if (event.key === 'ArrowLeft') {
+    } else if (action === 'prevPageRTL') {
       event.preventDefault();
       if (manga.rtl) scrollNext();
       else scrollPrev();

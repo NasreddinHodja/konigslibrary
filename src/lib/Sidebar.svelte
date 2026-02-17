@@ -1,6 +1,6 @@
 <script lang="ts">
   import { slide } from 'svelte/transition';
-  import { Menu, X, Minus, Plus, ArrowLeft, Download } from 'lucide-svelte';
+  import { Menu, X, Minus, Plus, ArrowLeft, Download, Settings } from 'lucide-svelte';
   import {
     manga,
     setZip,
@@ -8,10 +8,15 @@
     getSourceMode,
     getLibraryManga,
     getLibraryChapters,
-    getMangaName
+    getMangaName,
+    toggleScrollMode,
+    toggleRtl,
+    toggleDoublePage,
+    zoomIn,
+    zoomOut
   } from '$lib/state.svelte';
   import { saveChapter } from '$lib/download';
-  import { ANIM_DURATION, ANIM_EASE, LS_RTL, LS_DOUBLE_PAGE, LS_SCROLL_MODE } from '$lib/constants';
+  import { ANIM_DURATION, ANIM_EASE } from '$lib/constants';
   import ChapterList from '$lib/ChapterList.svelte';
   import Toggle from '$lib/ui/Toggle.svelte';
   import Button from '$lib/ui/Button.svelte';
@@ -122,13 +127,13 @@
           class="flex items-center justify-center gap-2"
           transition:slide={{ duration: ANIM_DURATION, easing: ANIM_EASE }}
         >
-          <Button size="icon" onclick={() => (manga.zoom = Math.max(0.5, manga.zoom - 0.1))}>
+          <Button size="icon" onclick={zoomOut}>
             <Minus size={16} />
           </Button>
           <span class="w-16 text-center text-sm opacity-80">
             {manga.zoom.toFixed(2)}x
           </span>
-          <Button size="icon" onclick={() => (manga.zoom = Math.min(1, manga.zoom + 0.1))}>
+          <Button size="icon" onclick={zoomIn}>
             <Plus size={16} />
           </Button>
         </div>
@@ -139,27 +144,12 @@
             class="flex flex-col gap-3"
             transition:slide={{ duration: ANIM_DURATION, easing: ANIM_EASE }}
           >
-            <Toggle
-              labelA="LTR"
-              labelB="RTL"
-              active={manga.rtl}
-              onclick={() => {
-                manga.rtl = !manga.rtl;
-                localStorage.setItem(LS_RTL, String(manga.rtl));
-              }}
-            />
+            <Toggle labelA="LTR" labelB="RTL" active={manga.rtl} onclick={toggleRtl} />
             <Toggle
               labelA="Single"
               labelB="Double"
               active={manga.doublePage}
-              onclick={() => {
-                manga.doublePage = !manga.doublePage;
-                localStorage.setItem(LS_DOUBLE_PAGE, String(manga.doublePage));
-                if (manga.doublePage) {
-                  manga.scrollMode = false;
-                  localStorage.setItem(LS_SCROLL_MODE, 'false');
-                }
-              }}
+              onclick={toggleDoublePage}
             />
           </div>
         {/if}
@@ -168,12 +158,16 @@
           labelB="Scroll"
           active={manga.scrollMode}
           locked={manga.doublePage}
-          onclick={() => {
-            manga.scrollMode = !manga.scrollMode;
-            localStorage.setItem(LS_SCROLL_MODE, String(manga.scrollMode));
-          }}
+          onclick={toggleScrollMode}
         />
       </div>
+      <a
+        href="/settings"
+        class="flex items-center justify-center gap-2 py-1 text-sm opacity-40 hover:opacity-80"
+      >
+        <Settings size={14} />
+        Settings
+      </a>
     </div>
   </div>
 </aside>
