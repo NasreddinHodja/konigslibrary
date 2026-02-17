@@ -29,12 +29,14 @@ for (const addr of addresses) {
 console.log();
 
 // Auto-open browser (best-effort, ignore errors)
-const url = `http://localhost:${port}`;
-try {
-  const platform = process.platform;
-  if (platform === 'win32') execSync(`start "" "${url}"`);
-  else if (platform === 'darwin') execSync(`open "${url}"`);
-  else execSync(`xdg-open "${url}"`);
-} catch {
-  // browser auto-open is optional
+if (!process.env.NO_BROWSER) {
+  const url = `http://localhost:${port}`;
+  try {
+    const platform = process.platform;
+    if (platform === 'win32') execSync(`start "" "${url}"`);
+    else if (platform === 'darwin') execSync(`open "${url}"`);
+    else execSync(`xdg-open "${url}"`);
+  } catch {
+    // browser auto-open is optional
+  }
 }
