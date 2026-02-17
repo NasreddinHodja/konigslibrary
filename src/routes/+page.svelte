@@ -113,6 +113,13 @@
           >
             Windows
           </a>
+          <a
+            href="/download/konigslibrary.apk"
+            download
+            class="border-2 border-white/20 px-4 py-2 text-sm hover:border-white/60"
+          >
+            Android
+          </a>
         </div>
       </div>
 

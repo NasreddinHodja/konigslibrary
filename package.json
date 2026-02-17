@@ -14,7 +14,7 @@
     "format": "prettier --write .",
     "serve": "node server.js",
     "build:local": "LOCAL_BUILD=1 vite build",
-    "build:android": "CAPACITOR_BUILD=1 vite build && npx cap sync android && cd android && ./gradlew assembleRelease",
+    "build:android": "CAPACITOR_BUILD=1 vite build && npx cap sync android && cd android && ./gradlew assembleRelease && cp app/build/outputs/apk/release/app-release.apk ../static/download/konigslibrary.apk",
     "dev:android": "CAP_DEV=1 npx cap sync android && npx cap run android",
     "open:android": "npx cap open android"
   },
