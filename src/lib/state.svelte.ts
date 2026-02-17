@@ -123,11 +123,16 @@ export async function getChapterUrls(name: string): Promise<ChapterUrls> {
     const chapter = libraryChapters.find((c) => c.name === name);
     if (!chapter) return { urls: [], revoke: false };
 
+    const isZipManga = /\.(zip|cbz)$/i.test(decodeURIComponent(libraryManga));
     const urls = chapter.pages.map((page) => {
-      if (chapter.slug) {
-        return apiUrl(`/api/library/${libraryManga}/${chapter.slug}/${encodeURIComponent(page)}`);
+      const encodedPage = page
+        .split('/')
+        .map((s) => encodeURIComponent(s))
+        .join('/');
+      if (chapter.slug && !isZipManga) {
+        return apiUrl(`/api/library/${libraryManga}/${chapter.slug}/${encodedPage}`);
       }
-      return apiUrl(`/api/library/${libraryManga}/${encodeURIComponent(page)}`);
+      return apiUrl(`/api/library/${libraryManga}/${encodedPage}`);
     });
     return { urls, revoke: false };
   }

@@ -63,7 +63,7 @@
       onclick={() => (manga.sidebarOpen = true)}
     ></button>
   {/if}
-  <div class="absolute top-2 right-2 z-20">
+  <div class="absolute right-2 z-20" style="top: calc(0.5rem + env(safe-area-inset-top))">
     <Button size="icon" onclick={() => (manga.sidebarOpen = !manga.sidebarOpen)}>
       {#if manga.sidebarOpen}<X size={20} />{:else}<Menu size={20} />{/if}
     </Button>
@@ -75,7 +75,7 @@
       ? 'auto'
       : 'none'}"
   >
-    <div class="space-y-4 p-6 pt-14">
+    <div class="space-y-4 p-6" style="padding-top: calc(3.5rem + env(safe-area-inset-top))">
       <h2 class="pb-3 text-xl font-bold">KONIGSLIBRARY</h2>
       <div class="flex items-stretch justify-between">
         <Button size="md" onclick={clearManga}>

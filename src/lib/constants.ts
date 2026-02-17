@@ -29,6 +29,6 @@ export function setServerUrl(url: string) {
 }
 
 export function apiUrl(path: string): string {
-  const base = getServerUrl();
+  const base = getServerUrl().replace(/\/+$/, '');
   return base ? `${base}${path}` : path;
 }
