@@ -26,8 +26,7 @@
         href="/download/konigslibrary.apk"
         download
         class="border-b border-white/40 hover:border-white/80">APK</a
-      >, install it, and upload ZIPs directly on your phone. The reader goes fullscreen
-      automatically.
+      >, install it, and upload ZIPs directly on your phone.
     </p>
   </section>
 
