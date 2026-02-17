@@ -1,7 +1,8 @@
 import type { Chapter, ServerChapter } from '$lib/types';
 import { indexZip, extractEntry, type ZipEntry } from '$lib/zip';
 import { detectDepth, groupByChapter } from '$lib/chapters';
-import { LS_SCROLL_MODE, LS_RTL, LS_DOUBLE_PAGE, LS_PROGRESS_PREFIX } from '$lib/constants';
+import { LS_SCROLL_MODE, LS_RTL, LS_DOUBLE_PAGE, LS_PROGRESS_PREFIX, apiUrl } from '$lib/constants';
+import type { NativeChapter } from '$lib/native-library';
 
 const browser = typeof localStorage !== 'undefined';
 
@@ -9,9 +10,10 @@ let _chapters: Chapter[] = $state.raw([]);
 let mangaName: string | null = $state(null);
 let zipFile: File | null = $state(null);
 let zipEntries = $state.raw(new Map<string, ZipEntry[]>());
-let sourceMode: 'upload' | 'library' = $state('upload');
+let sourceMode: 'upload' | 'library' | 'native' = $state('upload');
 let libraryManga: string = $state('');
 let libraryChapters: ServerChapter[] = $state.raw([]);
+let nativeChapters: NativeChapter[] = $state.raw([]);
 
 export const manga = $state({
   selectedChapter: null as string | null,
@@ -68,7 +70,7 @@ export async function setLibraryManga(slug: string, name: string) {
   zipEntries = new Map(); // eslint-disable-line svelte/prefer-svelte-reactivity
   mangaName = name;
 
-  const res = await fetch(`/api/library/${slug}/chapters`);
+  const res = await fetch(apiUrl(`/api/library/${slug}/chapters`));
   const chapters: ServerChapter[] = await res.json();
   libraryChapters = chapters;
 
@@ -84,18 +86,48 @@ export async function setLibraryManga(slug: string, name: string) {
   }
 }
 
+export async function setNativeLibraryManga(chapters: NativeChapter[], name: string) {
+  manga.selectedChapter = null;
+  manga.currentPage = 0;
+  manga.shouldScroll = false;
+  sourceMode = 'native';
+  libraryManga = '';
+  libraryChapters = [];
+  zipFile = null;
+  zipEntries = new Map(); // eslint-disable-line svelte/prefer-svelte-reactivity
+  mangaName = name;
+  nativeChapters = chapters;
+
+  _chapters = chapters.map((c) => ({ name: c.name, pageCount: c.pages.length }));
+
+  const saved = getProgress();
+  if (saved && _chapters.find((c) => c.name === saved.chapter)) {
+    manga.selectedChapter = saved.chapter;
+    manga.currentPage = saved.page;
+    manga.shouldScroll = true;
+  } else if (_chapters.length > 0) {
+    manga.selectedChapter = _chapters[0].name;
+  }
+}
+
 export type ChapterUrls = { urls: string[]; revoke: boolean };
 
 export async function getChapterUrls(name: string): Promise<ChapterUrls> {
+  if (sourceMode === 'native') {
+    const chapter = nativeChapters.find((c) => c.name === name);
+    if (!chapter) return { urls: [], revoke: false };
+    return { urls: chapter.pages, revoke: false };
+  }
+
   if (sourceMode === 'library') {
     const chapter = libraryChapters.find((c) => c.name === name);
     if (!chapter) return { urls: [], revoke: false };
 
     const urls = chapter.pages.map((page) => {
       if (chapter.slug) {
-        return `/api/library/${libraryManga}/${chapter.slug}/${encodeURIComponent(page)}`;
+        return apiUrl(`/api/library/${libraryManga}/${chapter.slug}/${encodeURIComponent(page)}`);
       }
-      return `/api/library/${libraryManga}/${encodeURIComponent(page)}`;
+      return apiUrl(`/api/library/${libraryManga}/${encodeURIComponent(page)}`);
     });
     return { urls, revoke: false };
   }
@@ -126,6 +158,7 @@ export function clearManga() {
   sourceMode = 'upload';
   libraryManga = '';
   libraryChapters = [];
+  nativeChapters = [];
 }
 
 export const getChapters = () => _chapters;

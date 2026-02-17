@@ -6,9 +6,14 @@
   import Button from '$lib/ui/Button.svelte';
   import EmptyState from '$lib/ui/EmptyState.svelte';
   import LibraryBrowser from '$lib/LibraryBrowser.svelte';
+  import NativeLibraryBrowser from '$lib/NativeLibraryBrowser.svelte';
   import SettingsPanel from '$lib/SettingsPanel.svelte';
+  import { isNative } from '$lib/platform';
+  import { getServerUrl, setServerUrl } from '$lib/constants';
 
+  const native = isNative();
   const chapters = $derived(getChapters());
+  let serverUrl = $state(getServerUrl());
 
   let saveTimer: ReturnType<typeof setTimeout> | undefined;
   $effect(() => {
@@ -28,12 +33,14 @@
   let isMobile = $derived(typeof window !== 'undefined' && 'ontouchstart' in window);
 
   function enterFullscreen() {
+    if (native) return;
     if (isMobile && !document.fullscreenElement) {
       document.documentElement.requestFullscreen().catch(() => {});
     }
   }
 
   $effect(() => {
+    if (native) return;
     if (!manga.selectedChapter && document.fullscreenElement) {
       document.exitFullscreen().catch(() => {});
     }
@@ -63,39 +70,62 @@
       />
     </label>
 
-    <LibraryBrowser />
-
-    <div class="flex flex-col items-center gap-3">
-      <p class="max-w-sm text-center text-sm opacity-60">
-        Run locally to serve manga from your PC to any device on your network
-      </p>
-      <div class="flex gap-4">
-        <a
-          href="/download/konigslibrary.sh"
-          download
-          class="border-2 border-white/20 px-4 py-2 text-sm hover:border-white/60"
-        >
-          Linux / Mac
-        </a>
-        <a
-          href="/download/konigslibrary.bat"
-          download
-          class="border-2 border-white/20 px-4 py-2 text-sm hover:border-white/60"
-        >
-          Windows
-        </a>
+    {#if native}
+      <div class="w-full max-w-2xl space-y-2">
+        <h2 class="mb-2 text-lg font-bold opacity-80">Server</h2>
+        <div class="flex gap-2">
+          <input
+            type="text"
+            bind:value={serverUrl}
+            placeholder="http://192.168.0.100:3000"
+            class="flex-1 border-2 bg-black px-3 py-2 text-sm text-white placeholder:opacity-40"
+          />
+          <Button
+            size="md"
+            onclick={() => {
+              setServerUrl(serverUrl);
+              location.reload();
+            }}>Connect</Button
+          >
+        </div>
       </div>
-    </div>
+      <LibraryBrowser />
+      <NativeLibraryBrowser />
+    {:else}
+      <LibraryBrowser />
 
-    <button
-      class="mt-4 text-sm opacity-40 hover:opacity-80"
-      onclick={() => (showSettings = !showSettings)}
-    >
-      {showSettings ? 'Hide settings' : 'Settings'}
-    </button>
+      <div class="flex flex-col items-center gap-3">
+        <p class="max-w-sm text-center text-sm opacity-60">
+          Run locally to serve manga from your PC to any device on your network
+        </p>
+        <div class="flex gap-4">
+          <a
+            href="/download/konigslibrary.sh"
+            download
+            class="border-2 border-white/20 px-4 py-2 text-sm hover:border-white/60"
+          >
+            Linux / Mac
+          </a>
+          <a
+            href="/download/konigslibrary.bat"
+            download
+            class="border-2 border-white/20 px-4 py-2 text-sm hover:border-white/60"
+          >
+            Windows
+          </a>
+        </div>
+      </div>
 
-    {#if showSettings}
-      <SettingsPanel />
+      <button
+        class="mt-4 text-sm opacity-40 hover:opacity-80"
+        onclick={() => (showSettings = !showSettings)}
+      >
+        {showSettings ? 'Hide settings' : 'Settings'}
+      </button>
+
+      {#if showSettings}
+        <SettingsPanel />
+      {/if}
     {/if}
   </div>
 {:else}

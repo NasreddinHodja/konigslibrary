@@ -14,3 +14,21 @@ export const SWIPE_MIN_HORIZONTAL = 30;
 export const SWIPE_MAX_VERTICAL = 50;
 
 export const PAGE_TURN_ZOOM = 2;
+
+export const LS_SERVER_URL = 'kl:serverUrl';
+
+const browser = typeof localStorage !== 'undefined';
+
+export function getServerUrl(): string {
+  if (!browser) return '';
+  return localStorage.getItem(LS_SERVER_URL) || '';
+}
+
+export function setServerUrl(url: string) {
+  if (browser) localStorage.setItem(LS_SERVER_URL, url);
+}
+
+export function apiUrl(path: string): string {
+  const base = getServerUrl();
+  return base ? `${base}${path}` : path;
+}

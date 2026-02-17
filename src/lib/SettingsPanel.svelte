@@ -1,5 +1,6 @@
 <script lang="ts">
   import Button from '$lib/ui/Button.svelte';
+  import { apiUrl } from '$lib/constants';
 
   let mangaDir = $state('');
   let saved = $state(false);
@@ -7,7 +8,7 @@
   let loading = $state(true);
 
   $effect(() => {
-    fetch('/api/settings')
+    fetch(apiUrl('/api/settings'))
       .then((r) => r.json())
       .then((data: { mangaDir?: string }) => {
         mangaDir = data.mangaDir || '';
@@ -23,7 +24,7 @@
     saved = false;
     error = null;
     try {
-      const res = await fetch('/api/settings', {
+      const res = await fetch(apiUrl('/api/settings'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ mangaDir })

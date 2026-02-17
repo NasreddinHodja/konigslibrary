@@ -1,6 +1,8 @@
 <script lang="ts">
   import type { LibraryEntry } from '$lib/types';
   import { setLibraryManga } from '$lib/state.svelte';
+  import { apiUrl, getServerUrl } from '$lib/constants';
+  import { isNative } from '$lib/platform';
   import { BookOpen, FileArchive } from 'lucide-svelte';
   import Loader from '$lib/ui/Loader.svelte';
 
@@ -9,14 +11,22 @@
   let error: string | null = $state(null);
 
   $effect(() => {
-    fetch('/api/library')
-      .then((r) => r.json())
+    if (isNative() && !getServerUrl()) {
+      loading = false;
+      return;
+    }
+    const url = apiUrl('/api/library');
+    fetch(url)
+      .then((r) => {
+        if (!r.ok) throw new Error(`${r.status}`);
+        return r.json();
+      })
       .then((data: LibraryEntry[]) => {
         entries = data;
         loading = false;
       })
-      .catch(() => {
-        error = 'Could not connect to library';
+      .catch((e) => {
+        error = `Could not connect to library (${url}: ${e.message})`;
         loading = false;
       });
   });

@@ -13,13 +13,19 @@
     "lint": "prettier --check . && eslint .",
     "format": "prettier --write .",
     "serve": "node server.js",
-    "build:local": "LOCAL_BUILD=1 vite build"
+    "build:local": "LOCAL_BUILD=1 vite build",
+    "build:android": "CAPACITOR_BUILD=1 vite build && npx cap sync android && cd android && ./gradlew assembleRelease",
+    "dev:android": "CAP_DEV=1 npx cap sync android && npx cap run android",
+    "open:android": "npx cap open android"
   },
   "devDependencies": {
+    "@capacitor/android": "^8.1.0",
+    "@capacitor/cli": "^8.1.0",
     "@eslint/compat": "^2.0.2",
     "@eslint/js": "^9.39.2",
     "@sveltejs/adapter-auto": "^7.0.1",
     "@sveltejs/adapter-node": "^5.0.0",
+    "@sveltejs/adapter-static": "^3.0.10",
     "@sveltejs/kit": "^2.50.2",
     "@sveltejs/vite-plugin-svelte": "^6.2.4",
     "@tailwindcss/vite": "^4.1.18",
@@ -39,6 +45,8 @@
     "vite": "^7.3.1"
   },
   "dependencies": {
+    "@capacitor/core": "^8.1.0",
+    "@capacitor/filesystem": "^8.1.2",
     "lucide-svelte": "^0.563.0"
   },
   "pkg": {

@@ -25,6 +25,10 @@ certs/
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 
+# Capacitor
+android/app/src/main/assets/public/
+android/*.jks
+
 # claude
 .claude/
 CLAUDE.md
