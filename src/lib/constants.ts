@@ -33,11 +33,5 @@ export function apiUrl(path: string): string {
   return base ? `${base}${path}` : path;
 }
 
-export async function checkLocalServer(): Promise<boolean> {
-  try {
-    const res = await fetch(apiUrl('/api/settings'));
-    return res.ok;
-  } catch {
-    return false;
-  }
-}
+declare const __LOCAL_BUILD__: boolean;
+export const isLocalServer = typeof __LOCAL_BUILD__ !== 'undefined' && __LOCAL_BUILD__;

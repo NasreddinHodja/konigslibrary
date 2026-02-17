@@ -9,22 +9,12 @@
   import NativeLibraryBrowser from '$lib/NativeLibraryBrowser.svelte';
   import SettingsPanel from '$lib/SettingsPanel.svelte';
   import { isNative } from '$lib/platform';
-  import { getServerUrl, setServerUrl, checkLocalServer } from '$lib/constants';
+  import { getServerUrl, setServerUrl, isLocalServer } from '$lib/constants';
   import { CircleHelp } from 'lucide-svelte';
 
   const native = isNative();
   const chapters = $derived(getChapters());
   let serverUrl = $state(getServerUrl());
-  let localServer = $state(false);
-  let probing = $state(!native);
-
-  $effect(() => {
-    if (native) return;
-    checkLocalServer().then((ok) => {
-      localServer = ok;
-      probing = false;
-    });
-  });
 
   let saveTimer: ReturnType<typeof setTimeout> | undefined;
   $effect(() => {
@@ -111,9 +101,7 @@
       </div>
       <LibraryBrowser />
       <NativeLibraryBrowser />
-    {:else if probing}
-      <!-- waiting for server probe -->
-    {:else if localServer}
+    {:else if isLocalServer}
       <LibraryBrowser />
 
       <div class="flex flex-col items-center gap-3">
