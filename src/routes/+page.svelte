@@ -98,25 +98,25 @@
         <p class="max-w-sm text-center text-sm opacity-60">
           Run locally to serve manga from your PC to any device on your network
         </p>
-        <div class="flex gap-4">
+        <div class="flex flex-wrap justify-center gap-4">
           <a
             href="/download/konigslibrary.sh"
             download
-            class="border-2 border-white/20 px-4 py-2 text-sm hover:border-white/60"
+            class="whitespace-nowrap border-2 border-white/20 px-4 py-2 text-sm hover:border-white/60"
           >
             Linux / Mac
           </a>
           <a
             href="/download/konigslibrary.bat"
             download
-            class="border-2 border-white/20 px-4 py-2 text-sm hover:border-white/60"
+            class="whitespace-nowrap border-2 border-white/20 px-4 py-2 text-sm hover:border-white/60"
           >
             Windows
           </a>
           <a
             href="/download/konigslibrary.apk"
             download
-            class="border-2 border-white/20 px-4 py-2 text-sm hover:border-white/60"
+            class="whitespace-nowrap border-2 border-white/20 px-4 py-2 text-sm hover:border-white/60"
           >
             Android
           </a>
