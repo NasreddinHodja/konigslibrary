@@ -63,6 +63,31 @@
     }
   });
 
+  $effect(() => {
+    if (!manga.selectedChapter) return;
+    if (!('wakeLock' in navigator)) return;
+
+    let sentinel: WakeLockSentinel | null = null;
+
+    const acquire = async () => {
+      try {
+        sentinel = await navigator.wakeLock.request('screen');
+      } catch {}
+    };
+
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') acquire();
+    };
+
+    acquire();
+    document.addEventListener('visibilitychange', onVisibility);
+
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibility);
+      sentinel?.release();
+    };
+  });
+
   const handleGlobalKey = (event: KeyboardEvent) => {
     if (event.altKey || event.ctrlKey || event.metaKey) return;
     const tag = (event.target as HTMLElement)?.tagName;
