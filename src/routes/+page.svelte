@@ -36,6 +36,7 @@
   let saveTimer: ReturnType<typeof setTimeout> | undefined;
   $effect(() => {
     if (!manga.selectedChapter) return;
+    manga.currentPage;
     clearTimeout(saveTimer);
     saveTimer = setTimeout(saveProgress, 300);
     return () => clearTimeout(saveTimer);
