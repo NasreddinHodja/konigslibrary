@@ -30,7 +30,11 @@ export async function listOfflineManga(): Promise<{ slug: string; name: string }
     const store = tx.objectStore('manga');
     const req = store.getAll();
     req.onsuccess = () =>
-      resolve((req.result as MangaEntry[]).map((e) => ({ slug: e.slug, name: e.name })));
+      resolve(
+        (req.result as MangaEntry[])
+          .filter((e) => e.chapters.length > 0)
+          .map((e) => ({ slug: e.slug, name: e.name }))
+      );
     req.onerror = () => reject(req.error);
   });
 }

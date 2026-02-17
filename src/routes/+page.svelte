@@ -70,7 +70,7 @@
       <CircleHelp size={24} />
     </a>
   {/if}
-  <div class="flex min-h-screen flex-col items-center justify-center gap-8 p-8">
+  <div class="flex min-h-screen flex-col items-center justify-center gap-8 p-8 pt-[calc(2rem+env(safe-area-inset-top))] pb-[calc(2rem+env(safe-area-inset-bottom))]">
     <label class="cursor-pointer">
       <Button size="lg" as="span">Upload manga</Button>
       <input
@@ -165,7 +165,7 @@
 {:else}
   <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions a11y_no_noninteractive_element_interactions -->
   <div
-    class="flex h-screen select-none md:pl-(--sidebar-peek)"
+    class="flex h-dvh select-none md:pl-(--sidebar-peek)"
     onclick={enterFullscreen}
     role="presentation"
   >

@@ -12,6 +12,4 @@
 body {
   @apply bg-black text-white antialiased;
   font-family: 'Source Code Pro', monospace;
-  padding-top: env(safe-area-inset-top);
-  padding-bottom: env(safe-area-inset-bottom);
 }

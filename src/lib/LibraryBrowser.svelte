@@ -55,7 +55,7 @@
     {#each entries as entry (entry.slug)}
       <div class="flex w-full items-center gap-3 border-2 px-4 py-3">
         <button
-          class="flex flex-1 cursor-pointer items-center gap-3 text-left hover:opacity-80"
+          class="flex min-w-0 flex-1 cursor-pointer items-center gap-3 text-left hover:opacity-80"
           onclick={() => open(entry)}
         >
           {#if entry.type === 'zip'}

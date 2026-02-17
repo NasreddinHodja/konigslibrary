@@ -28,6 +28,11 @@ vite.config.ts.timestamp-*
 # Capacitor
 android/app/src/main/assets/public/
 android/*.jks
+static/download/konigslibrary.apk
+
+# Test files
+static/*.zip
+static/*.cbz
 
 # claude
 .claude/
