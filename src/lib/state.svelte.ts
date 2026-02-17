@@ -3,6 +3,7 @@ import { indexZip, extractEntry, type ZipEntry } from '$lib/zip';
 import { detectDepth, groupByChapter } from '$lib/chapters';
 import { LS_SCROLL_MODE, LS_RTL, LS_DOUBLE_PAGE, LS_PROGRESS_PREFIX, apiUrl } from '$lib/constants';
 import type { NativeChapter } from '$lib/native-library';
+import { getOfflineManga, getOfflinePageBlob } from '$lib/offline-db';
 
 const browser = typeof localStorage !== 'undefined';
 
@@ -10,7 +11,7 @@ let _chapters: Chapter[] = $state.raw([]);
 let mangaName: string | null = $state(null);
 let zipFile: File | null = $state(null);
 let zipEntries = $state.raw(new Map<string, ZipEntry[]>());
-let sourceMode: 'upload' | 'library' | 'native' = $state('upload');
+let sourceMode: 'upload' | 'library' | 'native' | 'offline' = $state('upload');
 let libraryManga: string = $state('');
 let libraryChapters: ServerChapter[] = $state.raw([]);
 let nativeChapters: NativeChapter[] = $state.raw([]);
@@ -110,6 +111,33 @@ export async function setNativeLibraryManga(chapters: NativeChapter[], name: str
   }
 }
 
+export async function setOfflineManga(slug: string, name: string) {
+  manga.selectedChapter = null;
+  manga.currentPage = 0;
+  manga.shouldScroll = false;
+  sourceMode = 'offline';
+  libraryManga = slug;
+  libraryChapters = [];
+  zipFile = null;
+  zipEntries = new Map(); // eslint-disable-line svelte/prefer-svelte-reactivity
+  mangaName = name;
+  nativeChapters = [];
+
+  const entry = await getOfflineManga(slug);
+  libraryChapters = entry?.chapters ?? [];
+
+  _chapters = libraryChapters.map((c) => ({ name: c.name, pageCount: c.pageCount }));
+
+  const saved = getProgress();
+  if (saved && _chapters.find((c) => c.name === saved.chapter)) {
+    manga.selectedChapter = saved.chapter;
+    manga.currentPage = saved.page;
+    manga.shouldScroll = true;
+  } else if (_chapters.length > 0) {
+    manga.selectedChapter = _chapters[0].name;
+  }
+}
+
 export type ChapterUrls = { urls: string[]; revoke: boolean };
 
 export async function getChapterUrls(name: string): Promise<ChapterUrls> {
@@ -117,6 +145,18 @@ export async function getChapterUrls(name: string): Promise<ChapterUrls> {
     const chapter = nativeChapters.find((c) => c.name === name);
     if (!chapter) return { urls: [], revoke: false };
     return { urls: chapter.pages, revoke: false };
+  }
+
+  if (sourceMode === 'offline') {
+    const chapter = libraryChapters.find((c) => c.name === name);
+    if (!chapter) return { urls: [], revoke: true };
+    const urls: string[] = [];
+    for (const page of chapter.pages) {
+      const filename = page.split('/').pop() || page;
+      const blob = await getOfflinePageBlob(libraryManga, chapter.name, filename);
+      if (blob) urls.push(URL.createObjectURL(blob));
+    }
+    return { urls, revoke: true };
   }
 
   if (sourceMode === 'library') {
@@ -168,6 +208,9 @@ export function clearManga() {
 
 export const getChapters = () => _chapters;
 export const getSourceMode = () => sourceMode;
+export const getLibraryManga = () => libraryManga;
+export const getLibraryChapters = () => libraryChapters;
+export const getMangaName = () => mangaName;
 
 export function getNextChapter(): string | null {
   const idx = _chapters.findIndex((c) => c.name === manga.selectedChapter);

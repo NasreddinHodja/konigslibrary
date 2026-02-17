@@ -7,10 +7,12 @@
   import EmptyState from '$lib/ui/EmptyState.svelte';
   import LibraryBrowser from '$lib/LibraryBrowser.svelte';
   import NativeLibraryBrowser from '$lib/NativeLibraryBrowser.svelte';
+  import OfflineBrowser from '$lib/ui/OfflineBrowser.svelte';
   import SettingsPanel from '$lib/SettingsPanel.svelte';
   import { isNative } from '$lib/platform';
   import { getServerUrl, setServerUrl, isLocalServer } from '$lib/constants';
   import { CircleHelp } from 'lucide-svelte';
+  import ToastStack from '$lib/ui/ToastStack.svelte';
 
   const native = isNative();
   const chapters = $derived(getChapters());
@@ -56,6 +58,8 @@
   }}
 />
 
+<ToastStack />
+
 {#if chapters.length === 0}
   {#if !native}
     <a
@@ -99,9 +103,11 @@
           >
         </div>
       </div>
+      <OfflineBrowser />
       <LibraryBrowser />
       <NativeLibraryBrowser />
     {:else if isLocalServer}
+      <OfflineBrowser />
       <LibraryBrowser />
 
       <div class="flex flex-col items-center gap-3">
@@ -125,6 +131,7 @@
         <SettingsPanel />
       {/if}
     {:else}
+      <OfflineBrowser />
       <div class="flex flex-col items-center gap-3">
         <p class="max-w-sm text-center text-sm opacity-60">
           Run locally to serve manga from your PC to any device on your network

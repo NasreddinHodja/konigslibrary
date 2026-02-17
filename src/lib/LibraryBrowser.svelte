@@ -1,9 +1,10 @@
 <script lang="ts">
-  import type { LibraryEntry } from '$lib/types';
+  import type { LibraryEntry, ServerChapter } from '$lib/types';
   import { setLibraryManga } from '$lib/state.svelte';
   import { apiUrl, getServerUrl } from '$lib/constants';
+  import { saveManga } from '$lib/download';
   import { isNative } from '$lib/platform';
-  import { BookOpen, FileArchive } from 'lucide-svelte';
+  import { BookOpen, FileArchive, Download } from 'lucide-svelte';
   import Loader from '$lib/ui/Loader.svelte';
 
   let entries: LibraryEntry[] = $state([]);
@@ -34,6 +35,14 @@
   const open = (entry: LibraryEntry) => {
     setLibraryManga(entry.slug, entry.name);
   };
+
+  async function startDownload(e: MouseEvent, entry: LibraryEntry) {
+    e.stopPropagation();
+    const res = await fetch(apiUrl(`/api/library/${entry.slug}/chapters`));
+    if (!res.ok) return;
+    const chapters: ServerChapter[] = await res.json();
+    saveManga(entry.slug, entry.name, chapters);
+  }
 </script>
 
 {#if loading}
@@ -44,17 +53,26 @@
   <div class="w-full max-w-2xl space-y-2">
     <h2 class="mb-4 text-lg font-bold opacity-80">Library</h2>
     {#each entries as entry (entry.slug)}
-      <button
-        class="flex w-full cursor-pointer items-center gap-3 border-2 px-4 py-3 text-left hover:bg-white/10"
-        onclick={() => open(entry)}
-      >
-        {#if entry.type === 'zip'}
-          <FileArchive size={20} class="shrink-0 opacity-60" />
-        {:else}
-          <BookOpen size={20} class="shrink-0 opacity-60" />
-        {/if}
-        <span class="truncate">{entry.name}</span>
-      </button>
+      <div class="flex w-full items-center gap-3 border-2 px-4 py-3">
+        <button
+          class="flex flex-1 cursor-pointer items-center gap-3 text-left hover:opacity-80"
+          onclick={() => open(entry)}
+        >
+          {#if entry.type === 'zip'}
+            <FileArchive size={20} class="shrink-0 opacity-60" />
+          {:else}
+            <BookOpen size={20} class="shrink-0 opacity-60" />
+          {/if}
+          <span class="truncate">{entry.name}</span>
+        </button>
+        <button
+          class="shrink-0 p-1 opacity-40 hover:opacity-100"
+          onclick={(e) => startDownload(e, entry)}
+          aria-label="Download {entry.name}"
+        >
+          <Download size={16} />
+        </button>
+      </div>
     {/each}
   </div>
 {/if}

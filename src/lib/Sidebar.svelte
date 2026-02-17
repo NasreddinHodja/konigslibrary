@@ -1,7 +1,16 @@
 <script lang="ts">
   import { slide } from 'svelte/transition';
-  import { Menu, X, Minus, Plus, ArrowLeft } from 'lucide-svelte';
-  import { manga, setZip, clearManga } from '$lib/state.svelte';
+  import { Menu, X, Minus, Plus, ArrowLeft, Download } from 'lucide-svelte';
+  import {
+    manga,
+    setZip,
+    clearManga,
+    getSourceMode,
+    getLibraryManga,
+    getLibraryChapters,
+    getMangaName
+  } from '$lib/state.svelte';
+  import { saveChapter } from '$lib/download';
   import { ANIM_DURATION, ANIM_EASE, LS_RTL, LS_DOUBLE_PAGE, LS_SCROLL_MODE } from '$lib/constants';
   import ChapterList from '$lib/ChapterList.svelte';
   import Toggle from '$lib/ui/Toggle.svelte';
@@ -36,6 +45,16 @@
       manga.sidebarOpen = false;
     }
   );
+
+  function startChapterDownload() {
+    const slug = getLibraryManga();
+    const name = getMangaName();
+    const chapters = getLibraryChapters();
+    if (!slug || !name || !manga.selectedChapter) return;
+    const chapter = chapters.find((c) => c.name === manga.selectedChapter);
+    if (!chapter) return;
+    saveChapter(slug, name, chapter);
+  }
 </script>
 
 <svelte:document
@@ -77,10 +96,15 @@
   >
     <div class="space-y-4 p-6" style="padding-top: calc(3.5rem + env(safe-area-inset-top))">
       <h2 class="pb-3 text-xl font-bold">KONIGSLIBRARY</h2>
-      <div class="flex items-stretch justify-between">
+      <div class="flex items-stretch justify-between gap-2">
         <Button size="md" onclick={clearManga}>
           <ArrowLeft size={16} class="inline" /> Back
         </Button>
+        {#if getSourceMode() === 'library' || getSourceMode() === 'offline'}
+          <Button size="icon" onclick={startChapterDownload}>
+            <Download size={16} />
+          </Button>
+        {/if}
         <label class="flex cursor-pointer">
           <Button size="md" as="span">Upload</Button>
           <input type="file" accept=".zip,.cbz" onchange={handleZip} class="hidden" />
