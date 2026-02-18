@@ -11,7 +11,7 @@
   let entries: LibraryEntry[] = $state([]);
   let loading = $state(true);
   let error: string | null = $state(null);
-  let downloadedSlugs: Set<string> = $state(new Set());
+  let downloadedSlugs: Set<string> = $state.raw(new Set());
 
   $effect(() => {
     getDownloadVersion();

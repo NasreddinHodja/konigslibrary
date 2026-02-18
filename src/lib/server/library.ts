@@ -2,7 +2,7 @@ import { readdir, readFile, writeFile, stat } from 'node:fs/promises';
 import { join, resolve, extname } from 'node:path';
 import { existsSync } from 'node:fs';
 import type { LibraryEntry, ServerChapter } from '$lib/types';
-import { indexZipFile, extractEntryFromFile } from './zip-node';
+import { getCachedIndex, extractEntryFromFile } from './zip-node';
 import { detectDepth, groupByChapter } from '$lib/chapters';
 
 const IMAGE_EXT = /\.(jpe?g|png|gif|webp|avif|bmp)$/i;
@@ -140,7 +140,7 @@ async function listChaptersFromDir(mangaPath: string): Promise<ServerChapter[]> 
 }
 
 async function listChaptersFromZip(zipPath: string): Promise<ServerChapter[]> {
-  const entries = await indexZipFile(zipPath);
+  const entries = await getCachedIndex(zipPath);
   const imageEntries = entries.filter((e) => IMAGE_EXT.test(e.name));
 
   const { depth } = detectDepth(imageEntries.map((e) => e.name));
@@ -195,7 +195,7 @@ export async function getImageFromZip(
   if (!ZIP_EXT.test(mangaName)) return null;
 
   try {
-    const entries = await indexZipFile(zipPath);
+    const entries = await getCachedIndex(zipPath);
     const entry = entries.find((e) => e.name === entryPath);
     if (!entry) return null;
 

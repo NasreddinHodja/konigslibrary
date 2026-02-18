@@ -1,11 +1,13 @@
 <script lang="ts">
   import { listOfflineManga, deleteOfflineManga } from '$lib/offline-db';
   import { setOfflineManga } from '$lib/state.svelte';
+  import { getDownloadVersion } from '$lib/download.svelte';
   import { BookOpen, Trash2 } from 'lucide-svelte';
 
   let entries: { slug: string; name: string }[] = $state([]);
 
   $effect(() => {
+    getDownloadVersion();
     listOfflineManga().then((list) => {
       entries = list;
     });

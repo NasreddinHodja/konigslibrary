@@ -52,7 +52,7 @@
   }
 
   const categories = $derived.by(() => {
-    const map = new Map<string, KeyBinding[]>();
+    const map = new Map<string, KeyBinding[]>(); // eslint-disable-line svelte/prefer-svelte-reactivity
     for (const b of bindings) {
       const list = map.get(b.category) ?? [];
       list.push(b);
@@ -101,7 +101,6 @@
   };
 </script>
 
-<!-- svelte-ignore a11y_no_static_element_interactions -->
 <svelte:window onkeydown={handleKeyCapture} />
 
 <div class="mx-auto max-w-2xl space-y-10 p-8">
@@ -118,11 +117,11 @@
       <Button size="md" onclick={handleReset}>Reset to defaults</Button>
     </div>
 
-    {#each categories as [category, items]}
+    {#each categories as [category, items] (category)}
       <div>
         <h3 class="mb-2 text-sm font-bold opacity-60">{category}</h3>
         <div class="space-y-1">
-          {#each items as binding}
+          {#each items as binding (binding.action)}
             <div class="flex items-center justify-between border-b border-white/10 py-2">
               <span class="text-sm opacity-80">{binding.label}</span>
               <button
@@ -135,7 +134,7 @@
                 {#if listening === binding.action}
                   <span class="text-xs opacity-60">Press a key...</span>
                 {:else}
-                  {#each binding.keys as key}
+                  {#each binding.keys as key (key)}
                     <kbd class="text-xs">{formatKey(key)}</kbd>
                   {/each}
                   {#if binding.keys.length === 0}

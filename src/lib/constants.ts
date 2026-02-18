@@ -6,7 +6,7 @@ export const ANIM_EASE = (t: number) => 1 - Math.pow(1 - t, 4);
 export const LS_SCROLL_MODE = 'kl:scrollMode';
 export const LS_RTL = 'kl:rtl';
 export const LS_DOUBLE_PAGE = 'kl:doublePage';
-export const LS_PROGRESS_PREFIX = 'kl:';
+export const LS_PROGRESS_PREFIX = 'kl:progress:';
 
 export const INTERSECT_THRESHOLD = 0.5;
 

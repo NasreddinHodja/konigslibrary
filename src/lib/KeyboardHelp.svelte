@@ -7,7 +7,7 @@
   const bindings = $derived(getBindings());
 
   const categories = $derived.by(() => {
-    const map = new Map<string, typeof bindings>();
+    const map = new Map<string, typeof bindings>(); // eslint-disable-line svelte/prefer-svelte-reactivity
     for (const b of bindings) {
       const list = map.get(b.category) ?? [];
       list.push(b);
@@ -34,15 +34,15 @@
       </button>
     </div>
 
-    {#each categories as [category, items]}
+    {#each categories as [category, items] (category)}
       <div class="mb-4">
         <h3 class="mb-2 text-sm font-bold opacity-60">{category}</h3>
         <div class="space-y-1">
-          {#each items as binding}
+          {#each items as binding (binding.action)}
             <div class="flex items-center justify-between py-1">
               <span class="text-sm opacity-80">{binding.label}</span>
               <div class="flex gap-1">
-                {#each binding.keys as key}
+                {#each binding.keys as key (key)}
                   <kbd
                     class="min-w-[1.75rem] border border-white/20 px-1.5 py-0.5 text-center text-xs"
                   >

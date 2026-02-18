@@ -20,10 +20,11 @@
   let isMobile = $state(false);
 
   $effect(() => {
-    const check = () => (isMobile = window.innerWidth < 768);
-    check();
-    window.addEventListener('resize', check);
-    return () => window.removeEventListener('resize', check);
+    const mql = window.matchMedia('(max-width: 767px)');
+    isMobile = mql.matches;
+    const onChange = (e: MediaQueryListEvent) => (isMobile = e.matches);
+    mql.addEventListener('change', onChange);
+    return () => mql.removeEventListener('change', onChange);
   });
 
   const { handleTouchStart, handleTouchMove, handleTouchEnd } = createDrawerHandlers({

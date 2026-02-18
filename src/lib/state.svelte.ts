@@ -281,7 +281,7 @@ export const getProgress = (): { chapter: string; page: number } | null => {
   if (!raw) return null;
   try {
     const parsed = JSON.parse(raw);
-    if (parsed.chapter) return parsed;
+    if (typeof parsed.chapter === 'string' && typeof parsed.page === 'number') return parsed;
   } catch {
     return { chapter: raw, page: 0 };
   }

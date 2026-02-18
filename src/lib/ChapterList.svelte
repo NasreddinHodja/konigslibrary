@@ -14,7 +14,7 @@
   import { ANIM_DURATION, ANIM_EASE } from '$lib/constants';
 
   const canDownload = $derived(getSourceMode() === 'library' || getSourceMode() === 'offline');
-  let downloadedChapters: Set<string> = $state(new Set());
+  let downloadedChapters: Set<string> = $state.raw(new Set());
 
   $effect(() => {
     getDownloadVersion();

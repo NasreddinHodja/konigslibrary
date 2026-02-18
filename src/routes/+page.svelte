@@ -36,7 +36,7 @@
   let saveTimer: ReturnType<typeof setTimeout> | undefined;
   $effect(() => {
     if (!manga.selectedChapter) return;
-    manga.currentPage;
+    manga.currentPage; // eslint-disable-line @typescript-eslint/no-unused-expressions
     clearTimeout(saveTimer);
     saveTimer = setTimeout(saveProgress, 300);
     return () => clearTimeout(saveTimer);
@@ -47,7 +47,7 @@
     if (file && /\.(zip|cbz)$/i.test(file.name)) await setZip(file);
   };
 
-  let isMobile = $derived(typeof window !== 'undefined' && 'ontouchstart' in window);
+  const isMobile = typeof window !== 'undefined' && 'ontouchstart' in window;
 
   function enterFullscreen() {
     if (native) return;
@@ -72,7 +72,7 @@
     const acquire = async () => {
       try {
         sentinel = await navigator.wakeLock.request('screen');
-      } catch {}
+      } catch { /* ignore */ }
     };
 
     const onVisibility = () => {
@@ -257,7 +257,6 @@
     {/if}
   </div>
 {:else}
-  <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions a11y_no_noninteractive_element_interactions -->
   <div
     class="flex h-dvh select-none md:pl-(--sidebar-peek)"
     onclick={enterFullscreen}

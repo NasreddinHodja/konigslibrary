@@ -1,4 +1,4 @@
-import { open, type FileHandle } from 'node:fs/promises';
+import { open, stat as fsStat, type FileHandle } from 'node:fs/promises';
 import { inflateRawSync } from 'node:zlib';
 import {
   type BaseZipEntry,
@@ -10,6 +10,17 @@ import {
 } from '$lib/zip-parse';
 
 export type NodeZipEntry = BaseZipEntry;
+
+const zipIndexCache = new Map<string, { entries: NodeZipEntry[]; mtimeMs: number }>();
+
+export async function getCachedIndex(filePath: string): Promise<NodeZipEntry[]> {
+  const s = await fsStat(filePath);
+  const cached = zipIndexCache.get(filePath);
+  if (cached && cached.mtimeMs === s.mtimeMs) return cached.entries;
+  const entries = await indexZipFile(filePath);
+  zipIndexCache.set(filePath, { entries, mtimeMs: s.mtimeMs });
+  return entries;
+}
 
 async function readAt(fh: FileHandle, offset: number, length: number): Promise<Buffer> {
   const buf = Buffer.alloc(length);

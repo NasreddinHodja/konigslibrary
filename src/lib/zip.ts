@@ -48,6 +48,7 @@ export async function extractEntry(file: File, entry: ZipEntry): Promise<Blob> {
     .slice(entry.localHeaderOffset, entry.localHeaderOffset + 30)
     .arrayBuffer();
   const lh = new DataView(lhBuf);
+  if (lh.getUint32(0, true) !== 0x04034b50) throw new Error('Invalid local file header');
   const nameLen = lh.getUint16(26, true);
   const extraLen = lh.getUint16(28, true);
 
@@ -56,6 +57,9 @@ export async function extractEntry(file: File, entry: ZipEntry): Promise<Blob> {
 
   if (entry.compressionMethod === 0) {
     return raw;
+  }
+  if (entry.compressionMethod !== 8) {
+    throw new Error(`Unsupported compression method: ${entry.compressionMethod}`);
   }
 
   const ds = new DecompressionStream('deflate-raw');

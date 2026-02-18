@@ -20,6 +20,7 @@ export function getUint64(dv: DataView, offset: number): number {
 
 export function parseCentralDirectory(cdBuf: ArrayBuffer): BaseZipEntry[] {
   const cd = new DataView(cdBuf);
+  const decoder = new TextDecoder();
   const entries: BaseZipEntry[] = [];
   let pos = 0;
 
@@ -64,7 +65,7 @@ export function parseCentralDirectory(cdBuf: ArrayBuffer): BaseZipEntry[] {
     }
 
     const nameBytes = new Uint8Array(cdBuf, pos + 46, nameLen);
-    const name = new TextDecoder().decode(nameBytes);
+    const name = decoder.decode(nameBytes);
 
     if (!name.endsWith('/')) {
       entries.push({

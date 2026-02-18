@@ -3,9 +3,28 @@ import { addToast, updateToast } from '$lib/toast.svelte';
 import { saveOfflinePage, saveOfflineMangaMeta } from '$lib/offline-db';
 import type { ServerChapter } from '$lib/types';
 
+const CONCURRENT_DOWNLOADS = 4;
+
 let nextId = 0;
 let _dlVersion = $state(0);
 export const getDownloadVersion = () => _dlVersion;
+
+async function downloadPool<T>(
+  items: T[],
+  fn: (item: T) => Promise<void>,
+  concurrency: number,
+  signal: AbortSignal
+): Promise<void> {
+  let idx = 0;
+  const next = async (): Promise<void> => {
+    while (idx < items.length) {
+      if (signal.aborted) return;
+      const i = idx++;
+      await fn(items[i]);
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(concurrency, items.length) }, () => next()));
+}
 
 function buildPageUrl(
   slug: string,
@@ -44,10 +63,13 @@ export function saveManga(
     const isZipManga = /\.(zip|cbz)$/i.test(decodeURIComponent(slug));
     let fetched = 0;
 
-    for (const chapter of chapters) {
-      for (const page of chapter.pages) {
-        if (cancelled) return;
+    const allPages = chapters.flatMap((chapter) =>
+      chapter.pages.map((page) => ({ chapter, page }))
+    );
 
+    await downloadPool(
+      allPages,
+      async ({ chapter, page }) => {
         const url = buildPageUrl(slug, chapter, page, isZipManga);
         const res = await fetch(url, { signal: controller.signal });
         if (!res.ok) throw new Error(`Failed to fetch ${url}: ${res.status}`);
@@ -58,8 +80,10 @@ export function saveManga(
 
         fetched++;
         updateToast(id, { current: fetched });
-      }
-    }
+      },
+      CONCURRENT_DOWNLOADS,
+      controller.signal
+    );
 
     await saveOfflineMangaMeta(slug, name, chapters);
     _dlVersion++;
@@ -102,20 +126,23 @@ export function saveChapter(
     const isZipManga = /\.(zip|cbz)$/i.test(decodeURIComponent(slug));
     let fetched = 0;
 
-    for (const page of chapter.pages) {
-      if (cancelled) return;
+    await downloadPool(
+      chapter.pages,
+      async (page) => {
+        const url = buildPageUrl(slug, chapter, page, isZipManga);
+        const res = await fetch(url, { signal: controller.signal });
+        if (!res.ok) throw new Error(`Failed to fetch ${url}: ${res.status}`);
+        const blob = await res.blob();
 
-      const url = buildPageUrl(slug, chapter, page, isZipManga);
-      const res = await fetch(url, { signal: controller.signal });
-      if (!res.ok) throw new Error(`Failed to fetch ${url}: ${res.status}`);
-      const blob = await res.blob();
+        const filename = page.split('/').pop() || page;
+        await saveOfflinePage(slug, chapter.name, filename, blob);
 
-      const filename = page.split('/').pop() || page;
-      await saveOfflinePage(slug, chapter.name, filename, blob);
-
-      fetched++;
-      updateToast(id, { current: fetched });
-    }
+        fetched++;
+        updateToast(id, { current: fetched });
+      },
+      CONCURRENT_DOWNLOADS,
+      controller.signal
+    );
 
     await saveOfflineMangaMeta(slug, mangaName, [chapter]);
     _dlVersion++;

@@ -77,7 +77,7 @@ function loadBindings(): KeyBinding[] {
 }
 
 function buildLookup(bindings: KeyBinding[]): Map<string, Action> {
-  const map = new Map<string, Action>();
+  const map = new Map<string, Action>(); // eslint-disable-line svelte/prefer-svelte-reactivity
   for (const b of bindings) {
     for (const key of b.keys) {
       map.set(key, b.action);
@@ -87,7 +87,7 @@ function buildLookup(bindings: KeyBinding[]): Map<string, Action> {
 }
 
 let bindings: KeyBinding[] = $state(loadBindings());
-let lookup: Map<string, Action> = $derived(buildLookup(bindings));
+const lookup: Map<string, Action> = $derived(buildLookup(bindings));
 
 export function getBindings(): KeyBinding[] {
   return bindings;

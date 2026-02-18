@@ -1,17 +1,20 @@
 <script lang="ts">
-  import { SvelteSet } from 'svelte/reactivity';
   import { manga, getChapterUrls } from '$lib/state.svelte';
   import { resolveKey } from '$lib/keybindings.svelte';
   import { PAGE_TURN_ZOOM } from '$lib/constants';
   import Loader from '$lib/ui/Loader.svelte';
   import EndOfChapter from '$lib/EndOfChapter.svelte';
 
+  const PRELOAD_AHEAD = 5;
+  const PRELOAD_BEHIND = 2;
+
   let pageUrls: string[] = $state([]);
   let loading = $state(false);
-  // eslint-disable-next-line svelte/no-unnecessary-state-wrap -- reassigned on chapter change
-  let widePages: SvelteSet<number> = $state(new SvelteSet());
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- prevents GC during preload
-  let preloaded: HTMLImageElement[] = [];
+  let widePages: Set<number> = $state.raw(new Set());
+  let showEndScreen = $state(false);
+
+  // Sliding window: decoded Image objects keyed by page index (prevents GC of bitmaps)
+  const preloadCache = new Map<number, HTMLImageElement>(); // eslint-disable-line svelte/prefer-svelte-reactivity
 
   let spreads: number[][] = $derived.by(() => {
     const result: number[][] = [];
@@ -43,8 +46,20 @@
   );
 
   let currentSpread: number[] = $derived(spreads[currentSpreadIdx] ?? []);
-  let showEndScreen = $state(false);
 
+  // DOM window: current spread ± 1 spread for instant page turns
+  let domPages: number[] = $derived.by(() => {
+    if (spreads.length === 0) return [];
+    const start = Math.max(0, currentSpreadIdx - 1);
+    const end = Math.min(spreads.length - 1, currentSpreadIdx + 1);
+    const pages: number[] = [];
+    for (let i = start; i <= end; i++) {
+      for (const p of spreads[i]) pages.push(p);
+    }
+    return pages;
+  });
+
+  // Chapter load: decode first spread immediately, then background wide detection
   $effect(() => {
     const chapter = manga.selectedChapter;
     if (!chapter) return;
@@ -54,7 +69,8 @@
     let urls: string[] = [];
     loading = true;
     pageUrls = [];
-    widePages = new SvelteSet();
+    widePages = new Set();
+    preloadCache.clear();
     showEndScreen = false;
 
     getChapterUrls(chapter).then(async (result) => {
@@ -62,32 +78,78 @@
       urls = result.urls;
       revoke = result.revoke;
 
-      const imgs: HTMLImageElement[] = [];
-      for (const url of urls) {
+      // Decode only the initial spread for instant display
+      const startPage = Math.max(0, Math.min(manga.currentPage, urls.length - 1));
+      const initialPages = [startPage];
+      if (manga.doublePage && startPage + 1 < urls.length) {
+        initialPages.push(startPage + 1);
+      }
+
+      for (const idx of initialPages) {
         const img = new Image();
-        img.src = url;
-        imgs.push(img);
+        img.src = urls[idx];
+        try {
+          await img.decode();
+        } catch {
+          /* ignore */
+        }
+        if (cancelled) return;
+        preloadCache.set(idx, img);
       }
 
-      await Promise.all(imgs.map((img) => img.decode().catch(() => {})));
-      if (cancelled) return;
-
-      const wide = new SvelteSet<number>();
-      for (let i = 0; i < imgs.length; i++) {
-        if (imgs[i].naturalWidth > imgs[i].naturalHeight) wide.add(i);
-      }
-
-      preloaded = imgs;
-      widePages = wide;
       pageUrls = urls;
       loading = false;
+
+      // Background: detect wide pages sequentially (low memory)
+      if (manga.doublePage && urls.length > 0) {
+        const wide = new Set<number>(); // eslint-disable-line svelte/prefer-svelte-reactivity
+        for (let i = 0; i < urls.length; i++) {
+          if (cancelled) return;
+          let img = preloadCache.get(i);
+          if (!img) {
+            img = new Image();
+            img.src = urls[i];
+            try {
+              await img.decode();
+            } catch {
+              /* ignore */
+            }
+          }
+          if (img.naturalWidth > img.naturalHeight) wide.add(i);
+        }
+        if (!cancelled) widePages = wide;
+      }
     });
 
     return () => {
       cancelled = true;
-      preloaded = [];
+      preloadCache.clear();
       if (revoke) urls.forEach((url) => URL.revokeObjectURL(url));
     };
+  });
+
+  // Sliding window preload: keep nearby pages decoded
+  $effect(() => {
+    if (loading || pageUrls.length === 0) return;
+    const current = manga.currentPage;
+    const urls = pageUrls;
+    const start = Math.max(0, current - PRELOAD_BEHIND);
+    const end = Math.min(urls.length - 1, current + PRELOAD_AHEAD);
+
+    for (let i = start; i <= end; i++) {
+      if (!preloadCache.has(i)) {
+        const img = new Image();
+        img.src = urls[i];
+        img.decode().catch(() => {});
+        preloadCache.set(i, img);
+      }
+    }
+
+    for (const [idx] of preloadCache) {
+      if (idx < start || idx > end) {
+        preloadCache.delete(idx);
+      }
+    }
   });
 
   const prev = () => {
@@ -132,6 +194,7 @@
     const action = resolveKey(event.key);
     if (action === 'holdZoom') {
       zoomHeld = true;
+      if (spreadEl) spreadRect = spreadEl.getBoundingClientRect();
       return;
     }
     if (zoomHeld) return;
@@ -161,11 +224,9 @@
   };
 
   const handleMouseMove = (event: MouseEvent) => {
+    if (!zoomHeld) return;
     clientX = event.clientX;
     clientY = event.clientY;
-    if (!zoomHeld && spreadEl) {
-      spreadRect = spreadEl.getBoundingClientRect();
-    }
   };
 
   const handleClickLeft = () => {
@@ -201,9 +262,9 @@
       style:transform={zoomHeld ? `scale(${PAGE_TURN_ZOOM})` : 'none'}
       style:transform-origin="{originX}% {originY}%"
     >
-      {#each pageUrls as url, pageIdx}
+      {#each domPages as pageIdx (pageIdx)}
         <img
-          src={url}
+          src={pageUrls[pageIdx]}
           alt="Page {pageIdx + 1} of {pageUrls.length}"
           hidden={!currentSpread.includes(pageIdx)}
           class="max-h-full object-contain"

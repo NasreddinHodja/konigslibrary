@@ -49,13 +49,5 @@
     "@capacitor/core": "^8.1.0",
     "@capacitor/filesystem": "^8.1.2",
     "lucide-svelte": "^0.563.0"
-  },
-  "pkg": {
-    "scripts": "build/**/*.js",
-    "assets": "build/**/*",
-    "targets": [
-      "node18-win-x64"
-    ],
-    "outputPath": "dist"
   }
 }

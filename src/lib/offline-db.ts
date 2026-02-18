@@ -6,8 +6,11 @@ const DB_VERSION = 1;
 type MangaEntry = { slug: string; name: string; chapters: ServerChapter[] };
 type PageEntry = { key: string; blob: Blob };
 
+let cachedDB: Promise<IDBDatabase> | null = null;
+
 function openDB(): Promise<IDBDatabase> {
-  return new Promise((resolve, reject) => {
+  if (cachedDB) return cachedDB;
+  cachedDB = new Promise<IDBDatabase>((resolve, reject) => {
     const req = indexedDB.open(DB_NAME, DB_VERSION);
     req.onupgradeneeded = () => {
       const db = req.result;
@@ -19,8 +22,12 @@ function openDB(): Promise<IDBDatabase> {
       }
     };
     req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
+    req.onerror = () => {
+      cachedDB = null;
+      reject(req.error);
+    };
   });
+  return cachedDB;
 }
 
 export async function listOfflineManga(): Promise<{ slug: string; name: string }[]> {
@@ -119,17 +126,15 @@ export async function deleteOfflineManga(slug: string): Promise<void> {
   await new Promise<void>((resolve, reject) => {
     const tx = db.transaction('pages', 'readwrite');
     const store = tx.objectStore('pages');
-    const req = store.openCursor();
+    const range = IDBKeyRange.bound(`${slug}/`, `${slug}/\uffff`);
+    const req = store.openCursor(range);
     req.onsuccess = () => {
       const cursor = req.result;
       if (!cursor) {
         resolve();
         return;
       }
-      const key = (cursor.value as PageEntry).key;
-      if (key.startsWith(`${slug}/`)) {
-        cursor.delete();
-      }
+      cursor.delete();
       cursor.continue();
     };
     req.onerror = () => reject(req.error);
