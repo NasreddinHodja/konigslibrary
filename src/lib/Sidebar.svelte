@@ -1,21 +1,15 @@
 <script lang="ts">
   import { slide } from 'svelte/transition';
-  import { Menu, X, Minus, Plus, ArrowLeft, Download, Settings } from 'lucide-svelte';
+  import { Menu, X, Minus, Plus, ArrowLeft, Settings } from 'lucide-svelte';
   import {
     manga,
-    setZip,
     clearManga,
-    getSourceMode,
-    getLibraryManga,
-    getLibraryChapters,
-    getMangaName,
     toggleScrollMode,
     toggleRtl,
     toggleDoublePage,
     zoomIn,
     zoomOut
   } from '$lib/state.svelte';
-  import { saveChapter } from '$lib/download';
   import { ANIM_DURATION, ANIM_EASE } from '$lib/constants';
   import ChapterList from '$lib/ChapterList.svelte';
   import Toggle from '$lib/ui/Toggle.svelte';
@@ -36,12 +30,6 @@
     return () => window.removeEventListener('resize', check);
   });
 
-  const handleZip = async (event: Event) => {
-    const input = event.target as HTMLInputElement;
-    if (!input.files?.[0]) return;
-    await setZip(input.files[0]);
-  };
-
   const handleTouchMove = createTouchMoveHandler(
     () => {
       manga.sidebarOpen = true;
@@ -51,15 +39,6 @@
     }
   );
 
-  function startChapterDownload() {
-    const slug = getLibraryManga();
-    const name = getMangaName();
-    const chapters = getLibraryChapters();
-    if (!slug || !name || !manga.selectedChapter) return;
-    const chapter = chapters.find((c) => c.name === manga.selectedChapter);
-    if (!chapter) return;
-    saveChapter(slug, name, chapter);
-  }
 </script>
 
 <svelte:document
@@ -100,20 +79,11 @@
       : 'none'}"
   >
     <div class="space-y-4 p-6" style="padding-top: calc(3.5rem + env(safe-area-inset-top))">
-      <h2 class="pb-3 text-xl font-bold">KONIGSLIBRARY</h2>
-      <div class="flex items-stretch justify-between gap-2">
-        <Button size="md" onclick={clearManga}>
-          <ArrowLeft size={16} class="inline" /> Back
+      <div class="flex items-center gap-3">
+        <Button size="icon" onclick={clearManga}>
+          <ArrowLeft size={16} />
         </Button>
-        {#if getSourceMode() === 'library' || getSourceMode() === 'offline'}
-          <Button size="icon" onclick={startChapterDownload}>
-            <Download size={16} />
-          </Button>
-        {/if}
-        <label class="flex cursor-pointer">
-          <Button size="md" as="span">Upload</Button>
-          <input type="file" accept=".zip,.cbz" onchange={handleZip} class="hidden" />
-        </label>
+        <h2 class="text-xl font-bold">KONIGSLIBRARY</h2>
       </div>
     </div>
 

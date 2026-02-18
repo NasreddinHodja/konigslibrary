@@ -1,8 +1,31 @@
 <script lang="ts">
   import { slide } from 'svelte/transition';
-  import { ChevronDown, ChevronRight } from 'lucide-svelte';
-  import { manga, getChapters } from '$lib/state.svelte';
+  import { ChevronDown, ChevronRight, Download } from 'lucide-svelte';
+  import {
+    manga,
+    getChapters,
+    getSourceMode,
+    getLibraryManga,
+    getLibraryChapters,
+    getMangaName
+  } from '$lib/state.svelte';
+  import { saveChapter } from '$lib/download';
   import { ANIM_DURATION, ANIM_EASE } from '$lib/constants';
+
+  const canDownload = $derived(
+    getSourceMode() === 'library' || getSourceMode() === 'offline'
+  );
+
+  function downloadChapter(chapterName: string, e: MouseEvent) {
+    e.stopPropagation();
+    const slug = getLibraryManga();
+    const name = getMangaName();
+    const chapters = getLibraryChapters();
+    if (!slug || !name) return;
+    const chapter = chapters.find((c) => c.name === chapterName);
+    if (!chapter) return;
+    saveChapter(slug, name, chapter);
+  }
 
   const chapters = $derived(getChapters());
   let listEl: HTMLUListElement;
@@ -56,26 +79,37 @@
       </button>
 
       {#if isOpen}
-        <ul
+        <div
           class="mt-1 space-y-1 overflow-hidden"
           transition:slide={{ duration: ANIM_DURATION, easing: ANIM_EASE }}
         >
-          {#each Array.from({ length: chapter.pageCount }, (_, i) => i) as i (i)}
-            <li>
-              <button
-                class="w-full cursor-pointer truncate py-1 pr-2 pl-6 text-left text-sm
-                  {manga.currentPage === i ? 'underline' : 'hover:bg-white/10'}"
-                onclick={() => {
-                  manga.currentPage = i;
-                  manga.shouldScroll = true;
-                  if (window.innerWidth < 768) manga.sidebarOpen = false;
-                }}
-              >
-                Page {i + 1}
-              </button>
-            </li>
-          {/each}
-        </ul>
+          {#if canDownload}
+            <button
+              class="mt-1 mb-2 flex w-full cursor-pointer items-center justify-center gap-2 border-2 border-white px-3 py-2 text-sm hover:bg-white/10"
+              onclick={(e) => downloadChapter(chapter.name, e)}
+            >
+              <Download size={16} />
+              Download chapter
+            </button>
+          {/if}
+          <ul class="space-y-1">
+            {#each Array.from({ length: chapter.pageCount }, (_, i) => i) as i (i)}
+              <li>
+                <button
+                  class="w-full cursor-pointer truncate py-1 pr-2 pl-6 text-left text-sm
+                    {manga.currentPage === i ? 'underline' : 'hover:bg-white/10'}"
+                  onclick={() => {
+                    manga.currentPage = i;
+                    manga.shouldScroll = true;
+                    if (window.innerWidth < 768) manga.sidebarOpen = false;
+                  }}
+                >
+                  Page {i + 1}
+                </button>
+              </li>
+            {/each}
+          </ul>
+        </div>
       {/if}
     </li>
   {/each}
