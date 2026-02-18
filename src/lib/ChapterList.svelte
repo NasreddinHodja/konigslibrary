@@ -9,10 +9,24 @@
     getLibraryChapters,
     getMangaName
   } from '$lib/state.svelte';
-  import { saveChapter } from '$lib/download';
+  import { saveChapter, getDownloadVersion } from '$lib/download.svelte';
+  import { getOfflineManga } from '$lib/offline-db';
   import { ANIM_DURATION, ANIM_EASE } from '$lib/constants';
 
   const canDownload = $derived(getSourceMode() === 'library' || getSourceMode() === 'offline');
+  let downloadedChapters: Set<string> = $state(new Set());
+
+  $effect(() => {
+    getDownloadVersion();
+    const slug = getLibraryManga();
+    if (!slug || !canDownload) {
+      downloadedChapters = new Set();
+      return;
+    }
+    getOfflineManga(slug).then((entry) => {
+      downloadedChapters = new Set(entry?.chapters.map((c) => c.name) ?? []);
+    });
+  });
 
   function downloadChapter(chapterName: string, e: MouseEvent) {
     e.stopPropagation();
@@ -81,7 +95,7 @@
           class="mt-1 space-y-1 overflow-hidden"
           transition:slide={{ duration: ANIM_DURATION, easing: ANIM_EASE }}
         >
-          {#if canDownload}
+          {#if canDownload && !downloadedChapters.has(chapter.name)}
             <button
               class="mt-1 mb-2 flex w-full cursor-pointer items-center justify-center gap-2 border-2 border-white px-3 py-2 text-sm hover:bg-white/10"
               onclick={(e) => downloadChapter(chapter.name, e)}

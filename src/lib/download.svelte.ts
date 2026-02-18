@@ -4,6 +4,8 @@ import { saveOfflinePage, saveOfflineMangaMeta } from '$lib/offline-db';
 import type { ServerChapter } from '$lib/types';
 
 let nextId = 0;
+let _dlVersion = $state(0);
+export const getDownloadVersion = () => _dlVersion;
 
 function buildPageUrl(
   slug: string,
@@ -60,6 +62,7 @@ export function saveManga(
     }
 
     await saveOfflineMangaMeta(slug, name, chapters);
+    _dlVersion++;
     updateToast(id, { phase: 'done', cancel: undefined });
   };
 
@@ -115,6 +118,7 @@ export function saveChapter(
     }
 
     await saveOfflineMangaMeta(slug, mangaName, [chapter]);
+    _dlVersion++;
     updateToast(id, { phase: 'done', cancel: undefined });
   };
 

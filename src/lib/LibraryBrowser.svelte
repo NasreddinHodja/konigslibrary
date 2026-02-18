@@ -2,14 +2,23 @@
   import type { LibraryEntry, ServerChapter } from '$lib/types';
   import { setLibraryManga } from '$lib/state.svelte';
   import { apiUrl, getServerUrl } from '$lib/constants';
-  import { saveManga } from '$lib/download';
+  import { saveManga, getDownloadVersion } from '$lib/download.svelte';
+  import { listOfflineManga } from '$lib/offline-db';
   import { isNative } from '$lib/platform';
-  import { BookOpen, FileArchive, Download } from 'lucide-svelte';
+  import { BookOpen, FileArchive, Download, Check } from 'lucide-svelte';
   import Loader from '$lib/ui/Loader.svelte';
 
   let entries: LibraryEntry[] = $state([]);
   let loading = $state(true);
   let error: string | null = $state(null);
+  let downloadedSlugs: Set<string> = $state(new Set());
+
+  $effect(() => {
+    getDownloadVersion();
+    listOfflineManga().then((list) => {
+      downloadedSlugs = new Set(list.map((m) => m.slug));
+    });
+  });
 
   $effect(() => {
     if (isNative() && !getServerUrl()) {
@@ -65,13 +74,19 @@
           {/if}
           <span class="truncate">{entry.name}</span>
         </button>
-        <button
-          class="shrink-0 p-1 opacity-40 hover:opacity-100"
-          onclick={(e) => startDownload(e, entry)}
-          aria-label="Download {entry.name}"
-        >
-          <Download size={16} />
-        </button>
+        {#if downloadedSlugs.has(entry.slug)}
+          <span class="shrink-0 p-1 opacity-40" aria-label="{entry.name} downloaded">
+            <Check size={16} />
+          </span>
+        {:else}
+          <button
+            class="shrink-0 p-1 opacity-40 hover:opacity-100"
+            onclick={(e) => startDownload(e, entry)}
+            aria-label="Download {entry.name}"
+          >
+            <Download size={16} />
+          </button>
+        {/if}
       </div>
     {/each}
   </div>
