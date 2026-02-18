@@ -194,24 +194,23 @@
   {:else if showEndScreen}
     <EndOfChapter onback={() => (showEndScreen = false)} />
   {:else}
-    {#key currentSpreadIdx}
-      <div
-        bind:this={spreadEl}
-        class="flex h-full items-center justify-center transition-transform duration-150 ease-out"
-        style:flex-direction={manga.rtl ? 'row-reverse' : 'row'}
-        style:transform={zoomHeld ? `scale(${PAGE_TURN_ZOOM})` : 'none'}
-        style:transform-origin="{originX}% {originY}%"
-      >
-        {#each currentSpread as pageIdx (pageIdx)}
-          <img
-            src={pageUrls[pageIdx]}
-            alt="Page {pageIdx + 1} of {pageUrls.length}"
-            class="max-h-full object-contain"
-            class:max-w-[50%]={currentSpread.length === 2}
-          />
-        {/each}
-      </div>
-    {/key}
+    <div
+      bind:this={spreadEl}
+      class="flex h-full items-center justify-center transition-transform duration-150 ease-out"
+      style:flex-direction={manga.rtl ? 'row-reverse' : 'row'}
+      style:transform={zoomHeld ? `scale(${PAGE_TURN_ZOOM})` : 'none'}
+      style:transform-origin="{originX}% {originY}%"
+    >
+      {#each pageUrls as url, pageIdx}
+        <img
+          src={url}
+          alt="Page {pageIdx + 1} of {pageUrls.length}"
+          hidden={!currentSpread.includes(pageIdx)}
+          class="max-h-full object-contain"
+          class:max-w-[50%]={currentSpread.length === 2}
+        />
+      {/each}
+    </div>
   {/if}
   {#if !showEndScreen}
     <button
