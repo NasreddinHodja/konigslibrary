@@ -75,18 +75,17 @@
           <span class="truncate">{entry.name}</span>
         </button>
         {#if downloadedSlugs.has(entry.slug)}
-          <span class="shrink-0 p-1 opacity-40" aria-label="{entry.name} downloaded">
+          <span class="shrink-0 p-1 opacity-40" aria-label="{entry.name} partially downloaded">
             <Check size={16} />
           </span>
-        {:else}
-          <button
-            class="shrink-0 p-1 opacity-40 hover:opacity-100"
-            onclick={(e) => startDownload(e, entry)}
-            aria-label="Download {entry.name}"
-          >
-            <Download size={16} />
-          </button>
         {/if}
+        <button
+          class="shrink-0 p-1 opacity-40 hover:opacity-100"
+          onclick={(e) => startDownload(e, entry)}
+          aria-label="Download {entry.name}"
+        >
+          <Download size={16} />
+        </button>
       </div>
     {/each}
   </div>
