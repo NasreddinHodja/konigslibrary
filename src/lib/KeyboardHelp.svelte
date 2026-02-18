@@ -24,7 +24,9 @@
   role="dialog"
   aria-label="Keyboard shortcuts"
 >
-  <div class="max-h-[calc(100vh-2rem)] w-full max-w-lg overflow-y-auto border-2 bg-black p-6 shadow-xl">
+  <div
+    class="max-h-[calc(100vh-2rem)] w-full max-w-lg overflow-y-auto border-2 bg-black p-6 shadow-xl"
+  >
     <div class="mb-4 flex items-center justify-between">
       <h2 class="text-lg font-bold">Keyboard shortcuts</h2>
       <button class="px-2 py-1 text-sm opacity-40 hover:opacity-80" onclick={onclose}>

@@ -15,11 +15,7 @@
   import Toggle from '$lib/ui/Toggle.svelte';
   import Button from '$lib/ui/Button.svelte';
   import Backdrop from '$lib/ui/Backdrop.svelte';
-  import {
-    handleTouchStart,
-    handleTouchEnd,
-    createTouchMoveHandler
-  } from '$lib/actions/edgeSwipe.svelte';
+  import { drawer, createDrawerHandlers } from '$lib/actions/edgeSwipe.svelte';
 
   let isMobile = $state(false);
 
@@ -30,15 +26,13 @@
     return () => window.removeEventListener('resize', check);
   });
 
-  const handleTouchMove = createTouchMoveHandler(
-    () => {
-      manga.sidebarOpen = true;
-    },
-    () => {
-      manga.sidebarOpen = false;
+  const { handleTouchStart, handleTouchMove, handleTouchEnd } = createDrawerHandlers({
+    sidebarWidth: 320,
+    isOpen: () => manga.sidebarOpen,
+    onSnap: (open) => {
+      manga.sidebarOpen = open;
     }
-  );
-
+  });
 </script>
 
 <svelte:document
@@ -47,17 +41,24 @@
   ontouchend={handleTouchEnd}
 />
 
-{#if manga.sidebarOpen}
-  <Backdrop onclick={() => (manga.sidebarOpen = false)} />
+{#if drawer.dragging || manga.sidebarOpen}
+  <Backdrop
+    onclick={() => (manga.sidebarOpen = false)}
+    opacity={drawer.dragging ? drawer.progress * 0.5 : 0.5}
+  />
 {/if}
 
 <aside
-  class="duration-anim fixed top-0 left-0 z-50 flex h-full w-80 flex-col border-r-2 bg-black shadow-xl transition-transform ease-anim"
-  style="transform: translateX({manga.sidebarOpen
-    ? '0'
-    : isMobile
-      ? '-100%'
-      : 'calc(-100% + var(--sidebar-peek))'})"
+  class="fixed top-0 left-0 z-50 flex h-full w-80 flex-col border-r-2 bg-black shadow-xl {drawer.dragging
+    ? ''
+    : 'duration-anim transition-transform ease-anim'}"
+  style="transform: translateX({drawer.dragging
+    ? `${(drawer.progress - 1) * 100}%`
+    : manga.sidebarOpen
+      ? '0'
+      : isMobile
+        ? '-100%'
+        : 'calc(-100% + var(--sidebar-peek))'})"
 >
   {#if !manga.sidebarOpen && !isMobile}
     <button
@@ -73,10 +74,14 @@
   </div>
 
   <div
-    class="duration-anim flex flex-1 flex-col overflow-hidden transition-opacity ease-anim"
-    style="opacity: {manga.sidebarOpen ? '1' : '0'}; pointer-events: {manga.sidebarOpen
-      ? 'auto'
-      : 'none'}"
+    class="flex flex-1 flex-col overflow-hidden {drawer.dragging
+      ? ''
+      : 'duration-anim transition-opacity ease-anim'}"
+    style="opacity: {drawer.dragging
+      ? drawer.progress
+      : manga.sidebarOpen
+        ? '1'
+        : '0'}; pointer-events: {manga.sidebarOpen ? 'auto' : 'none'}"
   >
     <div class="space-y-4 p-6" style="padding-top: calc(3.5rem + env(safe-area-inset-top))">
       <div class="flex items-center gap-3">

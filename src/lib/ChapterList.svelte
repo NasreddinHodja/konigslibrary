@@ -12,9 +12,7 @@
   import { saveChapter } from '$lib/download';
   import { ANIM_DURATION, ANIM_EASE } from '$lib/constants';
 
-  const canDownload = $derived(
-    getSourceMode() === 'library' || getSourceMode() === 'offline'
-  );
+  const canDownload = $derived(getSourceMode() === 'library' || getSourceMode() === 'offline');
 
   function downloadChapter(chapterName: string, e: MouseEvent) {
     e.stopPropagation();

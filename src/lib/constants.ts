@@ -13,6 +13,9 @@ export const INTERSECT_THRESHOLD = 0.5;
 export const SWIPE_MIN_HORIZONTAL = 30;
 export const SWIPE_MAX_VERTICAL = 50;
 
+export const DRAWER_EDGE_ZONE = 0.5;
+export const SNAP_VELOCITY_THRESHOLD = 0.3;
+
 export const PAGE_TURN_ZOOM = 2;
 
 export const LS_SERVER_URL = 'kl:serverUrl';
