@@ -8,6 +8,18 @@ konigslibrary is a manga reader that runs in your browser. It works in two modes
 - *Deployed* — visit the hosted site, upload a ZIP/CBZ, and read. Everything is client-side, nothing leaves your browser.
 - *Local server* — run on your own machine to serve manga from a directory. Access from any device on your network, including the Android app.
 
+* Features
+
+- *Two reading modes* — vertical scroll or page-turn (single/double spread)
+- *RTL support* — right-to-left reading with reversed navigation
+- *Double-page spreads* — automatic wide-page detection for proper layout
+- *Hold-to-zoom* — press =z= in page-turn mode to zoom to cursor position
+- *Progress saving* — chapter and page position saved to localStorage, auto-resumes on return
+- *Offline downloads* — download manga or individual chapters to IndexedDB for offline reading
+- *Customizable keybindings* — rebind every shortcut from the Settings page
+- *Android app* — capacitor APK that reads from device storage or connects to a local server
+- *No backend required* — ZIP parsing, image extraction, and decompression all happen in the browser via the Web Compression API
+
 * Usage
 
 ** Online (no install)
@@ -59,7 +71,7 @@ Or configure it through the Settings panel in the web UI — saved to =konigslib
 
 ** Android
 
-The Android app connects to a running local server. Build the APK with:
+The Android app connects to a running local server or reads directly from device storage. Build the APK with:
 
 #+begin_src sh
 pnpm build:android
@@ -69,20 +81,34 @@ Or download the pre-built APK from the deployed site.
 
 ** Environment Variables
 
-| Variable      | Default     | Description                      |
-|---------------+-------------+----------------------------------|
-| =MANGA_DIR=  | (from config) | Path to your manga directory   |
-| =PORT=       | =3000=      | Server port                      |
-| =HOST=       | =0.0.0.0=   | Bind address                     |
-| =LOCAL_BUILD= | (unset)    | Set to =1= for local server build |
+| Variable      | Default       | Description                      |
+|---------------+---------------+----------------------------------|
+| =MANGA_DIR=  | (from config) | Path to your manga directory     |
+| =PORT=       | =3000=        | Server port                      |
+| =HOST=       | =0.0.0.0=     | Bind address                     |
+| =LOCAL_BUILD= | (unset)      | Set to =1= for local server build |
 
 * Keyboard Shortcuts
 
-| Key         | Scroll Mode | Page-Turn Mode          |
-|-------------+-------------+-------------------------|
-| =←= / =→=  | prev / next | prev / next (RTL-aware) |
-| =↑= / =↓=  | prev / next | prev / next             |
-| =z= (hold) | —           | zoom to cursor          |
+All shortcuts are rebindable from Settings. Defaults:
+
+| Key              | Action                                |
+|------------------+---------------------------------------|
+| =j= / =↓=       | Next page                             |
+| =k= / =↑=       | Previous page                         |
+| =l= / =→=       | Next page (prev in RTL)               |
+| =h= / =←=       | Previous page (next in RTL)           |
+| =n= / =]=       | Next chapter                          |
+| =p= / =[=       | Previous chapter                      |
+| =z= (hold)      | Zoom to cursor (page-turn mode)       |
+| =s=              | Toggle sidebar                        |
+| =b=              | Back to library                       |
+| =m=              | Toggle scroll / page-turn mode        |
+| =r=              | Toggle LTR / RTL                      |
+| =d=              | Toggle single / double page           |
+| =-= / ===       | Zoom out / in (scroll mode)           |
+| =?=              | Show keyboard shortcuts help          |
+| =Escape=         | Close sidebar or help dialog          |
 
 Click left/right halves of the page-turn viewer to navigate.
 
@@ -93,16 +119,16 @@ pnpm install
 pnpm dev
 #+end_src
 
-| Command              | Description                     |
-|----------------------+---------------------------------|
-| =pnpm dev=           | Start dev server                |
-| =pnpm build=         | Production build (adapter-auto) |
-| =pnpm build:local=   | Local server build (adapter-node) |
-| =pnpm serve=         | Start local server              |
-| =pnpm check=         | Svelte type checking            |
-| =pnpm lint=          | Prettier + ESLint check         |
-| =pnpm format=        | Auto-format with Prettier       |
-| =pnpm build:android= | Build Android APK               |
+| Command              | Description                          |
+|----------------------+--------------------------------------|
+| =pnpm dev=           | Start dev server                     |
+| =pnpm build=         | Production build (adapter-auto)      |
+| =pnpm build:local=   | Local server build (adapter-node)    |
+| =pnpm serve=         | Start local server                   |
+| =pnpm check=         | Svelte type checking                 |
+| =pnpm lint=          | Prettier + ESLint check              |
+| =pnpm format=        | Auto-format with Prettier            |
+| =pnpm build:android= | Build Android APK                    |
 
 ** Tech Stack
 
