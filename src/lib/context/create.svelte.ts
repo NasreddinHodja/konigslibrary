@@ -5,6 +5,7 @@ import { createDefaultRegistry } from '$lib/commands';
 import { createEventBus } from '$lib/events';
 import { ViewerRegistry, scrollViewer, pageTurnViewer } from '$lib/viewers';
 import { PluginRunner } from '$lib/plugins';
+import { windowTitlePlugin } from '$lib/plugins/window-title';
 import type { ReaderServices } from './types';
 
 const browser = typeof localStorage !== 'undefined';
@@ -32,6 +33,7 @@ export function createReaderServices(): ReaderServices {
   viewers.register(pageTurnViewer);
 
   const plugins = new PluginRunner();
+  plugins.register(windowTitlePlugin);
 
   function getProgress(): { chapter: string; page: number } | null {
     const name = _provider?.mangaName;

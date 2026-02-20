@@ -26,12 +26,21 @@
         href="/download/konigslibrary.apk"
         download
         class="border-b border-white/40 hover:border-white/80">APK</a
-      >, install it, and upload ZIPs directly on your phone.
+      >, install it, and read manga directly on your phone. Upload ZIPs or point it at a local
+      folder.
     </p>
   </section>
 
   <section class="space-y-3">
-    <h2 class="text-lg font-bold opacity-80">Local server + Android</h2>
+    <h2 class="text-lg font-bold opacity-80">Desktop app</h2>
+    <p class="text-sm leading-relaxed opacity-70">
+      The desktop app (built with Tauri) can read manga directly from a local folder. Point it at
+      your manga directory and browse your library without uploading anything.
+    </p>
+  </section>
+
+  <section class="space-y-3">
+    <h2 class="text-lg font-bold opacity-80">Local server</h2>
     <p class="text-sm leading-relaxed opacity-70">
       Serve your manga library from your computer and browse it from any device on your network.
     </p>
@@ -52,15 +61,6 @@
       </li>
       <li>Run the script &mdash; it handles Node.js, building, and starting the server</li>
       <li>Open the local URL in your browser and set your manga directory in Settings</li>
-      <li>
-        On your phone, install the
-        <a
-          href="/download/konigslibrary.apk"
-          download
-          class="border-b border-white/40 hover:border-white/80">APK</a
-        >, enter your server's IP address (e.g.
-        <code class="opacity-50">http://192.168.1.50:3000</code>), and browse your library
-      </li>
     </ol>
   </section>
 </div>

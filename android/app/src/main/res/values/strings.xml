@@ -1,7 +1,0 @@
-<?xml version='1.0' encoding='utf-8'?>
-<resources>
-    <string name="app_name">konigslibrary</string>
-    <string name="title_activity_main">konigslibrary</string>
-    <string name="package_name">com.konigslibrary.app</string>
-    <string name="custom_url_scheme">com.konigslibrary.app</string>
-</resources>

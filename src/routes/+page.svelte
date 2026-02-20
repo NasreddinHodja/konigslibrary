@@ -12,8 +12,8 @@
   import OfflineBrowser from '$lib/browsers/OfflineBrowser.svelte';
   import KeyboardHelp from '$lib/KeyboardHelp.svelte';
   import { isNative } from '$lib/platform';
-  import { getServerUrl, setServerUrl, isLocalServer } from '$lib/constants';
-  import { CircleHelp } from 'lucide-svelte';
+  import { isLocalServer } from '$lib/constants';
+  import { CircleQuestionMark } from 'lucide-svelte';
   import ToastStack from '$lib/ui/ToastStack.svelte';
 
   const svc = createReaderServices();
@@ -22,7 +22,6 @@
   const { state: manga, commands: registry } = svc;
   const native = isNative();
   const chapters = $derived(svc.chapters);
-  let serverUrl = $state(getServerUrl());
   let helpOpen = $state(false);
   let viewerCommands: ViewerCommands | null = $state(null);
   const activeViewer = $derived(svc.viewers.resolve(manga));
@@ -148,50 +147,19 @@
       class="fixed top-4 right-4 z-10 opacity-40 hover:opacity-80"
       aria-label="How to use"
     >
-      <CircleHelp size={24} />
+      <CircleQuestionMark size={24} />
     </a>
   {/if}
   <div
     class="flex min-h-screen flex-col items-center justify-center gap-8 p-8 pt-[calc(2rem+env(safe-area-inset-top))] pb-[calc(2rem+env(safe-area-inset-bottom))]"
   >
     <UploadButton />
-
     {#if native}
-      <div class="w-full max-w-2xl space-y-2">
-        <h2 class="mb-2 text-lg font-bold opacity-80">Server</h2>
-        <div class="flex gap-2">
-          <input
-            type="text"
-            bind:value={serverUrl}
-            placeholder="http://192.168.0.100:3000"
-            class="flex-1 border-2 bg-black px-3 py-2 text-sm text-white placeholder:opacity-40"
-          />
-          <Button
-            size="md"
-            onclick={() => {
-              setServerUrl(serverUrl);
-              location.reload();
-            }}>Connect</Button
-          >
-        </div>
-      </div>
-      <OfflineBrowser />
-      <LibraryBrowser />
       <NativeLibraryBrowser />
+      <OfflineBrowser />
     {:else if isLocalServer}
       <OfflineBrowser />
       <LibraryBrowser />
-
-      <div class="flex flex-col items-center gap-3">
-        <a
-          href="/download/konigslibrary.apk"
-          download
-          class="border-2 border-white/20 px-4 py-2 text-sm whitespace-nowrap hover:border-white/60"
-        >
-          Android APK
-        </a>
-      </div>
-
       <a href="/settings" class="mt-4 text-sm opacity-40 hover:opacity-80">Settings</a>
     {:else}
       <OfflineBrowser />

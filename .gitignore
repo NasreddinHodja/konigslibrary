@@ -25,10 +25,11 @@ certs/
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 
-# Capacitor
-android/app/src/main/assets/public/
-android/*.jks
-static/download/konigslibrary.apk
+# Keystore
+*.jks
+
+# Tauri
+src-tauri/gen/android/
 
 # Test files
 static/*.zip

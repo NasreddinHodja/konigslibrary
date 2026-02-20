@@ -15,21 +15,18 @@
     "serve": "node server.js",
     "dev:local": "LOCAL_BUILD=1 vite dev",
     "build:local": "LOCAL_BUILD=1 vite build",
-    "build:android": "CAPACITOR_BUILD=1 vite build && rm -rf build/download && npx cap sync android && cd android && ./gradlew assembleRelease && cp app/build/outputs/apk/release/app-release.apk ../static/download/konigslibrary.apk",
-    "dev:android": "CAP_DEV=1 npx cap sync android && npx cap run android",
-    "open:android": "npx cap open android"
+    "tauri:local": "LOCAL_BUILD=1 pnpm tauri dev",
+    "build:android": "pnpm tauri android build --target aarch64 && ~/.local/src/Android/build-tools/36.1.0/apksigner sign --ks src-tauri/konigslibrary.jks --ks-key-alias konigslibrary --out static/download/konigslibrary.apk src-tauri/gen/android/app/build/outputs/apk/universal/release/app-universal-release-unsigned.apk"
   },
   "devDependencies": {
-    "@capacitor/android": "^8.1.0",
-    "@capacitor/cli": "^8.1.0",
     "@eslint/compat": "^2.0.2",
     "@eslint/js": "^9.39.2",
     "@sveltejs/adapter-auto": "^7.0.1",
     "@sveltejs/adapter-node": "^5.0.0",
-    "@sveltejs/adapter-static": "^3.0.10",
     "@sveltejs/kit": "^2.50.2",
     "@sveltejs/vite-plugin-svelte": "^6.2.4",
     "@tailwindcss/vite": "^4.1.18",
+    "@tauri-apps/cli": "^2.10.0",
     "@types/node": "^22",
     "eslint": "^9.39.2",
     "eslint-config-prettier": "^10.1.8",
@@ -46,8 +43,8 @@
     "vite": "^7.3.1"
   },
   "dependencies": {
-    "@capacitor/core": "^8.1.0",
-    "@capacitor/filesystem": "^8.1.2",
+    "@tauri-apps/api": "^2.10.1",
+    "@tauri-apps/plugin-dialog": "^2.6.0",
     "lucide-svelte": "^0.563.0"
   }
 }

@@ -2,15 +2,15 @@
   import {
     listNativeManga,
     listNativeChapters,
-    loadNativeZipAsFile,
     getMangaDir,
     setMangaDir,
-    requestStoragePermission,
     type NativeMangaEntry
   } from '$lib/native-library';
+  import { convertFileSrc } from '@tauri-apps/api/core';
   import { getReaderContext } from '$lib/context';
   import { ZipUploadProvider, NativeFilesystemProvider } from '$lib/sources';
-  import { BookOpen, FileArchive, RefreshCw, Settings } from 'lucide-svelte';
+  import { open } from '@tauri-apps/plugin-dialog';
+  import { BookOpen, FileArchive, FolderOpen, RefreshCw, Settings } from 'lucide-svelte';
   import Loader from '$lib/ui/Loader.svelte';
   import Button from '$lib/ui/Button.svelte';
 
@@ -21,18 +21,10 @@
   let error: string | null = $state(null);
   let mangaDir = $state(getMangaDir());
   let showConfig = $state(false);
-  let permissionDenied = $state(false);
 
   async function loadEntries() {
     loading = true;
     error = null;
-    permissionDenied = false;
-    const granted = await requestStoragePermission();
-    if (!granted) {
-      permissionDenied = true;
-      loading = false;
-      return;
-    }
     try {
       entries = await listNativeManga();
     } catch {
@@ -47,11 +39,22 @@
 
   async function openEntry(entry: NativeMangaEntry) {
     if (entry.type === 'zip') {
-      const file = await loadNativeZipAsFile(entry.uri, entry.name);
+      const url = convertFileSrc(entry.path);
+      const response = await fetch(url);
+      const blob = await response.blob();
+      const file = new File([blob], entry.name + '.cbz', { type: 'application/zip' });
       await setSource(new ZipUploadProvider(file));
     } else {
       const chapters = await listNativeChapters(entry.path);
       await setSource(new NativeFilesystemProvider(chapters, entry.name));
+    }
+  }
+
+  async function browseDir() {
+    const selected = await open({ directory: true, title: 'Select manga folder' });
+    if (selected) {
+      mangaDir = selected;
+      saveDir();
     }
   }
 
@@ -64,7 +67,7 @@
 
 <div class="w-full max-w-2xl space-y-2">
   <div class="mb-4 flex items-center gap-3">
-    <h2 class="text-lg font-bold opacity-80">Device Library</h2>
+    <h2 class="text-lg font-bold opacity-80">Local Library</h2>
     <button class="opacity-40 hover:opacity-80" onclick={loadEntries} aria-label="Refresh">
       <RefreshCw size={16} />
     </button>
@@ -79,14 +82,21 @@
 
   {#if showConfig}
     <div class="mb-4 space-y-2">
-      <p class="text-sm opacity-60">Absolute path to manga folder on device</p>
+      <p class="text-sm opacity-60">Path to manga folder</p>
       <div class="flex gap-2">
         <input
           type="text"
           bind:value={mangaDir}
-          placeholder="/storage/emulated/0/Manga"
+          placeholder="/home/user/Manga"
           class="flex-1 border-2 bg-black px-3 py-2 text-sm text-white placeholder:opacity-40"
         />
+        <button
+          class="border-2 px-3 opacity-60 hover:opacity-100"
+          onclick={browseDir}
+          aria-label="Browse"
+        >
+          <FolderOpen size={16} />
+        </button>
         <Button size="md" onclick={saveDir}>Save</Button>
       </div>
     </div>
@@ -94,10 +104,6 @@
 
   {#if loading}
     <Loader />
-  {:else if permissionDenied}
-    <p class="text-sm opacity-60">
-      Storage permission required. Go to Settings &gt; Apps &gt; konigslibrary &gt; Permissions.
-    </p>
   {:else if error}
     <p class="text-sm opacity-60">{error}</p>
   {:else if entries.length > 0}
@@ -116,7 +122,7 @@
     {/each}
   {:else}
     <p class="text-sm opacity-40">
-      No manga found. Place ZIP/CBZ files or folders in the <code>{mangaDir}/</code> directory.
+      No manga found in <code>{mangaDir}/</code>
     </p>
   {/if}
 </div>

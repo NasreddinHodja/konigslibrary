@@ -6,7 +6,8 @@
 konigslibrary is a manga reader that runs in your browser. It works in two modes:
 
 - *Deployed* — visit the hosted site, upload a ZIP/CBZ, and read. Everything is client-side, nothing leaves your browser.
-- *Local server* — run on your own machine to serve manga from a directory. Access from any device on your network, including the Android app.
+- *Desktop app* — native app (via Tauri) that reads manga directly from a local folder.
+- *Local server* — run on your own machine to serve manga from a directory. Access from any device on your network.
 
 * Features
 
@@ -17,7 +18,7 @@ konigslibrary is a manga reader that runs in your browser. It works in two modes
 - *Progress saving* — chapter and page position saved to localStorage, auto-resumes on return
 - *Offline downloads* — download manga or individual chapters to IndexedDB for offline reading
 - *Customizable keybindings* — rebind every shortcut from the Settings page
-- *Android app* — capacitor APK that reads from device storage or connects to a local server
+- *Desktop app* — native Tauri app that reads manga from a local directory with file dialog support
 - *No backend required* — ZIP parsing, image extraction, and decompression all happen in the browser via the Web Compression API
 
 * Usage
@@ -69,15 +70,14 @@ MANGA_DIR=~/Manga pnpm serve
 
 Or configure it through the Settings panel in the web UI — saved to =konigslibrary.json=.
 
-** Android
-
-The Android app connects to a running local server or reads directly from device storage. Build the APK with:
+** Desktop App (Tauri)
 
 #+begin_src sh
-pnpm build:android
+pnpm tauri:local          # dev mode
+pnpm tauri build          # release build
 #+end_src
 
-Or download the pre-built APK from the deployed site.
+The desktop app reads manga directly from a local folder. Use the settings gear to pick your manga directory (or use the file dialog).
 
 ** Environment Variables
 
@@ -128,7 +128,8 @@ pnpm dev
 | =pnpm check=         | Svelte type checking                 |
 | =pnpm lint=          | Prettier + ESLint check              |
 | =pnpm format=        | Auto-format with Prettier            |
-| =pnpm build:android= | Build Android APK                    |
+| =pnpm tauri:local=   | Tauri dev mode                       |
+| =pnpm tauri build=   | Tauri release build                  |
 
 ** Tech Stack
 
@@ -136,4 +137,4 @@ pnpm dev
 - Tailwind CSS 4
 - TypeScript 5.9
 - Vite 7
-- Capacitor (Android)
+- Tauri 2 (desktop/mobile)

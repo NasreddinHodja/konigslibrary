@@ -1,4 +1,1 @@
-import { Capacitor } from '@capacitor/core';
-
-export const isNative = () => Capacitor.isNativePlatform();
-export const getPlatform = () => Capacitor.getPlatform();
+export const isNative = () => typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
