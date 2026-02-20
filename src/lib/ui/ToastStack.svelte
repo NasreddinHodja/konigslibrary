@@ -2,6 +2,7 @@
   import { fly } from 'svelte/transition';
   import { X, Check, AlertTriangle } from 'lucide-svelte';
   import { getToasts, removeToast } from '$lib/toast.svelte';
+  import { ANIM_DURATION } from '$lib/constants';
 
   const toasts = $derived(getToasts());
 </script>
@@ -11,7 +12,7 @@
     {#each toasts as toast (toast.id)}
       <div
         class="flex items-center gap-3 border-2 bg-black px-4 py-2 shadow-lg"
-        transition:fly={{ x: 100, duration: 200 }}
+        transition:fly={{ x: 100, duration: ANIM_DURATION }}
       >
         {#if toast.phase === 'done'}
           <Check size={16} class="shrink-0 text-green-400" />

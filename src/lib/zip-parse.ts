@@ -4,6 +4,7 @@ export type BaseZipEntry = {
   uncompressedSize: number;
   compressionMethod: number;
   localHeaderOffset: number;
+  crc32: number;
 };
 
 export const EOCD_SIG = 0x06054b50;
@@ -28,6 +29,7 @@ export function parseCentralDirectory(cdBuf: ArrayBuffer): BaseZipEntry[] {
     if (cd.getUint32(pos, true) !== CD_SIG) break;
 
     const compressionMethod = cd.getUint16(pos + 10, true);
+    const crc32 = cd.getUint32(pos + 16, true);
     let compressedSize: number = cd.getUint32(pos + 20, true);
     let uncompressedSize: number = cd.getUint32(pos + 24, true);
     const nameLen = cd.getUint16(pos + 28, true);
@@ -73,7 +75,8 @@ export function parseCentralDirectory(cdBuf: ArrayBuffer): BaseZipEntry[] {
         compressedSize,
         uncompressedSize,
         compressionMethod,
-        localHeaderOffset
+        localHeaderOffset,
+        crc32
       });
     }
 

@@ -1,15 +1,4 @@
-const crcTable = new Uint32Array(256);
-for (let i = 0; i < 256; i++) {
-  let c = i;
-  for (let j = 0; j < 8; j++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
-  crcTable[i] = c;
-}
-
-function crc32(data: Uint8Array): number {
-  let crc = 0xffffffff;
-  for (let i = 0; i < data.length; i++) crc = crcTable[(crc ^ data[i]) & 0xff] ^ (crc >>> 8);
-  return (crc ^ 0xffffffff) >>> 0;
-}
+import { crc32 } from '$lib/crc32';
 
 export function createZip(entries: { name: string; data: Uint8Array }[]): Blob {
   const encoder = new TextEncoder();

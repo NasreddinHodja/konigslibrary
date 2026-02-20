@@ -15,14 +15,46 @@
     }
     return Array.from(map.entries());
   });
+
+  let dialogEl: HTMLDivElement | undefined = $state();
+  let previousFocus: HTMLElement | null = null;
+
+  const FOCUSABLE = 'a[href], button, [tabindex]:not([tabindex="-1"])';
+
+  function trapFocus(e: KeyboardEvent) {
+    if (e.key !== 'Tab' || !dialogEl) return;
+    const focusable = Array.from(dialogEl.querySelectorAll<HTMLElement>(FOCUSABLE));
+    if (focusable.length === 0) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
+    }
+  }
+
+  $effect(() => {
+    if (!dialogEl) return;
+    previousFocus = document.activeElement as HTMLElement | null;
+    const first = dialogEl.querySelector<HTMLElement>(FOCUSABLE);
+    first?.focus();
+    return () => previousFocus?.focus();
+  });
 </script>
+
+<svelte:window onkeydown={trapFocus} />
 
 <Backdrop onclick={onclose} />
 
 <div
+  bind:this={dialogEl}
   class="fixed inset-0 z-50 flex items-center justify-center p-4"
   role="dialog"
   aria-label="Keyboard shortcuts"
+  aria-modal="true"
 >
   <div
     class="max-h-[calc(100vh-2rem)] w-full max-w-lg overflow-y-auto border-2 bg-black p-6 shadow-xl"

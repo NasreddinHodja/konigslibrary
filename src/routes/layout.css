@@ -13,3 +13,18 @@ body {
   @apply bg-black text-white antialiased;
   font-family: 'Source Code Pro', monospace;
 }
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-anim: 0ms;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

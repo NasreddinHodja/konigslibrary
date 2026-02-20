@@ -28,3 +28,9 @@ export function updateToast(id: string, updates: Partial<Toast>): void {
 export function removeToast(id: string): void {
   toasts = toasts.filter((t) => t.id !== id);
 }
+
+export function showError(message: string): void {
+  const id = `error-${Date.now()}`;
+  addToast({ id, label: message, current: 0, total: 0, phase: 'error' });
+  setTimeout(() => removeToast(id), 3000);
+}

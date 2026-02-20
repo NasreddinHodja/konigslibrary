@@ -1,4 +1,8 @@
-export const ANIM_DURATION = 300;
+const reducedMotion =
+  typeof globalThis.matchMedia === 'function' &&
+  globalThis.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+export const ANIM_DURATION = reducedMotion ? 0 : 300;
 
 // quartic ease-out — matches CSS cubic-bezier(0.25, 1, 0.5, 1) in layout.css
 export const ANIM_EASE = (t: number) => 1 - Math.pow(1 - t, 4);

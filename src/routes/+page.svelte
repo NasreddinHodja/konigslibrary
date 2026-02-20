@@ -15,6 +15,7 @@
   import { isLocalServer } from '$lib/constants';
   import { CircleQuestionMark, HardDrive } from 'lucide-svelte';
   import ToastStack from '$lib/ui/ToastStack.svelte';
+  import { showError } from '$lib/toast.svelte';
 
   const svc = createReaderServices();
   setReaderContext(svc);
@@ -42,7 +43,7 @@
     try {
       await svc.setSource(new ZipUploadProvider(file));
     } catch (err) {
-      alert(`Failed to open file: ${err instanceof Error ? err.message : err}`);
+      showError(`Failed to open file: ${err instanceof Error ? err.message : err}`);
     }
   };
 

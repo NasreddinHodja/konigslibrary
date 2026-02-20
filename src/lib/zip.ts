@@ -6,6 +6,7 @@ import {
   getUint64,
   parseCentralDirectory
 } from '$lib/zip-parse';
+import { crc32 } from '$lib/crc32';
 
 export type ZipEntry = BaseZipEntry;
 
@@ -55,14 +56,27 @@ export async function extractEntry(file: File, entry: ZipEntry): Promise<Blob> {
   const dataStart = entry.localHeaderOffset + 30 + nameLen + extraLen;
   const raw = file.slice(dataStart, dataStart + entry.compressedSize);
 
+  let blob: Blob;
   if (entry.compressionMethod === 0) {
-    return raw;
-  }
-  if (entry.compressionMethod !== 8) {
+    blob = raw;
+  } else if (entry.compressionMethod === 8) {
+    const ds = new DecompressionStream('deflate-raw');
+    const readable = raw.stream().pipeThrough(ds);
+    blob = await new Response(readable).blob();
+  } else {
     throw new Error(`Unsupported compression method: ${entry.compressionMethod}`);
   }
 
-  const ds = new DecompressionStream('deflate-raw');
-  const readable = raw.stream().pipeThrough(ds);
-  return new Response(readable).blob();
+  if (entry.crc32 !== 0) {
+    const data = new Uint8Array(await blob.arrayBuffer());
+    const actual = crc32(data);
+    if (actual !== entry.crc32) {
+      throw new Error(
+        `CRC32 mismatch for "${entry.name}": expected ${entry.crc32.toString(16)}, got ${actual.toString(16)}`
+      );
+    }
+    return new Blob([data]);
+  }
+
+  return blob;
 }
