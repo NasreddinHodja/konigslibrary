@@ -13,7 +13,7 @@
   import KeyboardHelp from '$lib/KeyboardHelp.svelte';
   import { isNative } from '$lib/platform';
   import { isLocalServer } from '$lib/constants';
-  import { CircleQuestionMark } from 'lucide-svelte';
+  import { CircleQuestionMark, HardDrive } from 'lucide-svelte';
   import ToastStack from '$lib/ui/ToastStack.svelte';
 
   const svc = createReaderServices();
@@ -23,6 +23,7 @@
   const native = isNative();
   const chapters = $derived(svc.chapters);
   let helpOpen = $state(false);
+  let showDeviceLibrary = $state(false);
   let viewerCommands: ViewerCommands | null = $state(null);
   const activeViewer = $derived(svc.viewers.resolve(manga));
 
@@ -155,8 +156,20 @@
   >
     <UploadButton />
     {#if native}
-      <NativeLibraryBrowser />
       <OfflineBrowser />
+      <LibraryBrowser />
+      {#if showDeviceLibrary}
+        <NativeLibraryBrowser />
+      {:else}
+        <button
+          class="flex items-center gap-2 border-2 border-white/20 px-4 py-2 text-sm opacity-60 hover:border-white/60 hover:opacity-100"
+          onclick={() => (showDeviceLibrary = true)}
+        >
+          <HardDrive size={16} />
+          Browse device
+        </button>
+      {/if}
+      <a href="/settings" class="mt-4 text-sm opacity-40 hover:opacity-80">Settings</a>
     {:else if isLocalServer}
       <OfflineBrowser />
       <LibraryBrowser />

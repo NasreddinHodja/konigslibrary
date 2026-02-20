@@ -10,7 +10,8 @@
     formatKey,
     DEFAULT_BINDINGS
   } from '$lib/keybindings.svelte';
-  import { apiUrl, isLocalServer } from '$lib/constants';
+  import { apiUrl, isLocalServer, getServerUrl, setServerUrl } from '$lib/constants';
+  import { isNative } from '$lib/platform';
 
   let bindings: KeyBinding[] = $state($state.snapshot(getBindings()) as KeyBinding[]);
   let listening: Action | null = $state(null);
@@ -60,6 +61,15 @@
     }
     return Array.from(map.entries());
   });
+
+  // Native server URL
+  const native = isNative();
+  let serverUrl = $state(getServerUrl());
+
+  function connectServer() {
+    setServerUrl(serverUrl.trim());
+    window.location.href = '/';
+  }
 
   // Server settings (only for local server)
   let mangaDir = $state('');
@@ -148,6 +158,20 @@
       </div>
     {/each}
   </section>
+
+  {#if native}
+    <section class="space-y-3">
+      <h2 class="text-lg font-bold opacity-80">Server</h2>
+      <h3 class="text-sm font-bold opacity-60">Server URL</h3>
+      <input
+        type="text"
+        bind:value={serverUrl}
+        placeholder="http://192.168.1.x:3000"
+        class="w-full border-2 bg-black px-3 py-2 text-sm text-white placeholder:opacity-40"
+      />
+      <Button size="md" onclick={connectServer}>Connect</Button>
+    </section>
+  {/if}
 
   {#if isLocalServer}
     <section class="space-y-3">
