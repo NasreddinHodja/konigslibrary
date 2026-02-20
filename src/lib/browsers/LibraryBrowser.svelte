@@ -7,6 +7,7 @@
   import { listOfflineManga } from '$lib/offline-db';
   import { isNative } from '$lib/platform';
   import { BookOpen, FileArchive, Download, Check } from 'lucide-svelte';
+  import { showError } from '$lib/toast.svelte';
   import Loader from '$lib/ui/Loader.svelte';
 
   const { setSource, events } = getReaderContext();
@@ -56,7 +57,10 @@
   async function startDownload(e: MouseEvent, entry: LibraryEntry) {
     e.stopPropagation();
     const res = await fetch(apiUrl(`/api/library/${entry.slug}/chapters`));
-    if (!res.ok) return;
+    if (!res.ok) {
+      showError(`Failed to fetch chapters for "${entry.name}"`);
+      return;
+    }
     const chapters: ServerChapter[] = await res.json();
     saveManga(entry.slug, entry.name, chapters, events);
   }
