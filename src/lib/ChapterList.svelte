@@ -56,7 +56,19 @@
     if (manga.sidebarOpen && listEl) {
       const id = setTimeout(() => {
         const active = listEl.querySelector('.underline') as HTMLElement | null;
-        active?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        if (active) {
+          const scroller = active.closest('.overflow-y-auto') as HTMLElement | null;
+          if (scroller) {
+            const pad = 40;
+            const sRect = scroller.getBoundingClientRect();
+            const aRect = active.getBoundingClientRect();
+            if (aRect.top < sRect.top + pad) {
+              scroller.scrollBy({ top: aRect.top - sRect.top - pad, behavior: 'smooth' });
+            } else if (aRect.bottom > sRect.bottom - pad) {
+              scroller.scrollBy({ top: aRect.bottom - sRect.bottom + pad, behavior: 'smooth' });
+            }
+          }
+        }
       }, ANIM_DURATION + 10);
       return () => clearTimeout(id);
     }
