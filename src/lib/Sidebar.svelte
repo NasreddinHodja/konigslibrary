@@ -1,21 +1,23 @@
 <script lang="ts">
   import { slide } from 'svelte/transition';
   import { Menu, X, Minus, Plus, ArrowLeft, Settings } from 'lucide-svelte';
-  import {
-    manga,
-    clearManga,
-    toggleScrollMode,
-    toggleRtl,
-    toggleDoublePage,
-    zoomIn,
-    zoomOut
-  } from '$lib/state.svelte';
+  import { getReaderContext } from '$lib/context';
   import { ANIM_DURATION, ANIM_EASE } from '$lib/constants';
   import ChapterList from '$lib/ChapterList.svelte';
   import Toggle from '$lib/ui/Toggle.svelte';
   import Button from '$lib/ui/Button.svelte';
   import Backdrop from '$lib/ui/Backdrop.svelte';
   import { drawer, createDrawerHandlers } from '$lib/actions/edgeSwipe.svelte';
+
+  const {
+    state: manga,
+    clearManga,
+    toggleScrollMode,
+    toggleRtl,
+    toggleDoublePage,
+    zoomIn,
+    zoomOut
+  } = getReaderContext();
 
   let isMobile = $state(false);
 

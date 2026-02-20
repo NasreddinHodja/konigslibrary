@@ -1,24 +1,26 @@
 <script lang="ts">
   import { slide } from 'svelte/transition';
   import { ChevronDown, ChevronRight, Download } from 'lucide-svelte';
-  import {
-    manga,
-    getChapters,
-    getSourceMode,
-    getLibraryManga,
-    getLibraryChapters,
-    getMangaName
-  } from '$lib/state.svelte';
-  import { saveChapter, getDownloadVersion } from '$lib/download.svelte';
+  import { getReaderContext } from '$lib/context';
+  import { saveChapter } from '$lib/download.svelte';
   import { getOfflineManga } from '$lib/offline-db';
+  import { ServerLibraryProvider } from '$lib/sources/library';
+  import { OfflineDbProvider } from '$lib/sources/offline';
   import { ANIM_DURATION, ANIM_EASE } from '$lib/constants';
 
-  const canDownload = $derived(getSourceMode() === 'library' || getSourceMode() === 'offline');
+  const svc = getReaderContext();
+  const { state: manga, events } = svc;
+
+  const canDownload = $derived.by(() => {
+    const p = svc.getProvider();
+    return p instanceof ServerLibraryProvider || p instanceof OfflineDbProvider;
+  });
   let downloadedChapters: Set<string> = $state.raw(new Set());
 
-  $effect(() => {
-    getDownloadVersion();
-    const slug = getLibraryManga();
+  function refreshOfflineChapters() {
+    const p = svc.getProvider();
+    const slug =
+      p instanceof ServerLibraryProvider ? p.slug : p instanceof OfflineDbProvider ? p.slug : '';
     if (!slug || !canDownload) {
       downloadedChapters = new Set();
       return;
@@ -26,20 +28,28 @@
     getOfflineManga(slug).then((entry) => {
       downloadedChapters = new Set(entry?.chapters.map((c) => c.name) ?? []);
     });
+  }
+
+  // Initial load + refresh on download complete
+  $effect(() => {
+    refreshOfflineChapters();
+    const unsub = events.on('download:complete', () => refreshOfflineChapters());
+    return unsub;
   });
 
   function downloadChapter(chapterName: string, e: MouseEvent) {
     e.stopPropagation();
-    const slug = getLibraryManga();
-    const name = getMangaName();
-    const chapters = getLibraryChapters();
-    if (!slug || !name) return;
+    const p = svc.getProvider();
+    if (!(p instanceof ServerLibraryProvider) && !(p instanceof OfflineDbProvider)) return;
+    const slug = p.slug;
+    const name = p.mangaName;
+    const chapters = p.getServerChapters();
     const chapter = chapters.find((c) => c.name === chapterName);
     if (!chapter) return;
-    saveChapter(slug, name, chapter);
+    saveChapter(slug, name, chapter, events);
   }
 
-  const chapters = $derived(getChapters());
+  const chapters = $derived(svc.chapters);
   let listEl: HTMLUListElement;
 
   $effect(() => {

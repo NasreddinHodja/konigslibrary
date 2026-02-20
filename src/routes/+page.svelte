@@ -1,50 +1,44 @@
 <script lang="ts">
-  import {
-    manga,
-    setZip,
-    getChapters,
-    saveProgress,
-    clearManga,
-    goToNextChapter,
-    goToPrevChapter,
-    toggleScrollMode,
-    toggleRtl,
-    toggleDoublePage,
-    zoomIn,
-    zoomOut
-  } from '$lib/state.svelte';
+  import { ZipUploadProvider } from '$lib/sources';
   import { resolveKey } from '$lib/keybindings.svelte';
-  import PageScrollViewer from '$lib/PageScrollViewer.svelte';
-  import PageTurnViewer from '$lib/PageTurnViewer.svelte';
+  import type { ViewerCommands } from '$lib/commands';
+  import { createReaderServices, setReaderContext } from '$lib/context';
   import Sidebar from '$lib/Sidebar.svelte';
   import Button from '$lib/ui/Button.svelte';
   import EmptyState from '$lib/ui/EmptyState.svelte';
-  import LibraryBrowser from '$lib/LibraryBrowser.svelte';
-  import NativeLibraryBrowser from '$lib/NativeLibraryBrowser.svelte';
-  import OfflineBrowser from '$lib/ui/OfflineBrowser.svelte';
+  import UploadButton from '$lib/browsers/UploadButton.svelte';
+  import LibraryBrowser from '$lib/browsers/LibraryBrowser.svelte';
+  import NativeLibraryBrowser from '$lib/browsers/NativeLibraryBrowser.svelte';
+  import OfflineBrowser from '$lib/browsers/OfflineBrowser.svelte';
   import KeyboardHelp from '$lib/KeyboardHelp.svelte';
   import { isNative } from '$lib/platform';
   import { getServerUrl, setServerUrl, isLocalServer } from '$lib/constants';
   import { CircleHelp } from 'lucide-svelte';
   import ToastStack from '$lib/ui/ToastStack.svelte';
 
+  const svc = createReaderServices();
+  setReaderContext(svc);
+
+  const { state: manga, commands: registry } = svc;
   const native = isNative();
-  const chapters = $derived(getChapters());
+  const chapters = $derived(svc.chapters);
   let serverUrl = $state(getServerUrl());
   let helpOpen = $state(false);
+  let viewerCommands: ViewerCommands | null = $state(null);
+  const activeViewer = $derived(svc.viewers.resolve(manga));
 
   let saveTimer: ReturnType<typeof setTimeout> | undefined;
   $effect(() => {
     if (!manga.selectedChapter) return;
     manga.currentPage; // eslint-disable-line @typescript-eslint/no-unused-expressions
     clearTimeout(saveTimer);
-    saveTimer = setTimeout(saveProgress, 300);
+    saveTimer = setTimeout(() => svc.saveProgress(), 300);
     return () => clearTimeout(saveTimer);
   });
 
   const handleDrop = async (e: DragEvent) => {
     const file = e.dataTransfer?.files[0];
-    if (file && /\.(zip|cbz)$/i.test(file.name)) await setZip(file);
+    if (file && /\.(zip|cbz)$/i.test(file.name)) await svc.setSource(new ZipUploadProvider(file));
   };
 
   const isMobile = typeof window !== 'undefined' && 'ontouchstart' in window;
@@ -72,7 +66,9 @@
     const acquire = async () => {
       try {
         sentinel = await navigator.wakeLock.request('screen');
-      } catch { /* ignore */ }
+      } catch {
+        /* ignore */
+      }
     };
 
     const onVisibility = () => {
@@ -88,7 +84,7 @@
     };
   });
 
-  const handleGlobalKey = (event: KeyboardEvent) => {
+  const handleKey = (event: KeyboardEvent) => {
     if (event.altKey || event.ctrlKey || event.metaKey) return;
     const tag = (event.target as HTMLElement)?.tagName;
     if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
@@ -96,6 +92,11 @@
 
     const action = resolveKey(event.key);
     if (!action) return;
+
+    if (action === 'holdZoom') {
+      viewerCommands?.holdZoom?.(true);
+      return;
+    }
 
     if (action === 'showHelp') {
       event.preventDefault();
@@ -111,41 +112,20 @@
       return;
     }
 
-    if (action === 'closeSidebar') {
-      event.preventDefault();
-      manga.sidebarOpen = false;
-    } else if (action === 'toggleSidebar') {
-      event.preventDefault();
-      manga.sidebarOpen = !manga.sidebarOpen;
-    } else if (action === 'back') {
-      event.preventDefault();
-      clearManga();
-    } else if (action === 'nextChapter') {
-      event.preventDefault();
-      goToNextChapter();
-    } else if (action === 'prevChapter') {
-      event.preventDefault();
-      goToPrevChapter();
-    } else if (action === 'toggleMode' && manga.sidebarOpen) {
-      event.preventDefault();
-      toggleScrollMode();
-    } else if (action === 'toggleRtl' && manga.sidebarOpen) {
-      event.preventDefault();
-      toggleRtl();
-    } else if (action === 'toggleDoublePage' && manga.sidebarOpen) {
-      event.preventDefault();
-      toggleDoublePage();
-    } else if (action === 'zoomIn') {
-      event.preventDefault();
-      zoomIn();
-    } else if (action === 'zoomOut') {
-      event.preventDefault();
-      zoomOut();
-    }
+    event.preventDefault();
+    registry.execute(action, { services: svc, viewer: viewerCommands });
+  };
+
+  const handleKeyUp = (event: KeyboardEvent) => {
+    if (resolveKey(event.key) === 'holdZoom') viewerCommands?.holdZoom?.(false);
+  };
+
+  const handleBlur = () => {
+    viewerCommands?.holdZoom?.(false);
   };
 </script>
 
-<svelte:window onkeydown={handleGlobalKey} />
+<svelte:window onkeydown={handleKey} onkeyup={handleKeyUp} onblur={handleBlur} />
 
 <svelte:document
   ondragover={(e) => e.preventDefault()}
@@ -174,18 +154,7 @@
   <div
     class="flex min-h-screen flex-col items-center justify-center gap-8 p-8 pt-[calc(2rem+env(safe-area-inset-top))] pb-[calc(2rem+env(safe-area-inset-bottom))]"
   >
-    <label class="cursor-pointer">
-      <Button size="lg" as="span">Upload manga</Button>
-      <input
-        type="file"
-        accept=".zip,.cbz"
-        onchange={async (e) => {
-          const input = e.target as HTMLInputElement;
-          if (input.files?.[0]) await setZip(input.files[0]);
-        }}
-        class="hidden"
-      />
-    </label>
+    <UploadButton />
 
     {#if native}
       <div class="w-full max-w-2xl space-y-2">
@@ -264,13 +233,10 @@
   >
     <Sidebar />
 
-    {#if manga.selectedChapter}
-      {#if manga.scrollMode}
-        <PageScrollViewer />
-      {:else}
-        <PageTurnViewer />
-      {/if}
-    {:else}
+    {#if manga.selectedChapter && activeViewer}
+      {@const Viewer = activeViewer.component}
+      <Viewer bind:commands={viewerCommands} />
+    {:else if !manga.selectedChapter}
       <EmptyState>
         <Button size="lg" onclick={() => (manga.sidebarOpen = true)}>Select a chapter</Button>
       </EmptyState>

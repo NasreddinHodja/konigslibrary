@@ -1,0 +1,34 @@
+#+TITLE: Architecture
+#+STARTUP: overview
+
+* Structure
+
+#+begin_example
++page.svelte
+  +-- context/         DI container, reactive state, Svelte context
+  +-- sources/         source providers (upload, server, native, offline)
+  +-- commands/        command registry + keybindings
+  +-- events/          typed event bus
+  +-- viewers/         viewer registry + viewer components
+  +-- pipeline/        chapter loading hook + middleware
+  +-- plugins/         plugin lifecycle runner
+  +-- browsers/        source-selection UI components
+#+end_example
+
+* Modules
+
+- =context/= -- creates =ReaderServices=, sets/gets Svelte context with a Symbol key
+- =sources/= -- =SourceProvider= interface. Implementations: zip upload, server library, native filesystem, offline IDB
+- =commands/= -- =CommandRegistry= with 15 commands (navigation, settings, UI). Keybindings resolve keys to action IDs
+- =events/= -- =createEventBus()= with typed =on()= / =emit()=. Events: download, chapter, source, progress
+- =viewers/= -- =ViewerRegistry= resolves highest-priority matching viewer. Built-in: scroll (IntersectionObserver) and page-turn (spreads, hold-to-zoom)
+- =pipeline/= -- =useChapter()= reactive hook with middleware composition. Middleware: decode, wide-detect. Preloader: sliding window cache
+- =plugins/= -- =Plugin= interface with lifecycle hooks wired to the event bus
+
+* Extending
+
+- *New source*: implement =SourceProvider=, add browser component that calls =svc.setSource()=
+- *New viewer*: create component with =$bindable= commands prop, register =ViewerDefinition= with match/priority
+- *New command*: define =Command=, register in =createDefaultRegistry()=, add keybinding
+- *New middleware*: create =Middleware= function, pass in =useChapter()= array
+- *New plugin*: implement =Plugin= interface, register in =context/create.svelte.ts=

@@ -2,12 +2,11 @@ import { apiUrl } from '$lib/constants';
 import { addToast, updateToast } from '$lib/toast.svelte';
 import { saveOfflinePage, saveOfflineMangaMeta } from '$lib/offline-db';
 import type { ServerChapter } from '$lib/types';
+import type { EventBus } from '$lib/events';
 
 const CONCURRENT_DOWNLOADS = 4;
 
 let nextId = 0;
-let _dlVersion = $state(0);
-export const getDownloadVersion = () => _dlVersion;
 
 async function downloadPool<T>(
   items: T[],
@@ -45,7 +44,8 @@ function buildPageUrl(
 export function saveManga(
   slug: string,
   name: string,
-  chapters: ServerChapter[]
+  chapters: ServerChapter[],
+  events?: EventBus
 ): { cancel: () => void } {
   const id = `dl-${nextId++}`;
   const controller = new AbortController();
@@ -86,12 +86,13 @@ export function saveManga(
     );
 
     await saveOfflineMangaMeta(slug, name, chapters);
-    _dlVersion++;
+    events?.emit('download:complete', { slug });
     updateToast(id, { phase: 'done', cancel: undefined });
   };
 
   run().catch((err) => {
     if (cancelled || err.name === 'AbortError') return;
+    events?.emit('download:error', { slug, error: err.message });
     updateToast(id, { phase: 'error', cancel: undefined });
   });
 
@@ -101,7 +102,8 @@ export function saveManga(
 export function saveChapter(
   slug: string,
   mangaName: string,
-  chapter: ServerChapter
+  chapter: ServerChapter,
+  events?: EventBus
 ): { cancel: () => void } {
   const id = `dl-${nextId++}`;
   const controller = new AbortController();
@@ -145,12 +147,13 @@ export function saveChapter(
     );
 
     await saveOfflineMangaMeta(slug, mangaName, [chapter]);
-    _dlVersion++;
+    events?.emit('download:complete', { slug, chapterName: chapter.name });
     updateToast(id, { phase: 'done', cancel: undefined });
   };
 
   run().catch((err) => {
     if (cancelled || err.name === 'AbortError') return;
+    events?.emit('download:error', { slug, error: err.message });
     updateToast(id, { phase: 'error', cancel: undefined });
   });
 
