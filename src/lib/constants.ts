@@ -10,6 +10,9 @@ export const LS_PROGRESS_PREFIX = 'kl:progress:';
 
 export const INTERSECT_THRESHOLD = 0.5;
 
+export const VIRTUAL_BUFFER = 5;
+export const DEFAULT_PAGE_RATIO = 1.5; // height / width, typical manga page
+
 export const SWIPE_MIN_HORIZONTAL = 30;
 export const SWIPE_MAX_VERTICAL = 50;
 
