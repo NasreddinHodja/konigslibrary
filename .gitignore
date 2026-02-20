@@ -31,6 +31,9 @@ vite.config.ts.timestamp-*
 # Tauri
 src-tauri/gen/android/
 
+# APK signing metadata
+*.idsig
+
 # Test files
 static/*.zip
 static/*.cbz
