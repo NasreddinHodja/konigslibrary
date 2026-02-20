@@ -5,6 +5,7 @@ import { createPipeline } from './pipeline';
 export type ChapterState = {
   readonly pageUrls: string[];
   readonly loading: boolean;
+  readonly error: string | null;
   readonly widePages: Set<number>;
   readonly decoded: Map<number, HTMLImageElement>;
 };
@@ -12,6 +13,7 @@ export type ChapterState = {
 export function useChapter(services: ReaderServices, middlewares: Middleware[] = []): ChapterState {
   let pageUrls: string[] = $state([]);
   let loading = $state(false);
+  let error: string | null = $state(null);
   const emptySet: Set<number> = new Set(); // eslint-disable-line svelte/prefer-svelte-reactivity
   const emptyMap: Map<number, HTMLImageElement> = new Map(); // eslint-disable-line svelte/prefer-svelte-reactivity
   let widePages: Set<number> = $state.raw(emptySet);
@@ -28,24 +30,35 @@ export function useChapter(services: ReaderServices, middlewares: Middleware[] =
     let urls: string[] = [];
 
     loading = true;
+    error = null;
     pageUrls = [];
     widePages = emptySet;
     decoded = emptyMap;
 
-    services.getChapterUrls(chapter).then(async (result) => {
-      if (controller.signal.aborted) return;
-      urls = result.urls;
-      revoke = result.revoke;
+    services
+      .getChapterUrls(chapter)
+      .then(async (result) => {
+        if (controller.signal.aborted) return;
+        urls = result.urls;
+        revoke = result.revoke;
 
-      const output: PipelineOutput = await pipeline({ urls, revoke, services }, controller.signal);
+        const output: PipelineOutput = await pipeline(
+          { urls, revoke, services },
+          controller.signal
+        );
 
-      if (controller.signal.aborted) return;
+        if (controller.signal.aborted) return;
 
-      pageUrls = output.urls;
-      widePages = output.widePages;
-      decoded = output.decoded;
-      loading = false;
-    });
+        pageUrls = output.urls;
+        widePages = output.widePages;
+        decoded = output.decoded;
+        loading = false;
+      })
+      .catch((err) => {
+        if (controller.signal.aborted) return;
+        error = err instanceof Error ? err.message : String(err);
+        loading = false;
+      });
 
     return () => {
       controller.abort();
@@ -59,6 +72,9 @@ export function useChapter(services: ReaderServices, middlewares: Middleware[] =
     },
     get loading() {
       return loading;
+    },
+    get error() {
+      return error;
     },
     get widePages() {
       return widePages;

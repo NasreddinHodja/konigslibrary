@@ -55,7 +55,14 @@ export function createReaderServices(): ReaderServices {
     state.shouldScroll = false;
 
     _provider = provider;
-    _chapters = await provider.loadChapters();
+
+    try {
+      _chapters = await provider.loadChapters();
+    } catch (err) {
+      _provider = null;
+      _chapters = [];
+      throw err;
+    }
 
     events.emit('source:loaded', { kind: provider.kind, mangaName: provider.mangaName });
 

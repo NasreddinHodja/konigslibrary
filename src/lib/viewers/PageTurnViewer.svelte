@@ -140,6 +140,8 @@
 >
   {#if chapter.loading}
     <Loader />
+  {:else if chapter.error}
+    <p class="py-8 text-center text-sm opacity-60">Failed to load chapter: {chapter.error}</p>
   {:else if showEndScreen}
     <EndOfChapter onback={() => (showEndScreen = false)} />
   {:else}
@@ -157,6 +159,14 @@
           hidden={!currentSpread.includes(pageIdx)}
           class="max-h-full object-contain"
           class:max-w-[50%]={currentSpread.length === 2}
+          onerror={(e) => {
+            const img = e.currentTarget as HTMLImageElement;
+            img.style.display = 'none';
+            img.insertAdjacentHTML(
+              'afterend',
+              '<p class="py-8 text-sm opacity-40">Failed to load page</p>'
+            );
+          }}
         />
       {/each}
     </div>

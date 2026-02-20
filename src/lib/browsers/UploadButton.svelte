@@ -13,7 +13,12 @@
     accept=".zip,.cbz"
     onchange={async (e) => {
       const input = e.target as HTMLInputElement;
-      if (input.files?.[0]) await setSource(new ZipUploadProvider(input.files[0]));
+      if (!input.files?.[0]) return;
+      try {
+        await setSource(new ZipUploadProvider(input.files[0]));
+      } catch (err) {
+        alert(`Failed to open file: ${err instanceof Error ? err.message : err}`);
+      }
     }}
     class="hidden"
   />

@@ -39,14 +39,8 @@ export class ZipUploadProvider implements SourceProvider {
     const entries = this.zipEntries.get(chapterName);
     if (!entries) return { urls: [], revoke: true };
 
-    const urls: string[] = [];
-    try {
-      const blobs = await Promise.all(entries.map((e) => extractEntry(this.file, e)));
-      for (const b of blobs) urls.push(URL.createObjectURL(b));
-    } catch {
-      urls.forEach((url) => URL.revokeObjectURL(url));
-      return { urls: [], revoke: false };
-    }
+    const blobs = await Promise.all(entries.map((e) => extractEntry(this.file, e)));
+    const urls = blobs.map((b) => URL.createObjectURL(b));
     return { urls, revoke: true };
   }
 }

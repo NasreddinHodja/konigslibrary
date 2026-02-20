@@ -70,6 +70,8 @@
 <div class="flex h-full flex-1 flex-col gap-2 overflow-y-auto py-4 select-none">
   {#if chapter.loading}
     <Loader />
+  {:else if chapter.error}
+    <p class="py-8 text-center text-sm opacity-60">Failed to load chapter: {chapter.error}</p>
   {:else}
     {#each chapter.pageUrls as src, i (src)}
       <div

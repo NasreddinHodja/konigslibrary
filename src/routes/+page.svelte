@@ -38,7 +38,12 @@
 
   const handleDrop = async (e: DragEvent) => {
     const file = e.dataTransfer?.files[0];
-    if (file && /\.(zip|cbz)$/i.test(file.name)) await svc.setSource(new ZipUploadProvider(file));
+    if (!file || !/\.(zip|cbz)$/i.test(file.name)) return;
+    try {
+      await svc.setSource(new ZipUploadProvider(file));
+    } catch (err) {
+      alert(`Failed to open file: ${err instanceof Error ? err.message : err}`);
+    }
   };
 
   const isMobile = typeof window !== 'undefined' && 'ontouchstart' in window;
