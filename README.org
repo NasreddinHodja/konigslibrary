@@ -136,6 +136,61 @@ A signed APK is available at =static/download/konigslibrary.apk=.
 | =HOST=       | =0.0.0.0=     | Bind address                     |
 | =LOCAL_BUILD= | (unset)      | Set to =1= for local server build |
 
+* Library Structure
+
+Chapter detection is based on *directory structure*, not naming conventions. Folder names can be anything — =ch01=, =volume_1=, =foo= — the parser doesn't pattern-match on names.
+
+** Local server / Tauri (directories)
+
+#+begin_src
+MANGA_DIR/
+├── One Piece/              ← manga (has subfolders → multi-chapter)
+│   ├── ch01/               ← chapter — any folder name works
+│   │   ├── 001.jpg
+│   │   └── 002.jpg
+│   ├── ch02/
+│   │   └── 001.jpg
+│   └── extras/             ← also a chapter (every subfolder counts)
+│       └── cover.png
+├── Berserk/                ← manga (images only → single chapter)
+│   ├── page01.png
+│   └── page02.png
+└── Naruto.cbz              ← manga (ZIP — chapters from internal folders)
+#+end_src
+
+- Each top-level entry in =MANGA_DIR= is one manga (directory or ZIP/CBZ)
+- If a manga directory has *subdirectories*, each subdirectory is a chapter
+- If it has *only images* at the root, it's treated as a single chapter
+- Hidden files/folders (starting with =.=) are ignored
+
+** ZIP/CBZ files (uploaded or on server)
+
+The parser finds the longest common directory prefix shared by all images, then groups by the next directory level:
+
+#+begin_src
+manga.cbz
+└── manga/                  ← common root (auto-detected, stripped)
+    ├── chapter_01/         ← chapter
+    │   ├── 01.png
+    │   └── 02.png
+    └── chapter_02/
+        └── 01.png
+#+end_src
+
+If the ZIP has no subdirectories (all images at the root), it's a single chapter.
+
+** Sorting
+
+Chapters are sorted *lexicographically* by name. This means =ch10= sorts before =ch2=. To get correct numeric ordering, zero-pad your folder names:
+
+| Wrong           | Right            |
+|-----------------+------------------|
+| =ch1=, =ch10=, =ch2= | =ch01=, =ch02=, =ch10= |
+
+** Supported image formats
+
+JPEG, PNG, GIF, WebP, AVIF, BMP.
+
 * Development
 
 *Prerequisites:* Node.js 22+ (see =.nvmrc=), pnpm
