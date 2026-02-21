@@ -9,6 +9,9 @@
 
 A manga/comic reader that runs entirely in the browser. Upload a ZIP/CBZ and start reading - all parsing, decompression, and image extraction happen client-side using the Web Compression API. No server, no uploads, nothing leaves your machine. Also ships as a native desktop/mobile app via Tauri and a self-hosted local server for LAN access.
 
+#+html: <p align="center"><img src=".github/readme/reader-desktop.png" alt="Reader with sidebar" width="700"></p>
+#+html: <p align="center"><img src=".github/readme/sidebar-mobile.jpeg" alt="Mobile sidebar" width="280">&nbsp;&nbsp;<img src=".github/readme/home-mobile.jpeg" alt="Mobile library" width="280"></p>
+
 * Features
 
 - *Two reading modes* - vertical scroll with IntersectionObserver page tracking, or page-turn with left/right click zones and image preloading
