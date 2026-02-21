@@ -122,7 +122,6 @@ export async function getOfflinePageBlob(
 export async function deleteOfflineManga(slug: string): Promise<void> {
   const db = await openDB();
 
-  // Delete all pages with matching slug prefix
   await new Promise<void>((resolve, reject) => {
     const tx = db.transaction('pages', 'readwrite');
     const store = tx.objectStore('pages');
@@ -140,7 +139,6 @@ export async function deleteOfflineManga(slug: string): Promise<void> {
     req.onerror = () => reject(req.error);
   });
 
-  // Delete manga metadata
   return new Promise((resolve, reject) => {
     const tx = db.transaction('manga', 'readwrite');
     const store = tx.objectStore('manga');

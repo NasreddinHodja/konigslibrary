@@ -12,9 +12,7 @@ export const decodeMw: Middleware = async (input, next, signal) => {
     img.src = urls[startPage];
     try {
       await img.decode();
-    } catch {
-      /* ignore */
-    }
+    } catch {}
     output.decoded.set(startPage, img);
   }
 

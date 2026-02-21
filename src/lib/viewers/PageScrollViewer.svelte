@@ -19,21 +19,18 @@
 
   const GAP = 8; // gap-2 = 0.5rem = 8px
 
-  // Reset ratios when chapter changes
   $effect(() => {
     const len = chapter.pageUrls.length;
     ratios = Array(len).fill(DEFAULT_PAGE_RATIO);
     visibleSet.clear();
   });
 
-  // Compute page height from ratio, container width, and zoom
   function pageHeight(i: number): number {
     if (!containerEl) return 0;
     const w = containerEl.clientWidth;
     return (ratios[i] ?? DEFAULT_PAGE_RATIO) * w * manga.zoom;
   }
 
-  // Compute scroll offset to the top of page N
   function scrollOffsetFor(page: number): number {
     let offset = 0;
     for (let i = 0; i < page; i++) {
@@ -42,7 +39,6 @@
     return offset;
   }
 
-  // Capture natural ratio on image load
   function captureRatio(i: number, e: Event) {
     const img = e.currentTarget as HTMLImageElement;
     if (img.naturalWidth > 0 && img.naturalHeight > 0) {
@@ -50,7 +46,6 @@
     }
   }
 
-  // --- Buffer observer: add/remove pages from visibleSet ---
   let bufferObserver: IntersectionObserver | undefined;
 
   function setupBufferObserver() {
@@ -75,7 +70,6 @@
     );
   }
 
-  // --- Page-tracking observer: sets currentPage ---
   let pageObserver: IntersectionObserver | undefined;
 
   function setupPageObserver() {
@@ -98,7 +92,6 @@
     );
   }
 
-  // Setup observers when container mounts
   $effect(() => {
     if (!containerEl) return;
     setupBufferObserver();
@@ -109,7 +102,6 @@
     };
   });
 
-  // Observe/unobserve page divs as they mount
   let slotEls: (HTMLDivElement | undefined)[] = $state([]);
 
   $effect(() => {
@@ -130,7 +122,6 @@
     };
   });
 
-  // Scroll-to-page: triggered by shouldScroll flag
   $effect(() => {
     if (!manga.shouldScroll) return;
     manga.shouldScroll = false;
@@ -139,23 +130,19 @@
     const idx = manga.currentPage;
     const offset = scrollOffsetFor(idx);
 
-    // Ensure the target page is in the visible set so img renders
     visibleSet.add(idx);
 
-    // Use requestAnimationFrame to let the DOM update first
     requestAnimationFrame(() => {
       containerEl?.scrollTo({ top: offset });
     });
   });
 
-  // Trigger scroll restore when chapter finishes loading
   $effect(() => {
     if (!chapter.loading && chapter.pageUrls.length > 0) {
       manga.shouldScroll = true;
     }
   });
 
-  // Zoom: preserve relative scroll position
   let prevZoom = $state(manga.zoom);
   $effect(() => {
     const z = manga.zoom;

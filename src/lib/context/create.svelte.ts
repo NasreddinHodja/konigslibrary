@@ -127,7 +127,6 @@ export function createReaderServices(): ReaderServices {
     if (browser) localStorage.setItem(LS_RTL, String(state.rtl));
   }
 
-
   function zoomIn() {
     state.zoom = Math.min(1, +(state.zoom + 0.1).toFixed(2));
   }

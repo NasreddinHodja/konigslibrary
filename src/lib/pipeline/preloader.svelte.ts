@@ -13,7 +13,6 @@ export function usePreloader(
   const cache = new Map<number, HTMLImageElement>();
 
   $effect(() => {
-    // Seed from pipeline-decoded images
     const decoded = initialDecoded();
     for (const [idx, img] of decoded) {
       cache.set(idx, img);

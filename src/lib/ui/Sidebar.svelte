@@ -28,7 +28,8 @@
     return () => mql.removeEventListener('change', onChange);
   });
 
-  const { handleTouchStart, handleTouchMove, handleTouchEnd } = createDrawerHandlers({
+  const { handleTouchStart, handleTouchMove, handleTouchEnd, handleTouchCancel } =
+    createDrawerHandlers({
     sidebarWidth: 320,
     isOpen: () => manga.sidebarOpen,
     onSnap: (open) => {
@@ -41,6 +42,7 @@
   ontouchstart={handleTouchStart}
   ontouchmove={handleTouchMove}
   ontouchend={handleTouchEnd}
+  ontouchcancel={handleTouchCancel}
 />
 
 {#if drawer.dragging || manga.sidebarOpen}

@@ -71,9 +71,7 @@
     const acquire = async () => {
       try {
         sentinel = await navigator.wakeLock.request('screen');
-      } catch {
-        /* ignore */
-      }
+      } catch {}
     };
 
     const onVisibility = () => {
@@ -87,6 +85,27 @@
       document.removeEventListener('visibilitychange', onVisibility);
       sentinel?.release();
     };
+  });
+
+  $effect(() => {
+    if (chapters.length === 0) return;
+
+    history.pushState({ kl: 'reader' }, '');
+
+    const onPopState = () => {
+      if (helpOpen) {
+        helpOpen = false;
+        history.pushState({ kl: 'reader' }, '');
+      } else if (isMobile && manga.sidebarOpen) {
+        manga.sidebarOpen = false;
+        history.pushState({ kl: 'reader' }, '');
+      } else {
+        svc.clearManga();
+      }
+    };
+
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
   });
 
   const handleKey = (event: KeyboardEvent) => {

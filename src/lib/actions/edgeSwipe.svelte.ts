@@ -88,5 +88,10 @@ export function createDrawerHandlers(opts: DrawerHandlerOpts) {
     opts.onSnap(snapOpen);
   }
 
-  return { handleTouchStart, handleTouchMove, handleTouchEnd };
+  function handleTouchCancel() {
+    drawer.dragging = false;
+    tracking = false;
+  }
+
+  return { handleTouchStart, handleTouchMove, handleTouchEnd, handleTouchCancel };
 }

@@ -51,7 +51,6 @@ describe('CRC32 validation in extraction', () => {
     const data = new TextEncoder().encode('original');
     const zip = toFile(createZip([{ name: 'file.txt', data }]), 'test.zip');
     const entries = await indexZip(zip);
-    // Tamper with the expected CRC32
     entries[0].crc32 = 0xdeadbeef;
     await expect(extractEntry(zip, entries[0])).rejects.toThrow('CRC32 mismatch');
   });

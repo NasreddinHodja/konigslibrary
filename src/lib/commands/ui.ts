@@ -21,7 +21,6 @@ export const back: Command = {
   }
 };
 
-// showHelp is handled specially in +page.svelte (toggles local helpOpen state)
 export const showHelp: Command = {
   id: 'showHelp',
   execute() {}

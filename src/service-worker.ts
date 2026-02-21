@@ -34,7 +34,6 @@ sw.addEventListener('fetch', (event) => {
 
   const url = new URL(event.request.url);
 
-  // Never cache dynamic API endpoints
   if (url.pathname.startsWith('/api/library') || url.pathname.startsWith('/api/settings')) return;
 
   const isAsset = ASSETS.includes(url.pathname);

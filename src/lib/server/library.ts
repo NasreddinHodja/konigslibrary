@@ -18,18 +18,14 @@ function readConfig(): { mangaDir: string } {
     try {
       const data = JSON.parse(readFileSync(p, 'utf-8'));
       if (data.mangaDir) return data;
-    } catch {
-      // ignore corrupt config
-    }
+    } catch {}
   }
   return { mangaDir: '' };
 }
 
-// Synchronous read for config (only called on startup / per-request)
 import { readFileSync } from 'node:fs';
 
 export function getMangaDir(): string {
-  // Priority: env var > config file > empty (no library)
   if (process.env.MANGA_DIR) return resolve(process.env.MANGA_DIR);
   const config = readConfig();
   return config.mangaDir ? resolve(config.mangaDir) : '';
@@ -80,7 +76,6 @@ export async function listChapters(mangaSlug: string): Promise<ServerChapter[]> 
   const mangaName = decodeURIComponent(mangaSlug);
   const mangaPath = resolve(dir, mangaName);
 
-  // Path traversal protection
   if (!mangaPath.startsWith(resolve(dir))) return [];
 
   const s = await stat(mangaPath).catch(() => null);
@@ -98,12 +93,10 @@ export async function listChapters(mangaSlug: string): Promise<ServerChapter[]> 
 async function listChaptersFromDir(mangaPath: string): Promise<ServerChapter[]> {
   const items = await readdir(mangaPath, { withFileTypes: true });
 
-  // Check if there are subdirectories (chapters) or just images (single chapter)
   const subdirs = items.filter((i) => i.isDirectory() && !i.name.startsWith('.'));
   const images = items.filter((i) => i.isFile() && IMAGE_EXT.test(i.name));
 
   if (subdirs.length > 0) {
-    // Multi-chapter: each subdir is a chapter
     const chapters: ServerChapter[] = [];
     for (const sub of subdirs) {
       const chapterPath = join(mangaPath, sub.name);
@@ -124,7 +117,6 @@ async function listChaptersFromDir(mangaPath: string): Promise<ServerChapter[]> 
     chapters.sort((a, b) => a.name.localeCompare(b.name));
     return chapters;
   } else if (images.length > 0) {
-    // Single chapter: all images in root
     const pages = images.map((i) => i.name).sort((a, b) => a.localeCompare(b));
     return [
       {
@@ -166,10 +158,7 @@ export async function getImageFromDir(
   const mangaName = decodeURIComponent(mangaSlug);
   const resolved = resolve(dir, mangaName, ...pathParts.map(decodeURIComponent));
 
-  // Path traversal protection
   if (!resolved.startsWith(resolve(dir))) return null;
-
-  // Must be an image
   if (!IMAGE_EXT.test(resolved)) return null;
 
   try {
@@ -190,7 +179,6 @@ export async function getImageFromZip(
   const mangaName = decodeURIComponent(mangaSlug);
   const zipPath = resolve(dir, mangaName);
 
-  // Path traversal protection
   if (!zipPath.startsWith(resolve(dir))) return null;
   if (!ZIP_EXT.test(mangaName)) return null;
 

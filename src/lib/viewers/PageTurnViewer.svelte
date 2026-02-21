@@ -12,7 +12,6 @@
   const { state: manga } = svc;
 
   const chapter = useChapter(svc, [decodeMw]);
-  // Preloader runs side effects (keeps nearby images decoded); cache not referenced directly
   usePreloader(
     manga,
     () => chapter.pageUrls,
@@ -22,7 +21,6 @@
 
   let showEndScreen = $state(false);
 
-  // Reset end screen on chapter change
   $effect(() => {
     manga.selectedChapter; // eslint-disable-line @typescript-eslint/no-unused-expressions
     showEndScreen = false;

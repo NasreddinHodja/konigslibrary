@@ -30,7 +30,6 @@
     });
   }
 
-  // Initial load + refresh on download complete
   $effect(() => {
     refreshOfflineChapters();
     const unsub = events.on('download:complete', () => refreshOfflineChapters());

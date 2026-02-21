@@ -38,14 +38,12 @@
     const idx = bindings.findIndex((b) => b.action === listening);
     if (idx < 0) return;
 
-    // Remove this key from any other binding
     for (let i = 0; i < bindings.length; i++) {
       if (i !== idx) {
         bindings[i] = { ...bindings[i], keys: bindings[i].keys.filter((k) => k !== key) };
       }
     }
 
-    // Set as the sole key for this action
     bindings[idx] = { ...bindings[idx], keys: [key] };
     setBindings(bindings);
     listening = null;
@@ -66,7 +64,6 @@
     return Array.from(map.entries());
   });
 
-  // Native device library
   const native = isNative();
   let deviceDir = $state(getMangaDir());
 
@@ -83,7 +80,6 @@
     setMangaDir(deviceDir.trim());
   }
 
-  // Native server URL
   let serverUrl = $state(getServerUrl());
 
   function connectServer() {
@@ -91,7 +87,6 @@
     window.location.href = '/';
   }
 
-  // Server settings (only for local server)
   let mangaDir = $state('');
   let saved = $state(false);
   let error: string | null = $state(null);

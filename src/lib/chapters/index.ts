@@ -1,7 +1,6 @@
 export function detectDepth(names: string[]): { depth: number; commonRoot: string | null } {
   if (names.length === 0) return { depth: 0, commonRoot: null };
 
-  // Find the common prefix segments shared by all entries
   const split = names.map((n) => n.split('/'));
   const minLen = split.reduce((min, s) => Math.min(min, s.length), Infinity);
   let depth = 0;

@@ -15,17 +15,14 @@ export const GET: RequestHandler = async ({ params }) => {
   const mangaSlug = params.manga;
   const pathStr = params.path;
 
-  // Determine if this manga is a ZIP or directory
   const decodedManga = decodeURIComponent(mangaSlug);
   const isZip = /\.(zip|cbz)$/i.test(decodedManga);
 
   let result: { buffer: Buffer; ext: string } | null = null;
 
   if (isZip) {
-    // For ZIPs, the path is the entry name inside the archive
     result = await getImageFromZip(mangaSlug, pathStr);
   } else {
-    // For directories, split the path into segments
     const parts = pathStr.split('/');
     result = await getImageFromDir(mangaSlug, parts);
   }

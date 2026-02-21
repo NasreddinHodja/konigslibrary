@@ -37,7 +37,6 @@ describe('createPipeline', () => {
     };
     const pipeline = createPipeline([mw1, mw2]);
     await pipeline(makeInput([]), new AbortController().signal);
-    // Last middleware runs first (outermost wrapper)
     expect(order).toEqual([2, 1]);
   });
 

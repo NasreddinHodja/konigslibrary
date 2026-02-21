@@ -90,7 +90,6 @@ describe('zip error handling', () => {
     const zip = toFile(createZip([{ name: 'test.bin', data }]), 'test.zip');
 
     const entries = await indexZip(zip);
-    // Fake a compression method the extractor doesn't support
     entries[0].compressionMethod = 99;
     await expect(extractEntry(zip, entries[0])).rejects.toThrow(
       'Unsupported compression method: 99'
