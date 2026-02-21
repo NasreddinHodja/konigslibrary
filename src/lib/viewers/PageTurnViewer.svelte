@@ -2,9 +2,9 @@
   import { getReaderContext } from '$lib/context';
   import type { ViewerCommands } from '$lib/commands';
   import { useChapter, usePreloader, decodeMw, wideDetectMw } from '$lib/pipeline';
-  import { PAGE_TURN_ZOOM } from '$lib/constants';
+  import { PAGE_TURN_ZOOM } from '$lib/utils/constants';
   import Loader from '$lib/ui/Loader.svelte';
-  import EndOfChapter from '$lib/EndOfChapter.svelte';
+  import EndOfChapter from '$lib/chapters/EndOfChapter.svelte';
 
   let { commands = $bindable() }: { commands?: ViewerCommands | null } = $props();
 

@@ -1,8 +1,8 @@
 <script lang="ts">
   import { fly } from 'svelte/transition';
   import { X, Check, AlertTriangle } from 'lucide-svelte';
-  import { getToasts, removeToast } from '$lib/toast.svelte';
-  import { ANIM_DURATION } from '$lib/constants';
+  import { getToasts, removeToast } from '$lib/ui/toast.svelte';
+  import { ANIM_DURATION } from '$lib/utils/constants';
 
   const toasts = $derived(getToasts());
 </script>

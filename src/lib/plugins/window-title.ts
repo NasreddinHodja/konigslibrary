@@ -1,4 +1,4 @@
-import { isNative } from '$lib/platform';
+import { isNative } from '$lib/utils/platform';
 import type { ReaderServices } from '$lib/context';
 import type { Plugin } from './types';
 

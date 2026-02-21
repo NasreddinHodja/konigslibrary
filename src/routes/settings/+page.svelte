@@ -9,9 +9,9 @@
     resetBindings,
     formatKey,
     DEFAULT_BINDINGS
-  } from '$lib/keybindings.svelte';
-  import { apiUrl, isLocalServer, getServerUrl, setServerUrl } from '$lib/constants';
-  import { isNative } from '$lib/platform';
+  } from '$lib/keyboard/keybindings.svelte';
+  import { apiUrl, isLocalServer, getServerUrl, setServerUrl } from '$lib/utils/constants';
+  import { isNative } from '$lib/utils/platform';
 
   let bindings: KeyBinding[] = $state($state.snapshot(getBindings()) as KeyBinding[]);
   let listening: Action | null = $state(null);

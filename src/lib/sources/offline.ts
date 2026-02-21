@@ -1,5 +1,5 @@
-import type { Chapter, ServerChapter } from '$lib/types';
-import { getOfflineManga, getOfflinePageBlob } from '$lib/offline-db';
+import type { Chapter, ServerChapter } from '$lib/utils/types';
+import { getOfflineManga, getOfflinePageBlob } from '$lib/sources/offline-db';
 import type { SourceProvider, PageResult } from './types';
 
 export class OfflineDbProvider implements SourceProvider {

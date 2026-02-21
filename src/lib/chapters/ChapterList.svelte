@@ -2,11 +2,11 @@
   import { slide } from 'svelte/transition';
   import { ChevronDown, ChevronRight, Download } from 'lucide-svelte';
   import { getReaderContext } from '$lib/context';
-  import { saveChapter } from '$lib/download.svelte';
-  import { getOfflineManga } from '$lib/offline-db';
+  import { saveChapter } from '$lib/sources/download.svelte';
+  import { getOfflineManga } from '$lib/sources/offline-db';
   import { ServerLibraryProvider } from '$lib/sources/library';
   import { OfflineDbProvider } from '$lib/sources/offline';
-  import { ANIM_DURATION, ANIM_EASE } from '$lib/constants';
+  import { ANIM_DURATION, ANIM_EASE } from '$lib/utils/constants';
 
   const svc = getReaderContext();
   const { state: manga, events } = svc;

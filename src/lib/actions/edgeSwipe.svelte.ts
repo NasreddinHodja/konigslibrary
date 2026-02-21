@@ -1,4 +1,8 @@
-import { DRAWER_EDGE_ZONE, SWIPE_MAX_VERTICAL, SNAP_VELOCITY_THRESHOLD } from '$lib/constants';
+import {
+  DRAWER_EDGE_ZONE,
+  SWIPE_MAX_VERTICAL,
+  SNAP_VELOCITY_THRESHOLD
+} from '$lib/utils/constants';
 
 const DEAD_ZONE = 10;
 

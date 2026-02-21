@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { getBindings, formatKey } from '$lib/keybindings.svelte';
+  import { getBindings, formatKey } from '$lib/keyboard/keybindings.svelte';
   import Backdrop from '$lib/ui/Backdrop.svelte';
 
   let { onclose }: { onclose: () => void } = $props();

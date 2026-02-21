@@ -5,7 +5,7 @@
     getMangaDir,
     setMangaDir,
     type NativeMangaEntry
-  } from '$lib/native-library';
+  } from '$lib/sources/native-library';
   import { convertFileSrc } from '@tauri-apps/api/core';
   import { getReaderContext } from '$lib/context';
   import { ZipUploadProvider, NativeFilesystemProvider } from '$lib/sources';

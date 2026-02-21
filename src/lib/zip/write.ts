@@ -1,4 +1,4 @@
-import { crc32 } from '$lib/crc32';
+import { crc32 } from './crc32';
 
 export function createZip(entries: { name: string; data: Uint8Array }[]): Blob {
   const encoder = new TextEncoder();

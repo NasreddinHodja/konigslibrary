@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { crc32 } from '$lib/crc32';
-import { createZip } from '$lib/zip-write';
+import { crc32 } from './crc32';
+import { createZip } from './write';
 import { indexZip, extractEntry } from '$lib/zip';
 
 describe('crc32', () => {

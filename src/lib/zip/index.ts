@@ -5,8 +5,8 @@ import {
   ZIP64_EOCD_SIG,
   getUint64,
   parseCentralDirectory
-} from '$lib/zip-parse';
-import { crc32 } from '$lib/crc32';
+} from './parse';
+import { crc32 } from './crc32';
 
 export type ZipEntry = BaseZipEntry;
 

@@ -1,7 +1,7 @@
-import { apiUrl } from '$lib/constants';
-import { addToast, updateToast } from '$lib/toast.svelte';
-import { saveOfflinePage, saveOfflineMangaMeta } from '$lib/offline-db';
-import type { ServerChapter } from '$lib/types';
+import { apiUrl } from '$lib/utils/constants';
+import { addToast, updateToast } from '$lib/ui/toast.svelte';
+import { saveOfflinePage, saveOfflineMangaMeta } from './offline-db';
+import type { ServerChapter } from '$lib/utils/types';
 import type { EventBus } from '$lib/events';
 
 const CONCURRENT_DOWNLOADS = 4;

@@ -1,4 +1,4 @@
-import type { ServerChapter } from '$lib/types';
+import type { ServerChapter } from '$lib/utils/types';
 
 const DB_NAME = 'konigslibrary';
 const DB_VERSION = 1;

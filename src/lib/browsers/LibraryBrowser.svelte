@@ -1,13 +1,13 @@
 <script lang="ts">
-  import type { LibraryEntry, ServerChapter } from '$lib/types';
+  import type { LibraryEntry, ServerChapter } from '$lib/utils/types';
   import { getReaderContext } from '$lib/context';
   import { ServerLibraryProvider } from '$lib/sources';
-  import { apiUrl, getServerUrl } from '$lib/constants';
-  import { saveManga } from '$lib/download.svelte';
-  import { listOfflineManga } from '$lib/offline-db';
-  import { isNative } from '$lib/platform';
+  import { apiUrl, getServerUrl } from '$lib/utils/constants';
+  import { saveManga } from '$lib/sources/download.svelte';
+  import { listOfflineManga } from '$lib/sources/offline-db';
+  import { isNative } from '$lib/utils/platform';
   import { BookOpen, FileArchive, Download, Check } from 'lucide-svelte';
-  import { showError } from '$lib/toast.svelte';
+  import { showError } from '$lib/ui/toast.svelte';
   import Loader from '$lib/ui/Loader.svelte';
 
   const { setSource, events } = getReaderContext();

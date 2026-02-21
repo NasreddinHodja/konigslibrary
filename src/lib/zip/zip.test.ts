@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { createZip } from '$lib/zip-write';
+import { createZip } from './write';
 import { indexZip, extractEntry } from '$lib/zip';
 
 function toFile(blob: Blob, name: string): File {

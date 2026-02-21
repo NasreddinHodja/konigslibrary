@@ -1,5 +1,5 @@
-import type { Chapter, ServerChapter } from '$lib/types';
-import { apiUrl } from '$lib/constants';
+import type { Chapter, ServerChapter } from '$lib/utils/types';
+import { apiUrl } from '$lib/utils/constants';
 import type { SourceProvider, PageResult } from './types';
 
 export class ServerLibraryProvider implements SourceProvider {

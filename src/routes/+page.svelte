@@ -1,21 +1,21 @@
 <script lang="ts">
   import { ZipUploadProvider } from '$lib/sources';
-  import { resolveKey } from '$lib/keybindings.svelte';
+  import { resolveKey } from '$lib/keyboard/keybindings.svelte';
   import type { ViewerCommands } from '$lib/commands';
   import { createReaderServices, setReaderContext } from '$lib/context';
-  import Sidebar from '$lib/Sidebar.svelte';
+  import Sidebar from '$lib/ui/Sidebar.svelte';
   import Button from '$lib/ui/Button.svelte';
   import EmptyState from '$lib/ui/EmptyState.svelte';
   import UploadButton from '$lib/browsers/UploadButton.svelte';
   import LibraryBrowser from '$lib/browsers/LibraryBrowser.svelte';
   import NativeLibraryBrowser from '$lib/browsers/NativeLibraryBrowser.svelte';
   import OfflineBrowser from '$lib/browsers/OfflineBrowser.svelte';
-  import KeyboardHelp from '$lib/KeyboardHelp.svelte';
-  import { isNative } from '$lib/platform';
-  import { isLocalServer } from '$lib/constants';
+  import KeyboardHelp from '$lib/keyboard/KeyboardHelp.svelte';
+  import { isNative } from '$lib/utils/platform';
+  import { isLocalServer } from '$lib/utils/constants';
   import { CircleQuestionMark, HardDrive } from 'lucide-svelte';
   import ToastStack from '$lib/ui/ToastStack.svelte';
-  import { showError } from '$lib/toast.svelte';
+  import { showError } from '$lib/ui/toast.svelte';
 
   const svc = createReaderServices();
   setReaderContext(svc);

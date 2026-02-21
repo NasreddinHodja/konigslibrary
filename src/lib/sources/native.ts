@@ -1,5 +1,5 @@
-import type { Chapter } from '$lib/types';
-import type { NativeChapter } from '$lib/native-library';
+import type { Chapter } from '$lib/utils/types';
+import type { NativeChapter } from '$lib/sources/native-library';
 import type { SourceProvider, PageResult } from './types';
 
 export class NativeFilesystemProvider implements SourceProvider {

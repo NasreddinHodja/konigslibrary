@@ -1,4 +1,4 @@
-import type { Chapter } from '$lib/types';
+import type { Chapter } from '$lib/utils/types';
 
 export type PageResult = { urls: string[]; revoke: boolean };
 

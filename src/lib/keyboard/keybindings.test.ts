@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { DEFAULT_BINDINGS, formatKey } from '$lib/keybindings.svelte';
+import { DEFAULT_BINDINGS, formatKey } from '$lib/keyboard/keybindings.svelte';
 
 describe('formatKey', () => {
   it('maps arrow keys to unicode symbols', () => {

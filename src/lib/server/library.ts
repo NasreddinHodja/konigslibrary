@@ -1,7 +1,7 @@
 import { readdir, readFile, writeFile, stat } from 'node:fs/promises';
 import { join, resolve, extname } from 'node:path';
 import { existsSync } from 'node:fs';
-import type { LibraryEntry, ServerChapter } from '$lib/types';
+import type { LibraryEntry, ServerChapter } from '$lib/utils/types';
 import { getCachedIndex, extractEntryFromFile } from './zip-node';
 import { detectDepth, groupByChapter } from '$lib/chapters';
 

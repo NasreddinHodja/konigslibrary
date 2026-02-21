@@ -2,7 +2,7 @@
   import { getReaderContext } from '$lib/context';
   import type { ViewerCommands } from '$lib/commands';
   import { useChapter } from '$lib/pipeline';
-  import { VIRTUAL_BUFFER, DEFAULT_PAGE_RATIO, INTERSECT_THRESHOLD } from '$lib/constants';
+  import { VIRTUAL_BUFFER, DEFAULT_PAGE_RATIO, INTERSECT_THRESHOLD } from '$lib/utils/constants';
   import { SvelteSet } from 'svelte/reactivity';
   import Loader from '$lib/ui/Loader.svelte';
 

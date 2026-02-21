@@ -2,8 +2,8 @@
   import { slide } from 'svelte/transition';
   import { Menu, X, Minus, Plus, ArrowLeft, Settings } from 'lucide-svelte';
   import { getReaderContext } from '$lib/context';
-  import { ANIM_DURATION, ANIM_EASE } from '$lib/constants';
-  import ChapterList from '$lib/ChapterList.svelte';
+  import { ANIM_DURATION, ANIM_EASE } from '$lib/utils/constants';
+  import ChapterList from '$lib/chapters/ChapterList.svelte';
   import Toggle from '$lib/ui/Toggle.svelte';
   import Button from '$lib/ui/Button.svelte';
   import Backdrop from '$lib/ui/Backdrop.svelte';

@@ -1,4 +1,4 @@
-import type { Chapter } from '$lib/types';
+import type { Chapter } from '$lib/utils/types';
 import type { SourceProvider, PageResult } from '$lib/sources';
 import type { CommandRegistry } from '$lib/commands';
 import type { EventBus } from '$lib/events';

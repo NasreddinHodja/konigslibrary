@@ -7,7 +7,7 @@ import {
   ZIP64_EOCD_SIG,
   getUint64,
   parseCentralDirectory
-} from '$lib/zip-parse';
+} from '$lib/zip/parse';
 
 export type NodeZipEntry = BaseZipEntry;
 

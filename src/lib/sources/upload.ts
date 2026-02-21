@@ -1,4 +1,4 @@
-import type { Chapter } from '$lib/types';
+import type { Chapter } from '$lib/utils/types';
 import type { ZipEntry } from '$lib/zip';
 import { indexZip, extractEntry } from '$lib/zip';
 import { detectDepth, groupByChapter } from '$lib/chapters';

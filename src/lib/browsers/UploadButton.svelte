@@ -1,7 +1,7 @@
 <script lang="ts">
   import { getReaderContext } from '$lib/context';
   import { ZipUploadProvider } from '$lib/sources';
-  import { showError } from '$lib/toast.svelte';
+  import { showError } from '$lib/ui/toast.svelte';
   import Button from '$lib/ui/Button.svelte';
 
   const { setSource } = getReaderContext();

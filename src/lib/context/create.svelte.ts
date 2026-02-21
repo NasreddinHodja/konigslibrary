@@ -1,6 +1,6 @@
-import type { Chapter } from '$lib/types';
+import type { Chapter } from '$lib/utils/types';
 import type { SourceProvider, PageResult } from '$lib/sources';
-import { LS_SCROLL_MODE, LS_RTL, LS_DOUBLE_PAGE, LS_PROGRESS_PREFIX } from '$lib/constants';
+import { LS_SCROLL_MODE, LS_RTL, LS_DOUBLE_PAGE, LS_PROGRESS_PREFIX } from '$lib/utils/constants';
 import { createDefaultRegistry } from '$lib/commands';
 import { createEventBus } from '$lib/events';
 import { ViewerRegistry, scrollViewer, pageTurnViewer } from '$lib/viewers';

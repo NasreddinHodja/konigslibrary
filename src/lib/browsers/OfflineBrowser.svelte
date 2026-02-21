@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { listOfflineManga, deleteOfflineManga } from '$lib/offline-db';
+  import { listOfflineManga, deleteOfflineManga } from '$lib/sources/offline-db';
   import { getReaderContext } from '$lib/context';
   import { OfflineDbProvider } from '$lib/sources';
   import { BookOpen, Trash2 } from 'lucide-svelte';
