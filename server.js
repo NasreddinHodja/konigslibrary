@@ -8,7 +8,7 @@ process.env.PORT = String(port);
 process.env.HOST = host;
 
 // Start the SvelteKit server
-const server = await import('./build/index.js');
+await import('./build/index.js');
 
 // Print LAN addresses
 const nets = networkInterfaces();

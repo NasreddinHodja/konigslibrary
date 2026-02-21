@@ -18,7 +18,9 @@ function readConfig(): { mangaDir: string } {
     try {
       const data = JSON.parse(readFileSync(p, 'utf-8'));
       if (data.mangaDir) return data;
-    } catch {}
+    } catch {
+      /* invalid config JSON */
+    }
   }
   return { mangaDir: '' };
 }

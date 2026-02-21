@@ -30,12 +30,12 @@
 
   const { handleTouchStart, handleTouchMove, handleTouchEnd, handleTouchCancel } =
     createDrawerHandlers({
-    sidebarWidth: 320,
-    isOpen: () => manga.sidebarOpen,
-    onSnap: (open) => {
-      manga.sidebarOpen = open;
-    }
-  });
+      sidebarWidth: 320,
+      isOpen: () => manga.sidebarOpen,
+      onSnap: (open) => {
+        manga.sidebarOpen = open;
+      }
+    });
 </script>
 
 <svelte:document

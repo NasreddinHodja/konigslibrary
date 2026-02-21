@@ -71,7 +71,9 @@
     const acquire = async () => {
       try {
         sentinel = await navigator.wakeLock.request('screen');
-      } catch {}
+      } catch {
+        /* wake lock not supported */
+      }
     };
 
     const onVisibility = () => {
