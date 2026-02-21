@@ -8,7 +8,7 @@ export class ViewerRegistry {
     this.viewers.sort((a, b) => b.priority - a.priority);
   }
 
-  resolve(state: { scrollMode: boolean; doublePage: boolean }): ViewerDefinition | null {
+  resolve(state: { scrollMode: boolean }): ViewerDefinition | null {
     return this.viewers.find((v) => v.match(state)) ?? null;
   }
 

@@ -1,6 +1,6 @@
 import type { Chapter } from '$lib/utils/types';
 import type { SourceProvider, PageResult } from '$lib/sources';
-import { LS_SCROLL_MODE, LS_RTL, LS_DOUBLE_PAGE, LS_PROGRESS_PREFIX } from '$lib/utils/constants';
+import { LS_SCROLL_MODE, LS_RTL, LS_PROGRESS_PREFIX } from '$lib/utils/constants';
 import { createDefaultRegistry } from '$lib/commands';
 import { createEventBus } from '$lib/events';
 import { ViewerRegistry, scrollViewer, pageTurnViewer } from '$lib/viewers';
@@ -21,7 +21,6 @@ export function createReaderServices(): ReaderServices {
     zoom: 1,
     scrollMode: browser ? localStorage.getItem(LS_SCROLL_MODE) !== 'false' : true,
     rtl: browser ? localStorage.getItem(LS_RTL) === 'true' : false,
-    doublePage: browser ? localStorage.getItem(LS_DOUBLE_PAGE) === 'true' : false,
     sidebarOpen: true
   });
 
@@ -128,14 +127,6 @@ export function createReaderServices(): ReaderServices {
     if (browser) localStorage.setItem(LS_RTL, String(state.rtl));
   }
 
-  function toggleDoublePage() {
-    state.doublePage = !state.doublePage;
-    if (browser) localStorage.setItem(LS_DOUBLE_PAGE, String(state.doublePage));
-    if (state.doublePage) {
-      state.scrollMode = false;
-      if (browser) localStorage.setItem(LS_SCROLL_MODE, 'false');
-    }
-  }
 
   function zoomIn() {
     state.zoom = Math.min(1, +(state.zoom + 0.1).toFixed(2));
@@ -184,7 +175,6 @@ export function createReaderServices(): ReaderServices {
     getPrevChapter,
     toggleScrollMode,
     toggleRtl,
-    toggleDoublePage,
     zoomIn,
     zoomOut,
     saveProgress,

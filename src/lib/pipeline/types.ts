@@ -9,7 +9,6 @@ export type PipelineInput = {
 export type PipelineOutput = {
   urls: string[];
   revoke: boolean;
-  widePages: Set<number>;
   decoded: Map<number, HTMLImageElement>;
 };
 

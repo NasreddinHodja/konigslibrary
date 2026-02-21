@@ -2,7 +2,7 @@ import { isNative } from '$lib/utils/platform';
 import type { ReaderServices } from '$lib/context';
 import type { Plugin } from './types';
 
-const DEFAULT_TITLE = 'Konigslibrary';
+const DEFAULT_TITLE = 'konigslibrary';
 
 async function setTitle(title: string) {
   const { getCurrentWindow } = await import('@tauri-apps/api/window');

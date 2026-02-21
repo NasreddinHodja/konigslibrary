@@ -6,7 +6,6 @@ export type ChapterState = {
   readonly pageUrls: string[];
   readonly loading: boolean;
   readonly error: string | null;
-  readonly widePages: Set<number>;
   readonly decoded: Map<number, HTMLImageElement>;
 };
 
@@ -14,9 +13,7 @@ export function useChapter(services: ReaderServices, middlewares: Middleware[] =
   let pageUrls: string[] = $state([]);
   let loading = $state(false);
   let error: string | null = $state(null);
-  const emptySet: Set<number> = new Set(); // eslint-disable-line svelte/prefer-svelte-reactivity
   const emptyMap: Map<number, HTMLImageElement> = new Map(); // eslint-disable-line svelte/prefer-svelte-reactivity
-  let widePages: Set<number> = $state.raw(emptySet);
   let decoded: Map<number, HTMLImageElement> = $state.raw(emptyMap);
 
   const pipeline = createPipeline(middlewares);
@@ -32,7 +29,6 @@ export function useChapter(services: ReaderServices, middlewares: Middleware[] =
     loading = true;
     error = null;
     pageUrls = [];
-    widePages = emptySet;
     decoded = emptyMap;
 
     services
@@ -50,7 +46,6 @@ export function useChapter(services: ReaderServices, middlewares: Middleware[] =
         if (controller.signal.aborted) return;
 
         pageUrls = output.urls;
-        widePages = output.widePages;
         decoded = output.decoded;
         loading = false;
       })
@@ -75,9 +70,6 @@ export function useChapter(services: ReaderServices, middlewares: Middleware[] =
     },
     get error() {
       return error;
-    },
-    get widePages() {
-      return widePages;
     },
     get decoded() {
       return decoded;

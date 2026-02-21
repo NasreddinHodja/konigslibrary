@@ -6,21 +6,16 @@ export const decodeMw: Middleware = async (input, next, signal) => {
 
   const { urls } = output;
   const startPage = Math.max(0, Math.min(input.services.state.currentPage, urls.length - 1));
-  const initialPages = [startPage];
-  if (input.services.state.doublePage && startPage + 1 < urls.length) {
-    initialPages.push(startPage + 1);
-  }
 
-  for (const idx of initialPages) {
-    if (signal.aborted) return output;
+  if (!signal.aborted) {
     const img = new Image();
-    img.src = urls[idx];
+    img.src = urls[startPage];
     try {
       await img.decode();
     } catch {
       /* ignore */
     }
-    output.decoded.set(idx, img);
+    output.decoded.set(startPage, img);
   }
 
   return output;

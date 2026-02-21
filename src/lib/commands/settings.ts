@@ -14,13 +14,6 @@ export const toggleRtlCmd: Command = {
   }
 };
 
-export const toggleDoublePageCmd: Command = {
-  id: 'toggleDoublePage',
-  execute(ctx) {
-    if (ctx.services.state.sidebarOpen) ctx.services.toggleDoublePage();
-  }
-};
-
 export const zoomInCmd: Command = {
   id: 'zoomIn',
   execute(ctx) {

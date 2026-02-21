@@ -13,7 +13,6 @@ A manga/comic reader that runs entirely in the browser. Upload a ZIP/CBZ and sta
 
 - *Two reading modes* - vertical scroll with IntersectionObserver page tracking, or page-turn with left/right click zones and image preloading
 - *RTL support* - right-to-left reading with reversed navigation
-- *Double-page spreads* - automatic wide-page detection for proper layout
 - *Hold-to-zoom* - press =z= in page-turn mode to zoom to cursor position
 - *Progress saving* - chapter and page position persisted to localStorage, auto-resumes on return
 - *Offline downloads* - download manga or individual chapters to IndexedDB for offline reading
@@ -30,7 +29,7 @@ src/
 ├── lib/
 │   ├── viewers/             # Reading mode implementations
 │   │   ├── PageScrollViewer.svelte  # Virtual-scrolled vertical reader
-│   │   ├── PageTurnViewer.svelte    # Single/double page with preloading
+│   │   ├── PageTurnViewer.svelte    # Single page with preloading
 │   │   ├── registry.ts             # Viewer plugin registry
 │   │   └── builtin.ts              # Built-in viewer registration
 │   ├── actions/             # Svelte actions (edge swipe detection)
@@ -230,7 +229,6 @@ All shortcuts are rebindable from Settings. Defaults:
 | =b=              | Back to library                       |
 | =m=              | Toggle scroll / page-turn mode        |
 | =r=              | Toggle LTR / RTL                      |
-| =d=              | Toggle single / double page           |
 | =-= / ===       | Zoom out / in (scroll mode)           |
 | =?=              | Show keyboard shortcuts help          |
 | =Escape=         | Close sidebar or help dialog          |

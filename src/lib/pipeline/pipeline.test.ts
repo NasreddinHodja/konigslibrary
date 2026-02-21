@@ -12,7 +12,6 @@ describe('createPipeline', () => {
     const pipeline = createPipeline([]);
     const result = await pipeline(makeInput(['a.png', 'b.png']), new AbortController().signal);
     expect(result.urls).toEqual(['a.png', 'b.png']);
-    expect(result.widePages).toBeInstanceOf(Set);
     expect(result.decoded).toBeInstanceOf(Map);
   });
 

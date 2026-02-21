@@ -14,7 +14,6 @@
     clearManga,
     toggleScrollMode,
     toggleRtl,
-    toggleDoublePage,
     zoomIn,
     zoomOut
   } = getReaderContext();
@@ -55,7 +54,7 @@
   class="fixed top-0 left-0 z-50 flex h-full w-80 flex-col border-r-2 bg-black shadow-xl {drawer.dragging
     ? ''
     : 'duration-anim transition-transform ease-anim'}"
-  style="transform: translateX({drawer.dragging
+  style="padding-left: var(--safe-left); transform: translateX({drawer.dragging
     ? `${(drawer.progress - 1) * 100}%`
     : manga.sidebarOpen
       ? '0'
@@ -70,7 +69,7 @@
       onclick={() => (manga.sidebarOpen = true)}
     ></button>
   {/if}
-  <div class="absolute right-2 z-20" style="top: calc(0.5rem + env(safe-area-inset-top))">
+  <div class="absolute right-2 z-20" style="top: calc(0.5rem + var(--safe-top))">
     <Button size="icon" onclick={() => (manga.sidebarOpen = !manga.sidebarOpen)}>
       {#if manga.sidebarOpen}<X size={20} />{:else}<Menu size={20} />{/if}
     </Button>
@@ -86,7 +85,7 @@
         ? '1'
         : '0'}; pointer-events: {manga.sidebarOpen ? 'auto' : 'none'}"
   >
-    <div class="space-y-4 p-6" style="padding-top: calc(3.5rem + env(safe-area-inset-top))">
+    <div class="space-y-4 p-6" style="padding-top: calc(3.5rem + var(--safe-top))">
       <div class="flex items-center gap-3">
         <Button size="icon" onclick={clearManga}>
           <ArrowLeft size={16} />
@@ -99,7 +98,10 @@
       <ChapterList />
     </div>
 
-    <div class="flex shrink-0 flex-col gap-4 border-t border-white/20 p-4">
+    <div
+      class="flex shrink-0 flex-col gap-4 border-t border-white/20 p-4"
+      style="padding-bottom: calc(1rem + var(--safe-bottom))"
+    >
       {#if manga.scrollMode}
         <div
           class="flex items-center justify-center gap-2"
@@ -123,19 +125,12 @@
             transition:slide={{ duration: ANIM_DURATION, easing: ANIM_EASE }}
           >
             <Toggle labelA="LTR" labelB="RTL" active={manga.rtl} onclick={toggleRtl} />
-            <Toggle
-              labelA="Single"
-              labelB="Double"
-              active={manga.doublePage}
-              onclick={toggleDoublePage}
-            />
           </div>
         {/if}
         <Toggle
           labelA="Turn"
           labelB="Scroll"
           active={manga.scrollMode}
-          locked={manga.doublePage}
           onclick={toggleScrollMode}
         />
       </div>

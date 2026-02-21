@@ -1,7 +1,7 @@
 <script lang="ts">
   import { getReaderContext } from '$lib/context';
   import type { ViewerCommands } from '$lib/commands';
-  import { useChapter, usePreloader, decodeMw, wideDetectMw } from '$lib/pipeline';
+  import { useChapter, usePreloader, decodeMw } from '$lib/pipeline';
   import { PAGE_TURN_ZOOM } from '$lib/utils/constants';
   import Loader from '$lib/ui/Loader.svelte';
   import EndOfChapter from '$lib/chapters/EndOfChapter.svelte';
@@ -11,7 +11,7 @@
   const svc = getReaderContext();
   const { state: manga } = svc;
 
-  const chapter = useChapter(svc, [decodeMw, wideDetectMw]);
+  const chapter = useChapter(svc, [decodeMw]);
   // Preloader runs side effects (keeps nearby images decoded); cache not referenced directly
   usePreloader(
     manga,
@@ -28,45 +28,14 @@
     showEndScreen = false;
   });
 
-  let spreads: number[][] = $derived.by(() => {
-    const result: number[][] = [];
-    if (!manga.doublePage) {
-      for (let i = 0; i < chapter.pageUrls.length; i++) result.push([i]);
-      return result;
-    }
-    let i = 0;
-    while (i < chapter.pageUrls.length) {
-      if (chapter.widePages.has(i)) {
-        result.push([i]);
-        i++;
-      } else if (i + 1 < chapter.pageUrls.length && !chapter.widePages.has(i + 1)) {
-        result.push([i, i + 1]);
-        i += 2;
-      } else {
-        result.push([i]);
-        i++;
-      }
-    }
-    return result;
-  });
-
-  let currentSpreadIdx: number = $derived(
-    Math.max(
-      0,
-      spreads.findIndex((s) => s.includes(manga.currentPage))
-    )
-  );
-
-  let currentSpread: number[] = $derived(spreads[currentSpreadIdx] ?? []);
-
   let domPages: number[] = $derived.by(() => {
-    if (spreads.length === 0) return [];
-    const start = Math.max(0, currentSpreadIdx - 1);
-    const end = Math.min(spreads.length - 1, currentSpreadIdx + 1);
+    const len = chapter.pageUrls.length;
+    if (len === 0) return [];
+    const cur = manga.currentPage;
     const pages: number[] = [];
-    for (let i = start; i <= end; i++) {
-      for (const p of spreads[i]) pages.push(p);
-    }
+    if (cur > 0) pages.push(cur - 1);
+    pages.push(cur);
+    if (cur + 1 < len) pages.push(cur + 1);
     return pages;
   });
 
@@ -75,32 +44,32 @@
       showEndScreen = false;
       return;
     }
-    if (currentSpreadIdx > 0) {
-      manga.currentPage = spreads[currentSpreadIdx - 1][0];
+    if (manga.currentPage > 0) {
+      manga.currentPage--;
     }
   };
 
   const next = () => {
     if (showEndScreen) return;
-    if (currentSpreadIdx < spreads.length - 1) {
-      manga.currentPage = spreads[currentSpreadIdx + 1][0];
-    } else if (currentSpreadIdx === spreads.length - 1) {
+    if (manga.currentPage < chapter.pageUrls.length - 1) {
+      manga.currentPage++;
+    } else {
       showEndScreen = true;
     }
   };
 
   let zoomHeld = $state(false);
-  let spreadEl: HTMLDivElement | undefined = $state();
-  let spreadRect: DOMRect | null = $state(null);
+  let pageEl: HTMLDivElement | undefined = $state();
+  let pageRect: DOMRect | null = $state(null);
   let clientX = $state(0);
   let clientY = $state(0);
 
   let originX = $derived.by(() => {
-    const r = spreadRect;
+    const r = pageRect;
     return r ? ((clientX - r.left) / r.width) * 100 : 50;
   });
   let originY = $derived.by(() => {
-    const r = spreadRect;
+    const r = pageRect;
     return r ? ((clientY - r.top) / r.height) * 100 : 50;
   });
 
@@ -109,7 +78,7 @@
     prevPage: prev,
     holdZoom(held: boolean) {
       zoomHeld = held;
-      if (held && spreadEl) spreadRect = spreadEl.getBoundingClientRect();
+      if (held && pageEl) pageRect = pageEl.getBoundingClientRect();
     }
   };
 
@@ -133,6 +102,7 @@
 
 <div
   class="relative flex h-full flex-1 items-center justify-center bg-black select-none"
+  style="padding-bottom: calc(var(--safe-bottom) - var(--safe-top))"
   class:overflow-hidden={zoomHeld}
   onmousemove={handleMouseMove}
   role="img"
@@ -146,9 +116,8 @@
     <EndOfChapter onback={() => (showEndScreen = false)} />
   {:else}
     <div
-      bind:this={spreadEl}
+      bind:this={pageEl}
       class="flex h-full items-center justify-center transition-transform duration-150 ease-out"
-      style:flex-direction={manga.rtl ? 'row-reverse' : 'row'}
       style:transform={zoomHeld ? `scale(${PAGE_TURN_ZOOM})` : 'none'}
       style:transform-origin="{originX}% {originY}%"
     >
@@ -156,9 +125,8 @@
         <img
           src={chapter.pageUrls[pageIdx]}
           alt="Page {pageIdx + 1} of {chapter.pageUrls.length}"
-          hidden={!currentSpread.includes(pageIdx)}
+          hidden={pageIdx !== manga.currentPage}
           class="max-h-full object-contain"
-          class:max-w-[50%]={currentSpread.length === 2}
           onerror={(e) => {
             const img = e.currentTarget as HTMLImageElement;
             img.style.display = 'none';

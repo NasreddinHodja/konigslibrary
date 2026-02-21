@@ -5,7 +5,6 @@ export function createPipeline(middlewares: Middleware[]) {
     const base: PipelineOutput = {
       urls: input.urls,
       revoke: input.revoke,
-      widePages: new Set(),
       decoded: new Map()
     };
 

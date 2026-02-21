@@ -1,6 +1,6 @@
 {
-  "name": "Konigslibrary",
-  "short_name": "Konigslibrary",
+  "name": "konigslibrary",
+  "short_name": "konigslibrary",
   "description": "Client-side manga reader",
   "id": "/",
   "scope": "/",

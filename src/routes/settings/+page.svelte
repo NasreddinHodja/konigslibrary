@@ -12,6 +12,10 @@
   } from '$lib/keyboard/keybindings.svelte';
   import { apiUrl, isLocalServer, getServerUrl, setServerUrl } from '$lib/utils/constants';
   import { isNative } from '$lib/utils/platform';
+  import { getMangaDir, setMangaDir } from '$lib/sources/native-library';
+  import { FolderOpen } from 'lucide-svelte';
+
+  const isMobile = typeof window !== 'undefined' && 'ontouchstart' in window;
 
   let bindings: KeyBinding[] = $state($state.snapshot(getBindings()) as KeyBinding[]);
   let listening: Action | null = $state(null);
@@ -62,8 +66,24 @@
     return Array.from(map.entries());
   });
 
-  // Native server URL
+  // Native device library
   const native = isNative();
+  let deviceDir = $state(getMangaDir());
+
+  async function browseDeviceDir() {
+    const { open } = await import('@tauri-apps/plugin-dialog');
+    const selected = await open({ directory: true, title: 'Select manga folder' });
+    if (selected) {
+      deviceDir = selected;
+      saveDeviceDir();
+    }
+  }
+
+  function saveDeviceDir() {
+    setMangaDir(deviceDir.trim());
+  }
+
+  // Native server URL
   let serverUrl = $state(getServerUrl());
 
   function connectServer() {
@@ -121,45 +141,68 @@
 
   <h1 class="text-2xl font-bold">Settings</h1>
 
-  <section class="space-y-4">
-    <div class="flex items-center justify-between">
-      <h2 class="text-lg font-bold opacity-80">Keyboard shortcuts</h2>
-      <Button size="md" onclick={handleReset}>Reset to defaults</Button>
-    </div>
-
-    {#each categories as [category, items] (category)}
-      <div>
-        <h3 class="mb-2 text-sm font-bold opacity-60">{category}</h3>
-        <div class="space-y-1">
-          {#each items as binding (binding.action)}
-            <div class="flex items-center justify-between border-b border-white/10 py-2">
-              <span class="text-sm opacity-80">{binding.label}</span>
-              <button
-                class="flex min-w-[5rem] cursor-pointer justify-center gap-1 border px-2 py-1 {listening ===
-                binding.action
-                  ? 'border-white'
-                  : 'border-white/20 hover:border-white/50'}"
-                onclick={() => startListening(binding.action)}
-              >
-                {#if listening === binding.action}
-                  <span class="text-xs opacity-60">Press a key...</span>
-                {:else}
-                  {#each binding.keys as key (key)}
-                    <kbd class="text-xs">{formatKey(key)}</kbd>
-                  {/each}
-                  {#if binding.keys.length === 0}
-                    <span class="text-xs opacity-30">unbound</span>
-                  {/if}
-                {/if}
-              </button>
-            </div>
-          {/each}
-        </div>
+  {#if !isMobile}
+    <section class="space-y-4">
+      <div class="flex items-center justify-between">
+        <h2 class="text-lg font-bold opacity-80">Keyboard shortcuts</h2>
+        <Button size="md" onclick={handleReset}>Reset to defaults</Button>
       </div>
-    {/each}
-  </section>
+
+      {#each categories as [category, items] (category)}
+        <div>
+          <h3 class="mb-2 text-sm font-bold opacity-60">{category}</h3>
+          <div class="space-y-1">
+            {#each items as binding (binding.action)}
+              <div class="flex items-center justify-between border-b border-white/10 py-2">
+                <span class="text-sm opacity-80">{binding.label}</span>
+                <button
+                  class="flex min-w-[5rem] cursor-pointer justify-center gap-1 border px-2 py-1 {listening ===
+                  binding.action
+                    ? 'border-white'
+                    : 'border-white/20 hover:border-white/50'}"
+                  onclick={() => startListening(binding.action)}
+                >
+                  {#if listening === binding.action}
+                    <span class="text-xs opacity-60">Press a key...</span>
+                  {:else}
+                    {#each binding.keys as key (key)}
+                      <kbd class="text-xs">{formatKey(key)}</kbd>
+                    {/each}
+                    {#if binding.keys.length === 0}
+                      <span class="text-xs opacity-30">unbound</span>
+                    {/if}
+                  {/if}
+                </button>
+              </div>
+            {/each}
+          </div>
+        </div>
+      {/each}
+    </section>
+  {/if}
 
   {#if native}
+    <section class="space-y-3">
+      <h2 class="text-lg font-bold opacity-80">Device library</h2>
+      <h3 class="text-sm font-bold opacity-60">Manga folder</h3>
+      <div class="flex gap-2">
+        <input
+          type="text"
+          bind:value={deviceDir}
+          placeholder="/home/user/Manga"
+          class="flex-1 border-2 bg-black px-3 py-2 text-sm text-white placeholder:opacity-40"
+        />
+        <button
+          class="border-2 px-3 opacity-60 hover:opacity-100"
+          onclick={browseDeviceDir}
+          aria-label="Browse"
+        >
+          <FolderOpen size={16} />
+        </button>
+      </div>
+      <Button size="md" onclick={saveDeviceDir}>Save</Button>
+    </section>
+
     <section class="space-y-3">
       <h2 class="text-lg font-bold opacity-80">Server</h2>
       <h3 class="text-sm font-bold opacity-60">Server URL</h3>

@@ -8,7 +8,7 @@
     Back
   </a>
 
-  <h1 class="text-2xl font-bold">How to use Konigslibrary</h1>
+  <h1 class="text-2xl font-bold">How to use konigslibrary</h1>
 
   <section class="space-y-3">
     <h2 class="text-lg font-bold opacity-80">Browser only</h2>

@@ -21,8 +21,8 @@
 - =sources/= -- =SourceProvider= interface. Implementations: zip upload, server library, native filesystem, offline IDB
 - =commands/= -- =CommandRegistry= with 15 commands (navigation, settings, UI). Keybindings resolve keys to action IDs
 - =events/= -- =createEventBus()= with typed =on()= / =emit()=. Events: download, chapter, source, progress
-- =viewers/= -- =ViewerRegistry= resolves highest-priority matching viewer. Built-in: scroll (IntersectionObserver) and page-turn (spreads, hold-to-zoom)
-- =pipeline/= -- =useChapter()= reactive hook with middleware composition. Middleware: decode, wide-detect. Preloader: sliding window cache
+- =viewers/= -- =ViewerRegistry= resolves highest-priority matching viewer. Built-in: scroll (IntersectionObserver) and page-turn (hold-to-zoom)
+- =pipeline/= -- =useChapter()= reactive hook with middleware composition. Middleware: decode. Preloader: sliding window cache
 - =plugins/= -- =Plugin= interface with lifecycle hooks wired to the event bus
 
 * Extending

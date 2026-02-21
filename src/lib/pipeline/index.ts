@@ -4,4 +4,3 @@ export { createPipeline } from './pipeline';
 export { useChapter } from './use-chapter.svelte';
 export { usePreloader } from './preloader.svelte';
 export { decodeMw } from './decode';
-export { wideDetectMw } from './wide-detect';

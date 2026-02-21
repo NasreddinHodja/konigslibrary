@@ -13,7 +13,7 @@
   import KeyboardHelp from '$lib/keyboard/KeyboardHelp.svelte';
   import { isNative } from '$lib/utils/platform';
   import { isLocalServer } from '$lib/utils/constants';
-  import { CircleQuestionMark, HardDrive } from 'lucide-svelte';
+  import { CircleQuestionMark } from 'lucide-svelte';
   import ToastStack from '$lib/ui/ToastStack.svelte';
   import { showError } from '$lib/ui/toast.svelte';
 
@@ -24,7 +24,6 @@
   const native = isNative();
   const chapters = $derived(svc.chapters);
   let helpOpen = $state(false);
-  let showDeviceLibrary = $state(false);
   let viewerCommands: ViewerCommands | null = $state(null);
   const activeViewer = $derived(svc.viewers.resolve(manga));
 
@@ -151,30 +150,22 @@
   {#if !native}
     <a
       href="/about"
-      class="fixed top-4 right-4 z-10 opacity-40 hover:opacity-80"
+      class="fixed z-10 opacity-40 hover:opacity-80"
+      style="top: calc(1rem + var(--safe-top)); right: calc(1rem + var(--safe-right))"
       aria-label="How to use"
     >
       <CircleQuestionMark size={24} />
     </a>
   {/if}
   <div
-    class="flex min-h-screen flex-col items-center justify-center gap-8 p-8 pt-[calc(2rem+env(safe-area-inset-top))] pb-[calc(2rem+env(safe-area-inset-bottom))]"
+    class="flex min-h-screen flex-col items-center justify-center gap-8 p-8"
+    style="padding-top: calc(2rem + var(--safe-top)); padding-bottom: calc(2rem + var(--safe-bottom))"
   >
     <UploadButton />
     {#if native}
       <OfflineBrowser />
       <LibraryBrowser />
-      {#if showDeviceLibrary}
-        <NativeLibraryBrowser />
-      {:else}
-        <button
-          class="flex items-center gap-2 border-2 border-white/20 px-4 py-2 text-sm opacity-60 hover:border-white/60 hover:opacity-100"
-          onclick={() => (showDeviceLibrary = true)}
-        >
-          <HardDrive size={16} />
-          Browse device
-        </button>
-      {/if}
+      <NativeLibraryBrowser />
       <a href="/settings" class="mt-4 text-sm opacity-40 hover:opacity-80">Settings</a>
     {:else if isLocalServer}
       <OfflineBrowser />

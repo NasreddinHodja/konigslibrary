@@ -11,7 +11,6 @@ export type Action =
   | 'showHelp'
   | 'toggleMode'
   | 'toggleRtl'
-  | 'toggleDoublePage'
   | 'zoomIn'
   | 'zoomOut'
   | 'holdZoom';
@@ -49,12 +48,6 @@ export const DEFAULT_BINDINGS: KeyBinding[] = [
   { action: 'showHelp', keys: ['?'], label: 'Toggle shortcut help', category: 'UI' },
   { action: 'toggleMode', keys: ['m'], label: 'Toggle scroll/turn mode', category: 'Settings' },
   { action: 'toggleRtl', keys: ['r'], label: 'Toggle LTR/RTL', category: 'Settings' },
-  {
-    action: 'toggleDoublePage',
-    keys: ['d'],
-    label: 'Toggle single/double page',
-    category: 'Settings'
-  },
   { action: 'zoomOut', keys: ['-'], label: 'Zoom out', category: 'Settings' },
   { action: 'zoomIn', keys: ['='], label: 'Zoom in', category: 'Settings' }
 ];

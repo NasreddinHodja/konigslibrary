@@ -21,7 +21,7 @@ for (const name of Object.keys(nets)) {
   }
 }
 
-console.log(`\nKonigslibrary running on:`);
+console.log(`\nkonigslibrary running on:`);
 console.log(`  Local:   http://localhost:${port}`);
 for (const addr of addresses) {
   console.log(`  Network: http://${addr}:${port}`);

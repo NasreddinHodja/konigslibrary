@@ -11,7 +11,7 @@ import {
   prevChapter
 } from './navigation';
 import { toggleSidebar, closeSidebar, back, showHelp } from './ui';
-import { toggleMode, toggleRtlCmd, toggleDoublePageCmd, zoomInCmd, zoomOutCmd } from './settings';
+import { toggleMode, toggleRtlCmd, zoomInCmd, zoomOutCmd } from './settings';
 
 export function createDefaultRegistry(): CommandRegistry {
   const registry = new CommandRegistry();
@@ -27,7 +27,6 @@ export function createDefaultRegistry(): CommandRegistry {
   registry.register(showHelp);
   registry.register(toggleMode);
   registry.register(toggleRtlCmd);
-  registry.register(toggleDoublePageCmd);
   registry.register(zoomInCmd);
   registry.register(zoomOutCmd);
   return registry;

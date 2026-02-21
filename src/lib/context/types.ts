@@ -12,7 +12,6 @@ export type MangaState = {
   zoom: number;
   scrollMode: boolean;
   rtl: boolean;
-  doublePage: boolean;
   sidebarOpen: boolean;
 };
 
@@ -32,7 +31,6 @@ export type ReaderServices = {
   getPrevChapter(): string | null;
   toggleScrollMode(): void;
   toggleRtl(): void;
-  toggleDoublePage(): void;
   zoomIn(): void;
   zoomOut(): void;
   saveProgress(): void;
