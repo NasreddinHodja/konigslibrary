@@ -28,32 +28,25 @@ A manga/comic reader that runs entirely in the browser. Upload a ZIP/CBZ and sta
 * Architecture
 
 #+begin_src
-src/
-├── lib/
-│   ├── viewers/             # Reading mode implementations
-│   │   ├── PageScrollViewer.svelte  # Virtual-scrolled vertical reader
-│   │   ├── PageTurnViewer.svelte    # Single page with preloading
-│   │   ├── registry.ts             # Viewer plugin registry
-│   │   └── builtin.ts              # Built-in viewer registration
-│   ├── actions/             # Svelte actions (edge swipe detection)
-│   ├── commands/            # Keybinding command definitions
-│   ├── plugins/             # Plugin system (runner, types, window title)
-│   ├── server/              # Local server: directory listing + Node ZIP parsing
-│   ├── sources/             # Data source abstraction (file upload, server, Tauri)
-│   ├── pipeline/            # Image loading pipeline
-│   ├── zip.ts               # Browser ZIP/CBZ parser (ZIP64, Web Compression API)
-│   ├── zip-parse.ts         # Low-level ZIP binary parsing
-│   ├── chapters.ts          # Auto chapter detection from directory structure
-│   ├── download.svelte.ts   # IndexedDB offline storage
-│   └── keybindings.svelte.ts # Configurable keyboard shortcuts
-├── routes/
-│   ├── +page.svelte         # Main reader view
-│   ├── settings/            # Settings page
-│   └── about/               # About page
-└── src-tauri/               # Tauri native shell (Rust)
+src/lib/
+├── actions/         # Svelte actions (intersect, edge swipe)
+├── browsers/        # Source browser UIs (library, native, offline, upload)
+├── chapters/        # Chapter grouping logic + EndOfChapter UI
+├── commands/        # Command registry and keybinding actions
+├── context/         # ReaderServices factory (createReaderServices)
+├── events/          # Typed event bus
+├── keyboard/        # Configurable keybindings + help overlay
+├── pipeline/        # Image decode pipeline + preloader
+├── plugins/         # Plugin system (runner, registry, window title)
+├── server/          # Local server: directory listing + Node ZIP parsing
+├── sources/         # Data source abstraction (upload, server, Tauri, offline)
+├── ui/              # Shared UI components (sidebar, toast, buttons)
+├── utils/           # Constants, types, platform detection
+├── viewers/         # Reading modes (scroll, page-turn) + viewer registry
+└── zip/             # Custom ZIP/CBZ parser (ZIP64, Web Compression API)
 #+end_src
 
-State management uses a single Svelte 5 =$state= rune object - no stores, no context API. One reactive module owns all ZIP parsing, chapter grouping, image extraction, and progress persistence.
+State management uses a =createReaderServices()= factory that wires together a Svelte 5 =$state= object with the command registry, event bus, viewer registry, and plugin runner. No stores, no context API — one reactive service object owns all reader state and logic.
 
 * Tech Stack
 
@@ -237,3 +230,11 @@ All shortcuts are rebindable from Settings. Defaults:
 | =Escape=         | Close sidebar or help dialog          |
 
 Click left/right halves of the page-turn viewer to navigate.
+
+* Contributing
+
+See [[file:CONTRIBUTING.org][CONTRIBUTING.org]].
+
+* License
+
+[[file:LICENSE][MIT]]
