@@ -1,4 +1,4 @@
-#+TITLE: Konigslibrary
+#+TITLE: konigslibrary
 #+DESCRIPTION: Client-side manga reader — Svelte 5, Tauri, custom ZIP parser
 
 #+html: <a href="https://svelte.dev"><img src="https://img.shields.io/badge/Svelte-5-FF3E00?logo=svelte&logoColor=white"></a>
@@ -7,21 +7,21 @@
 #+html: <a href="https://www.typescriptlang.org"><img src="https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white"></a>
 #+html: <a href="https://v2.tauri.app"><img src="https://img.shields.io/badge/Tauri-2-FFC131?logo=tauri&logoColor=white"></a>
 
-A manga/comic reader that runs entirely in the browser. Upload a ZIP/CBZ and start reading — all parsing, decompression, and image extraction happen client-side using the Web Compression API. No server, no uploads, nothing leaves your machine. Also ships as a native desktop/mobile app via Tauri and a self-hosted local server for LAN access.
+A manga/comic reader that runs entirely in the browser. Upload a ZIP/CBZ and start reading - all parsing, decompression, and image extraction happen client-side using the Web Compression API. No server, no uploads, nothing leaves your machine. Also ships as a native desktop/mobile app via Tauri and a self-hosted local server for LAN access.
 
 * Features
 
-- *Two reading modes* — vertical scroll with IntersectionObserver page tracking, or page-turn with left/right click zones and image preloading
-- *RTL support* — right-to-left reading with reversed navigation
-- *Double-page spreads* — automatic wide-page detection for proper layout
-- *Hold-to-zoom* — press =z= in page-turn mode to zoom to cursor position
-- *Progress saving* — chapter and page position persisted to localStorage, auto-resumes on return
-- *Offline downloads* — download manga or individual chapters to IndexedDB for offline reading
-- *Customizable keybindings* — rebind every shortcut from the Settings page
-- *Plugin system* — extensible viewer and plugin architecture with a runner/registry pattern
-- *Desktop & mobile app* — native Tauri 2 app (Rust shell) that reads from a local directory with file dialog support
-- *Self-hosted server* — adapter-node build that serves manga from a directory to any device on your network
-- *Zero dependencies for ZIP* — custom ZIP/CBZ parser (with ZIP64 support) built on the Web Compression API, no libraries
+- *Two reading modes* - vertical scroll with IntersectionObserver page tracking, or page-turn with left/right click zones and image preloading
+- *RTL support* - right-to-left reading with reversed navigation
+- *Double-page spreads* - automatic wide-page detection for proper layout
+- *Hold-to-zoom* - press =z= in page-turn mode to zoom to cursor position
+- *Progress saving* - chapter and page position persisted to localStorage, auto-resumes on return
+- *Offline downloads* - download manga or individual chapters to IndexedDB for offline reading
+- *Customizable keybindings* - rebind every shortcut from the Settings page
+- *Plugin system* - extensible viewer and plugin architecture with a runner/registry pattern
+- *Desktop & mobile app* - native Tauri 2 app (Rust shell) that reads from a local directory with file dialog support
+- *Self-hosted server* - adapter-node build that serves manga from a directory to any device on your network
+- *Zero dependencies for ZIP* - custom ZIP/CBZ parser (with ZIP64 support) built on the Web Compression API, no libraries
 
 * Architecture
 
@@ -51,7 +51,7 @@ src/
 └── src-tauri/               # Tauri native shell (Rust)
 #+end_src
 
-State management uses a single Svelte 5 =$state= rune object — no stores, no context API. One reactive module owns all ZIP parsing, chapter grouping, image extraction, and progress persistence.
+State management uses a single Svelte 5 =$state= rune object - no stores, no context API. One reactive module owns all ZIP parsing, chapter grouping, image extraction, and progress persistence.
 
 * Tech Stack
 
@@ -61,7 +61,7 @@ State management uses a single Svelte 5 =$state= rune object — no stores, no c
 | Language    | TypeScript 5.9 (strict)                         |
 | Styling     | Tailwind CSS 4, Source Code Pro monospace font   |
 | Desktop     | Tauri 2 (Rust)                                  |
-| ZIP Parsing | Custom implementation — Web Compression API      |
+| ZIP Parsing | Custom implementation - Web Compression API       |
 | Icons       | Lucide Svelte                                   |
 | Quality     | ESLint 9, Prettier, Vitest, svelte-check         |
 
@@ -73,7 +73,7 @@ Visit the deployed site and drop a ZIP or CBZ file.
 
 ** Local Server (one-click)
 
-Download and run the starter script — it handles Node.js installation, building, and serving:
+Download and run the starter script - it handles Node.js installation, building, and serving:
 
 *** Linux / macOS
 
