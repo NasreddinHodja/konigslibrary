@@ -5,8 +5,8 @@ After=network.target
 [Service]
 Type=simple
 WorkingDirectory=/home/nasreddin/Prog/konigslibrary
+Environment=PORT=5511
 ExecStart=/home/nasreddin/.nvm/versions/node/v22.22.0/bin/node server.js
-Environment=PORT=3000
 Environment=NO_BROWSER=1
 Restart=on-failure
 RestartSec=3
