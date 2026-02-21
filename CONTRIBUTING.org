@@ -1,0 +1,46 @@
+#+TITLE: Contributing to Konigslibrary
+
+* Prerequisites
+
+- [[https://nodejs.org/][Node.js 22]] (see =.nvmrc=)
+- [[https://pnpm.io/][pnpm]]
+
+* Setup
+
+#+begin_src sh
+git clone https://github.com/NasreddinHodja/konigslibrary.git
+cd konigslibrary
+pnpm install
+pnpm dev
+#+end_src
+
+* Available Scripts
+
+| Command       | Description               |
+|---------------+---------------------------|
+| =pnpm dev=    | Start dev server          |
+| =pnpm build=  | Production build          |
+| =pnpm check=  | Svelte type checking      |
+| =pnpm lint=   | Prettier + ESLint check   |
+| =pnpm format= | Auto-format with Prettier |
+| =pnpm test=   | Run tests                 |
+
+* Code Style
+
+This project uses Prettier and ESLint for consistent formatting. Configuration lives in [[file:.prettierrc][.prettierrc]] and [[file:.editorconfig][.editorconfig]].
+
+Before submitting code, run:
+
+#+begin_src sh
+pnpm format
+pnpm lint
+#+end_src
+
+* Pull Request Workflow
+
+1. Fork the repository
+2. Create a feature branch (=git checkout -b my-feature=)
+3. Commit your changes
+4. Push to your fork and open a PR against =main=
+
+CI runs lint, type checking, and tests on every PR.
