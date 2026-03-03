@@ -18,6 +18,7 @@
   let visibleSet = new SvelteSet<number>();
 
   const GAP = 8; // gap-2 = 0.5rem = 8px
+  const BUFFER_MARGIN_PX = 1500; // generous px per VIRTUAL_BUFFER unit for IntersectionObserver preload zone
 
   $effect(() => {
     const len = chapter.pageUrls.length;
@@ -65,7 +66,7 @@
       },
       {
         root: containerEl,
-        rootMargin: `${VIRTUAL_BUFFER * 1500}px 0px`
+        rootMargin: `${VIRTUAL_BUFFER * BUFFER_MARGIN_PX}px 0px`
       }
     );
   }
@@ -206,10 +207,10 @@
             onerror={(e) => {
               const img = e.currentTarget as HTMLImageElement;
               img.style.display = 'none';
-              img.insertAdjacentHTML(
-                'afterend',
-                '<p class="py-8 text-sm opacity-40">Failed to load page</p>'
-              );
+              const p = document.createElement('p');
+              p.className = 'py-8 text-sm opacity-40';
+              p.textContent = 'Failed to load page';
+              img.insertAdjacentElement('afterend', p);
             }}
           />
         {/if}

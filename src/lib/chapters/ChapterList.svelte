@@ -19,8 +19,7 @@
 
   function refreshOfflineChapters() {
     const p = svc.getProvider();
-    const slug =
-      p instanceof ServerLibraryProvider ? p.slug : p instanceof OfflineDbProvider ? p.slug : '';
+    const slug = p && 'slug' in p ? (p as { slug: string }).slug : '';
     if (!slug || !canDownload) {
       downloadedChapters = new Set();
       return;
@@ -68,7 +67,7 @@
             }
           }
         }
-      }, ANIM_DURATION + 10);
+      }, ANIM_DURATION + 10); // +10ms buffer so scroll happens after transition settles
       return () => clearTimeout(id);
     }
   });

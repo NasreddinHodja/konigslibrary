@@ -8,6 +8,8 @@ export function createPipeline(middlewares: Middleware[]) {
       decoded: new Map()
     };
 
+    // Middlewares run last-to-first: the last registered runs first and calls
+    // `run` to delegate to the next one up the chain.
     let idx = middlewares.length - 1;
 
     const run = async (): Promise<PipelineOutput> => {
@@ -16,7 +18,6 @@ export function createPipeline(middlewares: Middleware[]) {
       return mw(input, run, signal);
     };
 
-    idx = middlewares.length - 1;
     return run();
   };
 }

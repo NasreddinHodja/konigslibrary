@@ -11,7 +11,7 @@ import type { ReaderServices } from './types';
 const browser = typeof localStorage !== 'undefined';
 
 export function createReaderServices(): ReaderServices {
-  let _chapters: Chapter[] = $state.raw([]);
+  let _chapters: Chapter[] = $state([]);
   let _provider: SourceProvider | null = $state(null);
 
   const state = $state({
@@ -128,11 +128,11 @@ export function createReaderServices(): ReaderServices {
   }
 
   function zoomIn() {
-    state.zoom = Math.min(1, +(state.zoom + 0.1).toFixed(2));
+    state.zoom = Math.min(1, Math.round((state.zoom + 0.1) * 100) / 100);
   }
 
   function zoomOut() {
-    state.zoom = Math.max(0.5, +(state.zoom - 0.1).toFixed(2));
+    state.zoom = Math.max(0.5, Math.round((state.zoom - 0.1) * 100) / 100);
   }
 
   function saveProgress() {

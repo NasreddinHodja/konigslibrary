@@ -2,7 +2,7 @@
   import { slide } from 'svelte/transition';
   import { Menu, X, Minus, Plus, ArrowLeft, Settings } from 'lucide-svelte';
   import { getReaderContext } from '$lib/context';
-  import { ANIM_DURATION, ANIM_EASE } from '$lib/utils/constants';
+  import { ANIM_DURATION, ANIM_EASE, SIDEBAR_WIDTH_PX } from '$lib/utils/constants';
   import ChapterList from '$lib/chapters/ChapterList.svelte';
   import Toggle from '$lib/ui/Toggle.svelte';
   import Button from '$lib/ui/Button.svelte';
@@ -30,12 +30,22 @@
 
   const { handleTouchStart, handleTouchMove, handleTouchEnd, handleTouchCancel } =
     createDrawerHandlers({
-      sidebarWidth: 320,
+      sidebarWidth: SIDEBAR_WIDTH_PX,
       isOpen: () => manga.sidebarOpen,
       onSnap: (open) => {
         manga.sidebarOpen = open;
       }
     });
+
+  const sidebarTransform = $derived(
+    drawer.dragging
+      ? `${(drawer.progress - 1) * 100}%`
+      : manga.sidebarOpen
+        ? '0'
+        : isMobile
+          ? '-100%'
+          : 'calc(-100% + var(--sidebar-peek))'
+  );
 </script>
 
 <svelte:document
@@ -56,13 +66,7 @@
   class="fixed top-0 left-0 z-50 flex h-full w-80 flex-col border-r-2 bg-black shadow-xl {drawer.dragging
     ? ''
     : 'duration-anim transition-transform ease-anim'}"
-  style="padding-left: var(--safe-left); transform: translateX({drawer.dragging
-    ? `${(drawer.progress - 1) * 100}%`
-    : manga.sidebarOpen
-      ? '0'
-      : isMobile
-        ? '-100%'
-        : 'calc(-100% + var(--sidebar-peek))'})"
+  style="padding-left: var(--safe-left); transform: translateX({sidebarTransform})"
 >
   {#if !manga.sidebarOpen && !isMobile}
     <button

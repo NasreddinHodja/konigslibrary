@@ -36,7 +36,7 @@ export function groupByChapter<T extends { name: string }>(
   }
 
   for (const [, chapterEntries] of grouped) {
-    chapterEntries.sort((a, b) => a.name.localeCompare(b.name));
+    chapterEntries.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
   }
 
   return grouped;

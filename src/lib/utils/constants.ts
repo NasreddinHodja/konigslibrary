@@ -24,6 +24,8 @@ export const SNAP_VELOCITY_THRESHOLD = 0.3;
 
 export const PAGE_TURN_ZOOM = 2;
 
+export const SIDEBAR_WIDTH_PX = 320; // matches w-80 (20rem) in Tailwind CSS
+
 export const LS_SERVER_URL = 'kl:serverUrl';
 
 const browser = typeof localStorage !== 'undefined';
@@ -43,4 +45,4 @@ export function apiUrl(path: string): string {
 }
 
 declare const __LOCAL_BUILD__: boolean;
-export const isLocalServer = typeof __LOCAL_BUILD__ !== 'undefined' && __LOCAL_BUILD__;
+export const isLocalServer = __LOCAL_BUILD__;

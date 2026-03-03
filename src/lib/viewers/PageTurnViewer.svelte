@@ -103,7 +103,7 @@
   style="padding-bottom: calc(var(--safe-bottom) - var(--safe-top))"
   class:overflow-hidden={zoomHeld}
   onmousemove={handleMouseMove}
-  role="img"
+  role="region"
   aria-label="Page {manga.currentPage + 1} of {chapter.pageUrls.length}"
 >
   {#if chapter.loading}
@@ -116,7 +116,7 @@
     <div
       bind:this={pageEl}
       class="flex h-full items-center justify-center transition-transform duration-150 ease-out"
-      style:transform={zoomHeld ? `scale(${PAGE_TURN_ZOOM})` : 'none'}
+      style:transform={zoomHeld ? `scale(${PAGE_TURN_ZOOM})` : undefined}
       style:transform-origin="{originX}% {originY}%"
     >
       {#each domPages as pageIdx (pageIdx)}
@@ -128,10 +128,10 @@
           onerror={(e) => {
             const img = e.currentTarget as HTMLImageElement;
             img.style.display = 'none';
-            img.insertAdjacentHTML(
-              'afterend',
-              '<p class="py-8 text-sm opacity-40">Failed to load page</p>'
-            );
+            const p = document.createElement('p');
+            p.className = 'py-8 text-sm opacity-40';
+            p.textContent = 'Failed to load page';
+            img.insertAdjacentElement('afterend', p);
           }}
         />
       {/each}

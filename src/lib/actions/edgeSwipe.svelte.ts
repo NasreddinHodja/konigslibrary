@@ -5,6 +5,7 @@ import {
 } from '$lib/utils/constants';
 
 const DEAD_ZONE = 10;
+const VELOCITY_HISTORY_MAX = 5;
 
 export const drawer = $state({ dragging: false, progress: 0 });
 
@@ -58,7 +59,7 @@ export function createDrawerHandlers(opts: DrawerHandlerOpts) {
     drawer.progress = Math.min(1, Math.max(0, startProgress + delta));
 
     history.push({ x: touch.clientX, t: event.timeStamp });
-    if (history.length > 5) history.shift();
+    if (history.length > VELOCITY_HISTORY_MAX) history.shift();
   }
 
   function handleTouchEnd() {
