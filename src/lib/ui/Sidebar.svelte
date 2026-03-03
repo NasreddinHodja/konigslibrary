@@ -1,8 +1,7 @@
 <script lang="ts">
-  import { slide } from 'svelte/transition';
   import { Menu, X, Minus, Plus, ArrowLeft, Settings } from 'lucide-svelte';
   import { getReaderContext } from '$lib/context';
-  import { ANIM_DURATION, ANIM_EASE, SIDEBAR_WIDTH_PX } from '$lib/utils/constants';
+  import { SIDEBAR_WIDTH_PX } from '$lib/utils/constants';
   import ChapterList from '$lib/chapters/ChapterList.svelte';
   import Toggle from '$lib/ui/Toggle.svelte';
   import Button from '$lib/ui/Button.svelte';
@@ -76,7 +75,7 @@
     ></button>
   {/if}
   <div class="absolute right-2 z-20" style="top: calc(0.5rem + var(--safe-top))">
-    <Button size="icon" onclick={() => (manga.sidebarOpen = !manga.sidebarOpen)}>
+    <Button size="icon" variant="ghost" onclick={() => (manga.sidebarOpen = !manga.sidebarOpen)}>
       {#if manga.sidebarOpen}<X size={20} />{:else}<Menu size={20} />{/if}
     </Button>
   </div>
@@ -93,10 +92,10 @@
   >
     <div class="space-y-4 p-6" style="padding-top: calc(3.5rem + var(--safe-top))">
       <div class="flex items-center gap-3">
-        <Button size="icon" onclick={clearManga}>
+        <Button size="icon" variant="ghost" onclick={clearManga}>
           <ArrowLeft size={16} />
         </Button>
-        <h2 class="text-xl font-bold">KONIGSLIBRARY</h2>
+        <h2 class="text-sm font-bold tracking-widest opacity-80">KONIGSLIBRARY</h2>
       </div>
     </div>
 
@@ -105,44 +104,50 @@
     </div>
 
     <div
-      class="flex shrink-0 flex-col gap-4 border-t border-white/20 p-4"
+      class="flex shrink-0 flex-col border-t border-white/20 p-4"
       style="padding-bottom: calc(1rem + var(--safe-bottom))"
     >
-      {#if manga.scrollMode}
-        <div
-          class="flex items-center justify-center gap-2"
-          transition:slide={{ duration: ANIM_DURATION, easing: ANIM_EASE }}
-        >
-          <Button size="icon" onclick={zoomOut}>
-            <Minus size={16} />
-          </Button>
-          <span class="w-16 text-center text-sm opacity-80">
-            {manga.zoom.toFixed(2)}x
-          </span>
-          <Button size="icon" onclick={zoomIn}>
-            <Plus size={16} />
-          </Button>
+      <div
+        class={manga.scrollMode ? '' : 'pointer-events-none'}
+        style:display="grid"
+        style:grid-template-rows={manga.scrollMode ? '1fr' : '0fr'}
+        style:transition="grid-template-rows var(--duration-anim) var(--ease-anim)"
+      >
+        <div class="overflow-hidden">
+          <div class="flex items-center justify-center gap-2 pb-4">
+            <Button size="icon" variant="ghost" onclick={zoomOut}>
+              <Minus size={16} />
+            </Button>
+            <span class="w-12 text-center text-sm opacity-80">
+              {Math.round(manga.zoom * 100)}%
+            </span>
+            <Button size="icon" variant="ghost" onclick={zoomIn}>
+              <Plus size={16} />
+            </Button>
+          </div>
         </div>
-      {/if}
-      <div class="flex flex-col gap-3">
-        {#if !manga.scrollMode}
-          <div
-            class="flex flex-col gap-3"
-            transition:slide={{ duration: ANIM_DURATION, easing: ANIM_EASE }}
-          >
+      </div>
+      <div
+        class={!manga.scrollMode ? '' : 'pointer-events-none'}
+        style:display="grid"
+        style:grid-template-rows={!manga.scrollMode ? '1fr' : '0fr'}
+        style:transition="grid-template-rows var(--duration-anim) var(--ease-anim)"
+      >
+        <div class="overflow-hidden">
+          <div class="flex flex-col pb-3">
             <Toggle labelA="LTR" labelB="RTL" active={manga.rtl} onclick={toggleRtl} />
           </div>
-        {/if}
-        <Toggle
-          labelA="Turn"
-          labelB="Scroll"
-          active={manga.scrollMode}
-          onclick={toggleScrollMode}
-        />
+        </div>
       </div>
+      <Toggle
+        labelA="Turn"
+        labelB="Scroll"
+        active={manga.scrollMode}
+        onclick={toggleScrollMode}
+      />
       <a
         href="/settings"
-        class="flex items-center justify-center gap-2 py-1 text-sm opacity-40 hover:opacity-80"
+        class="mt-4 flex items-center justify-center gap-2 py-1 text-sm opacity-40 hover:opacity-80"
       >
         <Settings size={14} />
         Settings

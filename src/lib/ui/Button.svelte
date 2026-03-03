@@ -4,25 +4,37 @@
   let {
     size = 'md',
     as = 'button',
+    variant = 'default',
     onclick,
     children
   }: {
     size?: 'lg' | 'md' | 'icon';
     as?: 'button' | 'span';
+    variant?: 'default' | 'primary' | 'ghost';
     onclick?: () => void;
     children: Snippet;
   } = $props();
 
-  const classes: Record<string, string> = {
-    lg: 'border-2 px-6 py-3 hover:bg-white/20',
-    md: 'border-2 px-3 py-2 hover:bg-white/20',
-    icon: 'p-2 hover:bg-white/20'
-  };
+  const variantClass = $derived(
+    ({
+      default: 'border-2 hover:bg-white/20',
+      primary: 'bg-white text-black hover:bg-white/90',
+      ghost: 'hover:bg-white/10'
+    })[variant]
+  );
+
+  const sizeClass = $derived(
+    ({
+      lg: 'px-6 py-3 text-sm font-bold',
+      md: 'px-3 py-2 text-sm',
+      icon: 'p-2'
+    })[size]
+  );
 </script>
 
 {#if as === 'span'}
   <span
-    class={classes[size]}
+    class="inline-flex cursor-pointer items-center gap-2 {variantClass} {sizeClass}"
     tabindex="0"
     role="button"
     onkeydown={(e: KeyboardEvent) => {
@@ -35,7 +47,10 @@
     {@render children()}
   </span>
 {:else}
-  <button class={classes[size]} {onclick}>
+  <button
+    class="inline-flex cursor-pointer items-center gap-2 {variantClass} {sizeClass}"
+    {onclick}
+  >
     {@render children()}
   </button>
 {/if}

@@ -1,6 +1,7 @@
 <script lang="ts">
   import { ArrowLeft, ChevronRight } from 'lucide-svelte';
   import { getReaderContext } from '$lib/context';
+  import Button from '$lib/ui/Button.svelte';
 
   let { onback }: { onback?: () => void } = $props();
 
@@ -14,25 +15,18 @@
   <p class="text-lg opacity-50">End of {manga.selectedChapter}</p>
   <div class="flex items-center gap-4">
     {#if onback}
-      <button
-        class="flex items-center gap-2 border-2 border-white px-6 py-3 text-sm font-bold transition-opacity hover:opacity-80"
-        onclick={onback}
-      >
+      <Button size="lg" onclick={onback}>
         <ArrowLeft size={16} />
         Back
-      </button>
+      </Button>
     {/if}
-    <button
-      class="flex items-center gap-2 border-2 border-white px-6 py-3 text-sm font-bold transition-opacity hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-30"
-      disabled={!nextChapter}
-      onclick={() => svc.goToNextChapter()}
-    >
-      {#if nextChapter}
+    {#if nextChapter}
+      <Button size="lg" variant="primary" onclick={() => svc.goToNextChapter()}>
         Next: {nextChapter}
-      {:else}
-        No next chapter
-      {/if}
-      <ChevronRight size={16} />
-    </button>
+        <ChevronRight size={16} />
+      </Button>
+    {:else}
+      <span class="px-6 py-3 text-sm opacity-30">No next chapter</span>
+    {/if}
   </div>
 </div>

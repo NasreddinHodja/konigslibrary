@@ -1,27 +1,42 @@
 <div class="flex h-full flex-1 items-center justify-center">
-  <div class="bouncer"></div>
+  <div class="bars">
+    <span></span>
+    <span></span>
+    <span></span>
+  </div>
 </div>
 
 <style>
-  .bouncer {
-    width: 8px;
-    height: 8px;
-    background: white;
-    animation: bounce 0.8s steps(3, jump-none) infinite alternate;
+  .bars {
+    display: flex;
+    gap: 5px;
+    align-items: center;
   }
 
-  @keyframes bounce {
-    0% {
-      transform: translateX(-24px);
-    }
-    33% {
-      transform: translateX(-8px);
-    }
-    66% {
-      transform: translateX(8px);
-    }
+  .bars span {
+    width: 3px;
+    height: 20px;
+    background: white;
+    animation: bar-pulse 1s var(--ease-anim, ease-in-out) infinite;
+  }
+
+  .bars span:nth-child(2) {
+    animation-delay: 0.15s;
+  }
+
+  .bars span:nth-child(3) {
+    animation-delay: 0.3s;
+  }
+
+  @keyframes bar-pulse {
+    0%,
     100% {
-      transform: translateX(24px);
+      opacity: 0.2;
+      transform: scaleY(0.4);
+    }
+    50% {
+      opacity: 1;
+      transform: scaleY(1);
     }
   }
 </style>

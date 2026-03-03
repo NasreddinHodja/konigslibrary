@@ -8,7 +8,7 @@
 </script>
 
 <label class="cursor-pointer">
-  <Button size="lg" as="span">Upload manga</Button>
+  <Button size="lg" as="span" variant="primary">Upload manga</Button>
   <input
     type="file"
     accept=".zip,.cbz"

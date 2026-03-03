@@ -16,6 +16,19 @@
 body {
   @apply bg-black text-white antialiased;
   font-family: 'Source Code Pro', monospace;
+  overflow-x: hidden;
+}
+
+:focus-visible {
+  outline: 2px solid white;
+  outline-offset: 2px;
+}
+
+/* Inputs use border-colour shift instead of an outline ring */
+input:focus-visible,
+textarea:focus-visible {
+  outline: none;
+  border-color: white;
 }
 
 @media (prefers-reduced-motion: reduce) {

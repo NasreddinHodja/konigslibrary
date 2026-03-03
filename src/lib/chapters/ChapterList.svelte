@@ -53,7 +53,7 @@
   $effect(() => {
     if (manga.sidebarOpen && listEl) {
       const id = setTimeout(() => {
-        const active = listEl.querySelector('.underline') as HTMLElement | null;
+        const active = listEl.querySelector('[data-active="true"]') as HTMLElement | null;
         if (active) {
           const scroller = active.closest('.overflow-y-auto') as HTMLElement | null;
           if (scroller) {
@@ -118,7 +118,7 @@
         >
           {#if canDownload && !downloadedChapters.has(chapter.name)}
             <button
-              class="mt-1 mb-2 flex w-full cursor-pointer items-center justify-center gap-2 border-2 border-white px-3 py-2 text-sm hover:bg-white/10"
+              class="mt-1 mb-2 flex w-full cursor-pointer items-center justify-center gap-2 border border-white/30 px-3 py-2 text-sm text-white/60 hover:border-white/70 hover:text-white"
               onclick={(e) => downloadChapter(chapter.name, e)}
             >
               <Download size={16} />
@@ -130,7 +130,10 @@
               <li>
                 <button
                   class="w-full cursor-pointer truncate py-1 pr-2 pl-6 text-left text-sm
-                    {manga.currentPage === i ? 'underline' : 'hover:bg-white/10'}"
+                    {manga.currentPage === i
+                      ? 'bg-white text-black'
+                      : 'opacity-60 hover:opacity-100 hover:bg-white/10'}"
+                  data-active={manga.currentPage === i}
                   onclick={() => {
                     manga.currentPage = i;
                     manga.shouldScroll = true;

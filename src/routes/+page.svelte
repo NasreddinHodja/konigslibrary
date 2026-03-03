@@ -12,10 +12,19 @@
   import OfflineBrowser from '$lib/browsers/OfflineBrowser.svelte';
   import KeyboardHelp from '$lib/keyboard/KeyboardHelp.svelte';
   import { isNative } from '$lib/utils/platform';
-  import { isLocalServer } from '$lib/utils/constants';
+  import { isLocalServer, ANIM_DURATION, ANIM_EASE } from '$lib/utils/constants';
+  import { pushState } from '$app/navigation';
   import { CircleQuestionMark } from 'lucide-svelte';
   import ToastStack from '$lib/ui/ToastStack.svelte';
   import { showError } from '$lib/ui/toast.svelte';
+
+  function slideFromRight(_node: Element, { duration = ANIM_DURATION } = {}) {
+    return {
+      duration,
+      easing: ANIM_EASE,
+      css: (t: number) => `transform: translateX(${(1 - t) * 100}%)`
+    };
+  }
 
   const svc = createReaderServices();
   setReaderContext(svc);
@@ -92,15 +101,15 @@
   $effect(() => {
     if (chapters.length === 0) return;
 
-    history.pushState({ kl: 'reader' }, '');
+    pushState('', { kl: 'reader' });
 
     const onPopState = () => {
       if (helpOpen) {
         helpOpen = false;
-        history.pushState({ kl: 'reader' }, '');
+        pushState('', { kl: 'reader' });
       } else if (isMobile && manga.sidebarOpen) {
         manga.sidebarOpen = false;
-        history.pushState({ kl: 'reader' }, '');
+        pushState('', { kl: 'reader' });
       } else {
         svc.clearManga();
       }
@@ -184,16 +193,22 @@
   >
     <UploadButton />
     {#if native}
-      <OfflineBrowser />
-      <LibraryBrowser />
+      <div class="flex w-full max-w-3xl flex-col gap-6 md:flex-row md:items-start">
+        <OfflineBrowser />
+        <LibraryBrowser />
+      </div>
       <NativeLibraryBrowser />
       <a href="/settings" class="mt-4 text-sm opacity-40 hover:opacity-80">Settings</a>
     {:else if isLocalServer}
-      <OfflineBrowser />
-      <LibraryBrowser />
+      <div class="flex w-full max-w-3xl flex-col gap-6 md:flex-row md:items-start">
+        <OfflineBrowser />
+        <LibraryBrowser />
+      </div>
       <a href="/settings" class="mt-4 text-sm opacity-40 hover:opacity-80">Settings</a>
     {:else}
-      <OfflineBrowser />
+      <div class="w-full max-w-3xl">
+        <OfflineBrowser />
+      </div>
       <div class="flex flex-col items-center gap-3">
         <p class="max-w-sm text-center text-sm opacity-60">
           Run locally to serve manga from your PC to any device on your network
@@ -226,6 +241,7 @@
   </div>
 {:else}
   <div
+    transition:slideFromRight
     class="flex h-dvh select-none md:pl-(--sidebar-peek)"
     onclick={enterFullscreen}
     role="presentation"
@@ -237,7 +253,9 @@
       <Viewer bind:commands={viewerCommands} />
     {:else if !manga.selectedChapter}
       <EmptyState>
-        <Button size="lg" onclick={() => (manga.sidebarOpen = true)}>Select a chapter</Button>
+        <Button size="lg" variant="primary" onclick={() => (manga.sidebarOpen = true)}>
+        Select a chapter
+      </Button>
       </EmptyState>
     {/if}
   </div>

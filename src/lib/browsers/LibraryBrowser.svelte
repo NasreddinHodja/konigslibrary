@@ -71,32 +71,32 @@
 {:else if error}
   <p class="text-sm opacity-60">{error}</p>
 {:else if entries.length > 0}
-  <div class="w-full max-w-2xl space-y-2">
-    <h2 class="mb-4 text-lg font-bold opacity-80">Library</h2>
+  <div class="w-full min-w-0 space-y-1">
+    <h2 class="mb-3 text-sm font-bold tracking-widest opacity-60">LIBRARY</h2>
     {#each entries as entry (entry.slug)}
-      <div class="flex w-full items-center gap-3 border-2 px-4 py-3">
+      <div class="flex w-full items-center gap-2 border-2 px-3 py-2">
         <button
-          class="flex min-w-0 flex-1 cursor-pointer items-center gap-3 text-left hover:opacity-80"
+          class="flex min-w-0 flex-1 cursor-pointer items-center gap-2 text-left text-sm hover:opacity-80"
           onclick={() => open(entry)}
         >
           {#if entry.type === 'zip'}
-            <FileArchive size={20} class="shrink-0 opacity-60" />
+            <FileArchive size={16} class="shrink-0 opacity-40" />
           {:else}
-            <BookOpen size={20} class="shrink-0 opacity-60" />
+            <BookOpen size={16} class="shrink-0 opacity-40" />
           {/if}
           <span class="truncate">{entry.name}</span>
         </button>
         {#if downloadedSlugs.has(entry.slug)}
-          <span class="shrink-0 p-1 opacity-40" aria-label="{entry.name} partially downloaded">
-            <Check size={16} />
+          <span class="shrink-0 p-1 opacity-30" aria-label="{entry.name} downloaded">
+            <Check size={14} />
           </span>
         {/if}
         <button
-          class="shrink-0 p-1 opacity-40 hover:opacity-100"
+          class="shrink-0 p-1 opacity-30 hover:opacity-100"
           onclick={(e) => startDownload(e, entry)}
           aria-label="Download {entry.name}"
         >
-          <Download size={16} />
+          <Download size={14} />
         </button>
       </div>
     {/each}

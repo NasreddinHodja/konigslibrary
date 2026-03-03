@@ -11,45 +11,44 @@
   <div class="fixed right-4 bottom-4 z-50 flex flex-col gap-2">
     {#each toasts as toast (toast.id)}
       <div
-        class="flex items-center gap-3 border-2 bg-black px-4 py-2 shadow-lg"
+        class="flex min-w-72 items-start gap-3 border-2 bg-black px-4 py-3 shadow-lg"
         transition:fly={{ x: 100, duration: ANIM_DURATION }}
       >
-        {#if toast.phase === 'done'}
-          <Check size={16} class="shrink-0 text-green-400" />
-        {:else if toast.phase === 'error'}
-          <AlertTriangle size={16} class="shrink-0 text-red-400" />
-        {/if}
+        <div class="mt-0.5 shrink-0">
+          {#if toast.phase === 'done'}
+            <Check size={14} class="text-green-400" />
+          {:else if toast.phase === 'error'}
+            <AlertTriangle size={14} class="text-red-400" />
+          {/if}
+        </div>
 
-        <span class="max-w-48 truncate text-sm">{toast.label}</span>
-
-        {#if toast.phase === 'fetching' || toast.phase === 'packaging'}
-          <span class="text-sm tabular-nums opacity-60">
-            {#if toast.phase === 'packaging'}
-              Zipping…
-            {:else}
-              {toast.current}/{toast.total}
-            {/if}
-          </span>
-        {:else if toast.phase === 'done'}
-          <span class="text-sm opacity-60">Done</span>
-        {:else if toast.phase === 'error'}
-          <span class="text-sm opacity-60">Failed</span>
-        {/if}
+        <div class="flex min-w-0 flex-1 flex-col gap-0.5">
+          <span class="text-sm leading-snug">{toast.label}</span>
+          {#if toast.phase === 'fetching'}
+            <span class="text-xs tabular-nums opacity-50">{toast.current} / {toast.total}</span>
+          {:else if toast.phase === 'packaging'}
+            <span class="text-xs opacity-50">Zipping…</span>
+          {:else if toast.phase === 'done'}
+            <span class="text-xs opacity-50">Done</span>
+          {:else if toast.phase === 'error'}
+            <span class="text-xs opacity-50">Failed</span>
+          {/if}
+        </div>
 
         {#if toast.cancel}
           <button
-            class="shrink-0 p-1 opacity-60 hover:opacity-100"
+            class="mt-0.5 shrink-0 opacity-40 hover:opacity-100"
             onclick={() => {
               toast.cancel?.();
               removeToast(toast.id);
             }}
-            aria-label="Cancel download"
+            aria-label="Cancel"
           >
             <X size={14} />
           </button>
         {:else if toast.phase === 'done' || toast.phase === 'error'}
           <button
-            class="shrink-0 p-1 opacity-60 hover:opacity-100"
+            class="mt-0.5 shrink-0 opacity-40 hover:opacity-100"
             onclick={() => removeToast(toast.id)}
             aria-label="Dismiss"
           >
