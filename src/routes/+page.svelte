@@ -17,6 +17,7 @@
   import { CircleQuestionMark } from 'lucide-svelte';
   import ToastStack from '$lib/ui/ToastStack.svelte';
   import { showError } from '$lib/ui/toast.svelte';
+  import { fade } from 'svelte/transition';
 
   function slideFromRight(_node: Element, { duration = ANIM_DURATION } = {}) {
     return {
@@ -177,6 +178,7 @@
 {/if}
 
 {#if chapters.length === 0}
+  <div in:fade={{ duration: ANIM_DURATION }}>
   {#if !native}
     <a
       href="/about"
@@ -238,6 +240,7 @@
         </div>
       </div>
     {/if}
+  </div>
   </div>
 {:else}
   <div

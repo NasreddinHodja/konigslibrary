@@ -4,8 +4,7 @@ const reducedMotion =
 
 export const ANIM_DURATION = reducedMotion ? 0 : 300;
 
-// quartic ease-out — matches CSS cubic-bezier(0.25, 1, 0.5, 1) in layout.css
-export const ANIM_EASE = (t: number) => 1 - Math.pow(1 - t, 4);
+export const ANIM_EASE = (t: number) => 1 - Math.pow(1 - t, 3);
 
 export const LS_SCROLL_MODE = 'kl:scrollMode';
 export const LS_RTL = 'kl:rtl';

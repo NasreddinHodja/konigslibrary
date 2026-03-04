@@ -1,6 +1,6 @@
 <script lang="ts">
   import { slide } from 'svelte/transition';
-  import { ChevronDown, ChevronRight, Download } from 'lucide-svelte';
+  import { ChevronRight, Download } from 'lucide-svelte';
   import { getReaderContext } from '$lib/context';
   import { saveChapter } from '$lib/sources/download.svelte';
   import { getOfflineManga } from '$lib/sources/offline-db';
@@ -108,7 +108,10 @@
       >
         <span class="truncate">{chapter.name}</span>
         <span class="ml-2 shrink-0 text-white/60">({chapter.pageCount})</span>
-        {#if isOpen}<ChevronDown size={16} />{:else}<ChevronRight size={16} />{/if}
+        <span
+          class="ml-1 shrink-0 transition-transform duration-[var(--duration-anim)] ease-[var(--ease-snappy)]"
+          style="transform: rotate({isOpen ? '90deg' : '0deg'})"
+        ><ChevronRight size={16} /></span>
       </button>
 
       {#if isOpen}
