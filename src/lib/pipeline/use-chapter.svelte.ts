@@ -1,3 +1,4 @@
+import { SvelteMap } from 'svelte/reactivity';
 import type { ReaderServices } from '$lib/context';
 import type { Middleware, PipelineOutput } from './types';
 import { createPipeline } from './pipeline';
@@ -13,7 +14,7 @@ export function useChapter(services: ReaderServices, middlewares: Middleware[] =
   let pageUrls: string[] = $state([]);
   let loading = $state(false);
   let error: string | null = $state(null);
-  const emptyMap: Map<number, HTMLImageElement> = new Map(); // plain Map — used as a reset sentinel, not reactive state
+  const emptyMap: SvelteMap<number, HTMLImageElement> = new SvelteMap();
   let decoded: Map<number, HTMLImageElement> = $state.raw(emptyMap);
 
   const pipeline = createPipeline(middlewares);

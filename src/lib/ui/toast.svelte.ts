@@ -1,3 +1,5 @@
+import { SvelteMap } from 'svelte/reactivity';
+
 export type Toast = {
   id: string;
   label: string;
@@ -10,7 +12,7 @@ export type Toast = {
 const DISMISS_DELAY = 3000;
 
 let toasts: Toast[] = $state([]);
-const dismissTimers = new Map<string, ReturnType<typeof setTimeout>>();
+const dismissTimers = new SvelteMap<string, ReturnType<typeof setTimeout>>();
 
 export const getToasts = () => toasts;
 

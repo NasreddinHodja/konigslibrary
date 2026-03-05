@@ -110,8 +110,8 @@
         <span class="ml-2 shrink-0 text-white/60">({chapter.pageCount})</span>
         <span
           class="ml-1 shrink-0 transition-transform duration-[var(--duration-anim)] ease-[var(--ease-snappy)]"
-          style="transform: rotate({isOpen ? '90deg' : '0deg'})"
-        ><ChevronRight size={16} /></span>
+          style="transform: rotate({isOpen ? '90deg' : '0deg'})"><ChevronRight size={16} /></span
+        >
       </button>
 
       {#if isOpen}
@@ -134,8 +134,8 @@
                 <button
                   class="w-full cursor-pointer truncate py-1 pr-2 pl-6 text-left text-sm
                     {manga.currentPage === i
-                      ? 'bg-white text-black'
-                      : 'opacity-60 hover:opacity-100 hover:bg-white/10'}"
+                    ? 'bg-white text-black'
+                    : 'opacity-60 hover:bg-white/10 hover:opacity-100'}"
                   data-active={manga.currentPage === i}
                   onclick={() => {
                     manga.currentPage = i;

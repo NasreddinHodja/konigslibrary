@@ -1,3 +1,5 @@
+import { SvelteMap } from 'svelte/reactivity';
+
 export type Action =
   | 'nextPage'
   | 'prevPage'
@@ -70,7 +72,7 @@ function loadBindings(): KeyBinding[] {
 }
 
 function buildLookup(bindings: KeyBinding[]): Map<string, Action> {
-  const map = new Map<string, Action>(); // plain Map — created inside a function, not stored as reactive state
+  const map = new SvelteMap<string, Action>();
   for (const b of bindings) {
     for (const key of b.keys) {
       map.set(key, b.action);

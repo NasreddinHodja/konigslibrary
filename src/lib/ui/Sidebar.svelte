@@ -139,12 +139,7 @@
           </div>
         </div>
       </div>
-      <Toggle
-        labelA="Turn"
-        labelB="Scroll"
-        active={manga.scrollMode}
-        onclick={toggleScrollMode}
-      />
+      <Toggle labelA="Turn" labelB="Scroll" active={manga.scrollMode} onclick={toggleScrollMode} />
       <a
         href="/settings"
         class="mt-4 flex items-center justify-center gap-2 py-1 text-sm opacity-40 hover:opacity-80"

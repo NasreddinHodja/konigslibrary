@@ -179,68 +179,68 @@
 
 {#if chapters.length === 0}
   <div in:fade={{ duration: ANIM_DURATION }}>
-  {#if !native}
-    <a
-      href="/about"
-      class="fixed z-10 opacity-40 hover:opacity-80"
-      style="top: calc(1rem + var(--safe-top)); right: calc(1rem + var(--safe-right))"
-      aria-label="How to use"
-    >
-      <CircleQuestionMark size={24} />
-    </a>
-  {/if}
-  <div
-    class="flex min-h-screen flex-col items-center justify-center gap-8 p-8"
-    style="padding-top: calc(2rem + var(--safe-top)); padding-bottom: calc(2rem + var(--safe-bottom))"
-  >
-    <UploadButton />
-    {#if native}
-      <div class="flex w-full max-w-3xl flex-col gap-6 md:flex-row md:items-start">
-        <OfflineBrowser />
-        <LibraryBrowser />
-      </div>
-      <NativeLibraryBrowser />
-      <a href="/settings" class="mt-4 text-sm opacity-40 hover:opacity-80">Settings</a>
-    {:else if isLocalServer}
-      <div class="flex w-full max-w-3xl flex-col gap-6 md:flex-row md:items-start">
-        <OfflineBrowser />
-        <LibraryBrowser />
-      </div>
-      <a href="/settings" class="mt-4 text-sm opacity-40 hover:opacity-80">Settings</a>
-    {:else}
-      <div class="w-full max-w-3xl">
-        <OfflineBrowser />
-      </div>
-      <div class="flex flex-col items-center gap-3">
-        <p class="max-w-sm text-center text-sm opacity-60">
-          Run locally to serve manga from your PC to any device on your network
-        </p>
-        <div class="flex flex-wrap justify-center gap-4">
-          <a
-            href="/download/konigslibrary.sh"
-            download
-            class="border-2 border-white/20 px-4 py-2 text-sm whitespace-nowrap hover:border-white/60"
-          >
-            Linux / Mac
-          </a>
-          <a
-            href="/download/konigslibrary.bat"
-            download
-            class="border-2 border-white/20 px-4 py-2 text-sm whitespace-nowrap hover:border-white/60"
-          >
-            Windows
-          </a>
-          <a
-            href="/download/konigslibrary.apk"
-            download
-            class="border-2 border-white/20 px-4 py-2 text-sm whitespace-nowrap hover:border-white/60"
-          >
-            Android
-          </a>
-        </div>
-      </div>
+    {#if !native}
+      <a
+        href="/about"
+        class="fixed z-10 opacity-40 hover:opacity-80"
+        style="top: calc(1rem + var(--safe-top)); right: calc(1rem + var(--safe-right))"
+        aria-label="How to use"
+      >
+        <CircleQuestionMark size={24} />
+      </a>
     {/if}
-  </div>
+    <div
+      class="flex min-h-screen flex-col items-center justify-center gap-8 p-8"
+      style="padding-top: calc(2rem + var(--safe-top)); padding-bottom: calc(2rem + var(--safe-bottom))"
+    >
+      <UploadButton />
+      {#if native}
+        <div class="flex w-full max-w-3xl flex-col gap-6 md:flex-row md:items-start">
+          <OfflineBrowser />
+          <LibraryBrowser />
+        </div>
+        <NativeLibraryBrowser />
+        <a href="/settings" class="mt-4 text-sm opacity-40 hover:opacity-80">Settings</a>
+      {:else if isLocalServer}
+        <div class="flex w-full max-w-3xl flex-col gap-6 md:flex-row md:items-start">
+          <OfflineBrowser />
+          <LibraryBrowser />
+        </div>
+        <a href="/settings" class="mt-4 text-sm opacity-40 hover:opacity-80">Settings</a>
+      {:else}
+        <div class="w-full max-w-3xl">
+          <OfflineBrowser />
+        </div>
+        <div class="flex flex-col items-center gap-3">
+          <p class="max-w-sm text-center text-sm opacity-60">
+            Run locally to serve manga from your PC to any device on your network
+          </p>
+          <div class="flex flex-wrap justify-center gap-4">
+            <a
+              href="/download/konigslibrary.sh"
+              download
+              class="border-2 border-white/20 px-4 py-2 text-sm whitespace-nowrap hover:border-white/60"
+            >
+              Linux / Mac
+            </a>
+            <a
+              href="/download/konigslibrary.bat"
+              download
+              class="border-2 border-white/20 px-4 py-2 text-sm whitespace-nowrap hover:border-white/60"
+            >
+              Windows
+            </a>
+            <a
+              href="/download/konigslibrary.apk"
+              download
+              class="border-2 border-white/20 px-4 py-2 text-sm whitespace-nowrap hover:border-white/60"
+            >
+              Android
+            </a>
+          </div>
+        </div>
+      {/if}
+    </div>
   </div>
 {:else}
   <div
@@ -257,8 +257,8 @@
     {:else if !manga.selectedChapter}
       <EmptyState>
         <Button size="lg" variant="primary" onclick={() => (manga.sidebarOpen = true)}>
-        Select a chapter
-      </Button>
+          Select a chapter
+        </Button>
       </EmptyState>
     {/if}
   </div>
