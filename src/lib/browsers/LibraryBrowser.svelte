@@ -6,7 +6,7 @@
   import { saveManga } from '$lib/sources/download.svelte';
   import { listOfflineManga } from '$lib/sources/offline-db';
   import { isNative } from '$lib/utils/platform';
-  import { BookOpen, FileArchive, Download, Check } from 'lucide-svelte';
+  import { Download, Check } from 'lucide-svelte';
   import { showError } from '$lib/ui/toast.svelte';
   import Loader from '$lib/ui/Loader.svelte';
 
@@ -16,6 +16,7 @@
   let loading = $state(true);
   let error: string | null = $state(null);
   let downloadedSlugs: Set<string> = $state.raw(new Set());
+  let downloadingSlug: string | null = $state(null);
 
   function refreshDownloadedSlugs() {
     listOfflineManga().then((list) => {
@@ -50,55 +51,66 @@
       });
   });
 
-  const open = (entry: LibraryEntry) => {
-    setSource(new ServerLibraryProvider(entry.slug, entry.name));
+  const open = async (entry: LibraryEntry) => {
+    try {
+      await setSource(new ServerLibraryProvider(entry.slug, entry.name));
+    } catch (err) {
+      showError(`Failed to open "${entry.name}": ${err instanceof Error ? err.message : err}`);
+    }
   };
 
   async function startDownload(e: MouseEvent, entry: LibraryEntry) {
     e.stopPropagation();
-    const res = await fetch(apiUrl(`/api/library/${entry.slug}/chapters`));
-    if (!res.ok) {
-      showError(`Failed to fetch chapters for "${entry.name}"`);
-      return;
+    if (downloadingSlug === entry.slug) return;
+    downloadingSlug = entry.slug;
+    try {
+      const res = await fetch(apiUrl(`/api/library/${entry.slug}/chapters`));
+      if (!res.ok) {
+        showError(`Failed to fetch chapters for "${entry.name}"`);
+        return;
+      }
+      const chapters: ServerChapter[] = await res.json();
+      saveManga(entry.slug, entry.name, chapters, events);
+    } catch {
+      showError(`Could not reach server to download "${entry.name}"`);
+    } finally {
+      downloadingSlug = null;
     }
-    const chapters: ServerChapter[] = await res.json();
-    saveManga(entry.slug, entry.name, chapters, events);
   }
 </script>
 
 {#if loading}
   <Loader />
 {:else if error}
-  <p class="text-sm opacity-60">{error}</p>
+  <p class="text-xs opacity-40">{error}</p>
 {:else if entries.length > 0}
-  <div class="w-full min-w-0 space-y-1">
-    <h2 class="mb-3 text-sm font-bold tracking-widest opacity-60">LIBRARY</h2>
-    {#each entries as entry (entry.slug)}
-      <div class="flex w-full items-center gap-2 border-2 px-3 py-2">
-        <button
-          class="flex min-w-0 flex-1 cursor-pointer items-center gap-2 text-left text-sm hover:opacity-80"
-          onclick={() => open(entry)}
-        >
-          {#if entry.type === 'zip'}
-            <FileArchive size={16} class="shrink-0 opacity-40" />
+  <div class="w-full min-w-0">
+    <p class="mb-2 text-xs font-bold tracking-widest opacity-30">LIBRARY</p>
+    <div class="border-2">
+      {#each entries as entry (entry.slug)}
+        <div class="flex items-center border-b border-white/10 last:border-b-0">
+          <button
+            class="flex min-w-0 flex-1 cursor-pointer px-4 py-3 text-left text-sm hover:bg-white/10"
+            onclick={() => open(entry)}
+          >
+            <span class="truncate">{entry.name}</span>
+          </button>
+          {#if downloadedSlugs.has(entry.slug)}
+            <span class="shrink-0 px-3 py-3 opacity-30" aria-label="{entry.name} downloaded">
+              <Check size={14} />
+            </span>
           {:else}
-            <BookOpen size={16} class="shrink-0 opacity-40" />
+            <button
+              class="shrink-0 px-3 py-3 {downloadingSlug === entry.slug ? 'animate-pulse opacity-50 cursor-wait' : 'cursor-pointer opacity-20 hover:opacity-80'}"
+              onclick={(e) => startDownload(e, entry)}
+              disabled={downloadingSlug === entry.slug}
+              aria-label="Download {entry.name}"
+            >
+              <Download size={14} />
+            </button>
           {/if}
-          <span class="truncate">{entry.name}</span>
-        </button>
-        {#if downloadedSlugs.has(entry.slug)}
-          <span class="shrink-0 p-1 opacity-30" aria-label="{entry.name} downloaded">
-            <Check size={14} />
-          </span>
-        {/if}
-        <button
-          class="shrink-0 p-1 opacity-30 hover:opacity-100"
-          onclick={(e) => startDownload(e, entry)}
-          aria-label="Download {entry.name}"
-        >
-          <Download size={14} />
-        </button>
-      </div>
-    {/each}
+        </div>
+      {/each}
+    </div>
   </div>
 {/if}

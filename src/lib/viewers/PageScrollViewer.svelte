@@ -6,7 +6,10 @@
   import { SvelteSet } from 'svelte/reactivity';
   import Loader from '$lib/ui/Loader.svelte';
 
-  let { commands = $bindable() }: { commands?: ViewerCommands | null } = $props();
+  let {
+    commands = $bindable(),
+    ontap
+  }: { commands?: ViewerCommands | null; ontap?: () => void } = $props();
 
   const svc = getReaderContext();
   const { state: manga } = svc;
@@ -17,8 +20,8 @@
   let ratios: number[] = $state([]);
   let visibleSet = new SvelteSet<number>();
 
-  const GAP = 8; // gap-2 = 0.5rem = 8px
-  const BUFFER_MARGIN_PX = 1500; // generous px per VIRTUAL_BUFFER unit for IntersectionObserver preload zone
+  const GAP = 8;
+  const BUFFER_MARGIN_PX = 1500;
 
   $effect(() => {
     const len = chapter.pageUrls.length;
@@ -179,11 +182,40 @@
   };
 
   commands = { nextPage: scrollNext, prevPage: scrollPrev };
+
+  // Tap detection: pointerdown → pointerup with < 10px movement = tap
+  let tapStartX = 0;
+  let tapStartY = 0;
+  let tapMoved = false;
+
+  function onPointerDown(e: PointerEvent) {
+    tapStartX = e.clientX;
+    tapStartY = e.clientY;
+    tapMoved = false;
+  }
+
+  function onPointerMove(e: PointerEvent) {
+    if (
+      Math.abs(e.clientX - tapStartX) > 10 ||
+      Math.abs(e.clientY - tapStartY) > 10
+    ) {
+      tapMoved = true;
+    }
+  }
+
+  function onPointerUp() {
+    if (!tapMoved) ontap?.();
+  }
 </script>
 
 <div
   bind:this={containerEl}
   class="flex h-full flex-1 flex-col gap-2 overflow-y-auto py-4 select-none"
+  role="region"
+  aria-label="Manga pages"
+  onpointerdown={onPointerDown}
+  onpointermove={onPointerMove}
+  onpointerup={onPointerUp}
 >
   {#if chapter.loading}
     <Loader />

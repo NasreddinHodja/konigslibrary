@@ -8,7 +8,7 @@
   import { convertFileSrc } from '@tauri-apps/api/core';
   import { getReaderContext } from '$lib/context';
   import { ZipUploadProvider, NativeFilesystemProvider } from '$lib/sources';
-  import { BookOpen, FileArchive, RefreshCw } from 'lucide-svelte';
+  import { RefreshCw } from 'lucide-svelte';
   import Loader from '$lib/ui/Loader.svelte';
 
   const { setSource } = getReaderContext();
@@ -47,39 +47,36 @@
   }
 </script>
 
-<div class="w-full max-w-2xl space-y-2">
-  <div class="mb-4 flex items-center gap-3">
-    <h2 class="text-lg font-bold opacity-80">Device Library</h2>
-    <button class="opacity-40 hover:opacity-80" onclick={loadEntries} aria-label="Refresh">
-      <RefreshCw size={16} />
+<div class="w-full min-w-0">
+  <div class="mb-2 flex items-center gap-3">
+    <p class="text-xs font-bold tracking-widest opacity-30">DEVICE LIBRARY</p>
+    <button class="cursor-pointer opacity-20 hover:opacity-70" onclick={loadEntries} aria-label="Refresh">
+      <RefreshCw size={12} />
     </button>
   </div>
 
   {#if !mangaDir}
     <p class="text-sm opacity-40">
-      No path set — <a href="/settings" class="underline hover:opacity-80">configure in Settings</a>
+      No path set — <a href="/settings" class="underline">configure in Settings</a>
     </p>
   {:else if loading}
     <Loader />
   {:else if error}
-    <p class="text-sm opacity-60">{error}</p>
+    <p class="text-sm opacity-40">{error}</p>
   {:else if entries.length > 0}
-    {#each entries as entry (entry.path)}
-      <button
-        class="flex w-full cursor-pointer items-center gap-3 border-2 px-4 py-3 text-left hover:bg-white/10"
-        onclick={() => openEntry(entry)}
-      >
-        {#if entry.type === 'zip'}
-          <FileArchive size={20} class="shrink-0 opacity-60" />
-        {:else}
-          <BookOpen size={20} class="shrink-0 opacity-60" />
-        {/if}
-        <span class="truncate">{entry.name}</span>
-      </button>
-    {/each}
+    <div class="border-2">
+      {#each entries as entry (entry.path)}
+        <button
+          class="flex w-full cursor-pointer items-center border-b border-white/10 px-4 py-3 text-left text-sm last:border-b-0 hover:bg-white/10"
+          onclick={() => openEntry(entry)}
+        >
+          <span class="truncate">{entry.name}</span>
+        </button>
+      {/each}
+    </div>
   {:else}
     <p class="text-sm opacity-40">
-      No manga found in <code>{mangaDir}/</code>
+      No manga found in <code class="opacity-60">{mangaDir}/</code>
     </p>
   {/if}
 </div>

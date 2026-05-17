@@ -17,7 +17,7 @@
 
   const variantClass = $derived(
     {
-      default: 'border-2 hover:bg-white/20',
+      default: 'border-2 hover:bg-white/10',
       primary: 'bg-white text-black hover:bg-white/90',
       ghost: 'hover:bg-white/10'
     }[variant]
@@ -25,7 +25,7 @@
 
   const sizeClass = $derived(
     {
-      lg: 'px-6 py-3 text-sm font-bold',
+      lg: 'px-6 py-3 text-sm font-bold tracking-wide',
       md: 'px-3 py-2 text-sm',
       icon: 'p-2'
     }[size]

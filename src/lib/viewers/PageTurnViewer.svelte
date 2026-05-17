@@ -6,7 +6,10 @@
   import Loader from '$lib/ui/Loader.svelte';
   import EndOfChapter from '$lib/chapters/EndOfChapter.svelte';
 
-  let { commands = $bindable() }: { commands?: ViewerCommands | null } = $props();
+  let {
+    commands = $bindable(),
+    ontap
+  }: { commands?: ViewerCommands | null; ontap?: () => void } = $props();
 
   const svc = getReaderContext();
   const { state: manga } = svc;
@@ -91,11 +94,18 @@
     if (manga.rtl) next();
     else prev();
   };
+
   const handleClickRight = () => {
     if (zoomHeld) return;
     if (manga.rtl) prev();
     else next();
   };
+
+  const handleClickCenter = () => {
+    if (zoomHeld) return;
+    ontap?.();
+  };
+
 </script>
 
 <div
@@ -137,16 +147,28 @@
       {/each}
     </div>
   {/if}
+
   {#if !showEndScreen}
+    <!-- Left zone: previous page -->
     <button
-      class="absolute inset-y-0 left-0 w-1/2"
+      class="absolute inset-y-0 left-0 w-[40%]"
       class:cursor-zoom-in={zoomHeld}
       class:cursor-w-resize={!zoomHeld}
       aria-label="Previous page"
       onclick={handleClickLeft}
     ></button>
+
+    <!-- Center zone: toggle HUD -->
     <button
-      class="absolute inset-y-0 right-0 w-1/2"
+      class="absolute inset-y-0 left-[40%] w-[20%]"
+      class:cursor-zoom-in={zoomHeld}
+      aria-label="Toggle menu"
+      onclick={handleClickCenter}
+    ></button>
+
+    <!-- Right zone: next page -->
+    <button
+      class="absolute inset-y-0 right-0 w-[40%]"
       class:cursor-zoom-in={zoomHeld}
       class:cursor-e-resize={!zoomHeld}
       aria-label="Next page"

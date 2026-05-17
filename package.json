@@ -1,7 +1,7 @@
 {
   "name": "konigslibrary",
   "description": "Client-side manga reader built with Svelte 5 + SvelteKit",
-  "packageManager": "pnpm@10.29.1",
+  "packageManager": "bun@1.2.0",
   "version": "0.0.1",
   "type": "module",
   "license": "MIT",
@@ -23,9 +23,10 @@
     "test:run": "vitest run",
     "serve": "node server.js",
     "dev:local": "LOCAL_BUILD=1 vite dev",
+    "dev:host": "LOCAL_BUILD=1 vite dev --host",
     "build:local": "LOCAL_BUILD=1 vite build",
-    "tauri:local": "LOCAL_BUILD=1 pnpm tauri dev",
-    "build:android": "pnpm tauri android build --target aarch64 && ~/.local/src/Android/build-tools/36.1.0/apksigner sign --ks src-tauri/konigslibrary.jks --ks-key-alias konigslibrary --out static/download/konigslibrary.apk src-tauri/gen/android/app/build/outputs/apk/universal/release/app-universal-release-unsigned.apk"
+    "tauri:local": "LOCAL_BUILD=1 bun tauri dev",
+    "build:android": "bun tauri android build --target aarch64 && ~/.local/src/Android/build-tools/36.1.0/apksigner sign --ks src-tauri/konigslibrary.jks --ks-key-alias konigslibrary --out static/download/konigslibrary.apk src-tauri/gen/android/app/build/outputs/apk/universal/release/app-universal-release-unsigned.apk"
   },
   "devDependencies": {
     "@eslint/compat": "^2.0.2",
@@ -54,8 +55,9 @@
     "vitest": "^4.0.18"
   },
   "dependencies": {
-    "@tauri-apps/api": "^2.10.1",
-    "@tauri-apps/plugin-dialog": "^2.6.0",
+    "@sveltejs/mcp": "^0.1.22",
+    "@tauri-apps/api": "^2",
+    "@tauri-apps/plugin-dialog": "^2.7.1",
     "lucide-svelte": "^0.563.0"
   }
 }

@@ -137,7 +137,7 @@ export function createReaderServices(): ReaderServices {
 
   function saveProgress() {
     const name = _provider?.mangaName;
-    if (!browser || !name || !state.selectedChapter) return;
+    if (!browser || !name || state.selectedChapter === null) return;
     localStorage.setItem(
       `${LS_PROGRESS_PREFIX}${name}`,
       JSON.stringify({ chapter: state.selectedChapter, page: state.currentPage })

@@ -21,7 +21,7 @@ export function useChapter(services: ReaderServices, middlewares: Middleware[] =
 
   $effect(() => {
     const chapter = services.state.selectedChapter;
-    if (!chapter) return;
+    if (chapter === null) return;
 
     const controller = new AbortController();
     let revoke = false;

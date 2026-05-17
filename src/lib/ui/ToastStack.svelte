@@ -8,7 +8,7 @@
 </script>
 
 {#if toasts.length > 0}
-  <div class="fixed right-4 bottom-4 z-50 flex flex-col gap-2">
+  <div class="fixed right-4 z-50 flex flex-col gap-2" style="bottom: calc(1rem + var(--safe-bottom, 0px))">
     {#each toasts as toast (toast.id)}
       <div
         class="flex min-w-72 items-start gap-3 border-2 bg-black px-4 py-3 shadow-lg"

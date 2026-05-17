@@ -4,6 +4,7 @@
   import type { ViewerCommands } from '$lib/commands';
   import { createReaderServices, setReaderContext } from '$lib/context';
   import Sidebar from '$lib/ui/Sidebar.svelte';
+  import ReaderHud from '$lib/ui/ReaderHud.svelte';
   import Button from '$lib/ui/Button.svelte';
   import EmptyState from '$lib/ui/EmptyState.svelte';
   import UploadButton from '$lib/browsers/UploadButton.svelte';
@@ -12,6 +13,7 @@
   import OfflineBrowser from '$lib/browsers/OfflineBrowser.svelte';
   import KeyboardHelp from '$lib/keyboard/KeyboardHelp.svelte';
   import { isNative } from '$lib/utils/platform';
+  import { invoke } from '@tauri-apps/api/core';
   import { isLocalServer, ANIM_DURATION, ANIM_EASE } from '$lib/utils/constants';
   import { pushState } from '$app/navigation';
   import { CircleQuestionMark } from 'lucide-svelte';
@@ -37,9 +39,37 @@
   let viewerCommands: ViewerCommands | null = $state(null);
   const activeViewer = $derived(svc.viewers.resolve(manga));
 
+  let dragCount = $state(0);
+  const isDragOver = $derived(dragCount > 0 && chapters.length === 0);
+
+  let hudVisible = $state(false);
+  let hudTimer: ReturnType<typeof setTimeout> | undefined;
+
+  function showHud() {
+    hudVisible = true;
+    clearTimeout(hudTimer);
+    hudTimer = setTimeout(() => {
+      hudVisible = false;
+    }, 3000);
+  }
+
+  function hideHud() {
+    hudVisible = false;
+    clearTimeout(hudTimer);
+  }
+
+  function toggleHud() {
+    if (hudVisible) hideHud();
+    else showHud();
+  }
+
+  $effect(() => {
+    if (manga.selectedChapter !== null) showHud();
+  });
+
   let saveTimer: ReturnType<typeof setTimeout> | undefined;
   $effect(() => {
-    if (!manga.selectedChapter) return;
+    if (manga.selectedChapter === null) return;
     manga.currentPage; // eslint-disable-line @typescript-eslint/no-unused-expressions
     clearTimeout(saveTimer);
     saveTimer = setTimeout(() => svc.saveProgress(), 300);
@@ -67,13 +97,18 @@
 
   $effect(() => {
     if (native) return;
-    if (!manga.selectedChapter && document.fullscreenElement) {
+    if (manga.selectedChapter === null && document.fullscreenElement) {
       document.exitFullscreen().catch(() => {});
     }
   });
 
   $effect(() => {
-    if (!manga.selectedChapter) return;
+    if (!native) return;
+    invoke('set_immersive', { hidden: chapters.length > 0 }).catch(() => {});
+  });
+
+  $effect(() => {
+    if (manga.selectedChapter === null) return;
     if (!('wakeLock' in navigator)) return;
 
     let sentinel: WakeLockSentinel | null = null;
@@ -164,9 +199,16 @@
 <svelte:window onkeydown={handleKey} onkeyup={handleKeyUp} onblur={handleBlur} />
 
 <svelte:document
+  ondragenter={() => {
+    dragCount++;
+  }}
+  ondragleave={() => {
+    dragCount = Math.max(0, dragCount - 1);
+  }}
   ondragover={(e) => e.preventDefault()}
   ondrop={(e) => {
     e.preventDefault();
+    dragCount = 0;
     handleDrop(e);
   }}
 />
@@ -178,88 +220,112 @@
 {/if}
 
 {#if chapters.length === 0}
-  <div in:fade={{ duration: ANIM_DURATION }}>
-    {#if !native}
-      <a
-        href="/about"
-        class="fixed z-10 opacity-40 hover:opacity-80"
-        style="top: calc(1rem + var(--safe-top)); right: calc(1rem + var(--safe-right))"
-        aria-label="How to use"
-      >
-        <CircleQuestionMark size={24} />
-      </a>
-    {/if}
+  <div class="flex min-h-screen flex-col">
+    <!-- Top bar -->
     <div
-      class="flex min-h-screen flex-col items-center justify-center gap-8 p-8"
-      style="padding-top: calc(2rem + var(--safe-top)); padding-bottom: calc(2rem + var(--safe-bottom))"
+      class="flex shrink-0 items-center justify-between border-b border-white/10 px-6 py-4"
+      style="padding-top: calc(1rem + var(--safe-top)); padding-left: calc(1.5rem + var(--safe-left)); padding-right: calc(1.5rem + var(--safe-right))"
     >
-      <UploadButton />
+      <span class="text-base font-bold tracking-widest">KONIGSLIBRARY</span>
+      {#if !native}
+        <a href="/about" class="opacity-30 hover:opacity-80" aria-label="How to use">
+          <CircleQuestionMark size={18} />
+        </a>
+      {/if}
+    </div>
+
+    <!-- Main content -->
+    <div
+      class="flex flex-1 flex-col items-center gap-10 px-6 py-10"
+      style="padding-bottom: calc(2.5rem + var(--safe-bottom))"
+    >
+      <UploadButton {isDragOver} />
       {#if native}
-        <div class="flex w-full max-w-3xl flex-col gap-6 md:flex-row md:items-start">
+        <div class="w-full max-w-lg space-y-8">
           <OfflineBrowser />
           <LibraryBrowser />
+          <NativeLibraryBrowser />
         </div>
-        <NativeLibraryBrowser />
-        <a href="/settings" class="mt-4 text-sm opacity-40 hover:opacity-80">Settings</a>
+        <a href="/settings" class="text-xs tracking-widest opacity-20 hover:opacity-60">SETTINGS</a>
       {:else if isLocalServer}
-        <div class="flex w-full max-w-3xl flex-col gap-6 md:flex-row md:items-start">
+        <div class="w-full max-w-lg space-y-8">
           <OfflineBrowser />
           <LibraryBrowser />
         </div>
-        <a href="/settings" class="mt-4 text-sm opacity-40 hover:opacity-80">Settings</a>
+        <a href="/settings" class="text-xs tracking-widest opacity-20 hover:opacity-60">SETTINGS</a>
       {:else}
-        <div class="w-full max-w-3xl">
+        <div class="w-full max-w-lg space-y-10">
           <OfflineBrowser />
-        </div>
-        <div class="flex flex-col items-center gap-3">
-          <p class="max-w-sm text-center text-sm opacity-60">
-            Run locally to serve manga from your PC to any device on your network
-          </p>
-          <div class="flex flex-wrap justify-center gap-4">
-            <a
-              href="/download/konigslibrary.sh"
-              download
-              class="border-2 border-white/20 px-4 py-2 text-sm whitespace-nowrap hover:border-white/60"
-            >
-              Linux / Mac
-            </a>
-            <a
-              href="/download/konigslibrary.bat"
-              download
-              class="border-2 border-white/20 px-4 py-2 text-sm whitespace-nowrap hover:border-white/60"
-            >
-              Windows
-            </a>
-            <a
-              href="/download/konigslibrary.apk"
-              download
-              class="border-2 border-white/20 px-4 py-2 text-sm whitespace-nowrap hover:border-white/60"
-            >
-              Android
-            </a>
+
+          <div class="border-t border-white/10 pt-8">
+            <p class="mb-1 text-xs font-bold tracking-widest opacity-30">RUN LOCALLY</p>
+            <p class="mb-5 text-sm opacity-40">
+              Serve manga from your PC to any device on your network.
+            </p>
+            <div class="flex flex-wrap gap-3">
+              <a
+                href="/download/konigslibrary.sh"
+                download
+                class="border-2 border-white/30 px-4 py-2 text-sm hover:border-white hover:bg-white/10"
+              >
+                Linux / Mac
+              </a>
+              <a
+                href="/download/konigslibrary.bat"
+                download
+                class="border-2 border-white/30 px-4 py-2 text-sm hover:border-white hover:bg-white/10"
+              >
+                Windows
+              </a>
+              <a
+                href="/download/konigslibrary.apk"
+                download
+                class="border-2 border-white/30 px-4 py-2 text-sm hover:border-white hover:bg-white/10"
+              >
+                Android
+              </a>
+            </div>
           </div>
         </div>
       {/if}
     </div>
   </div>
 {:else}
-  <div
-    transition:slideFromRight
-    class="flex h-dvh select-none md:pl-(--sidebar-peek)"
-    onclick={enterFullscreen}
-    role="presentation"
-  >
+  <div class="flex h-dvh select-none" onclick={enterFullscreen} role="presentation">
     <Sidebar />
 
-    {#if manga.selectedChapter && activeViewer}
+    {#if manga.selectedChapter !== null && activeViewer}
       {@const Viewer = activeViewer.component}
-      <Viewer bind:commands={viewerCommands} />
-    {:else if !manga.selectedChapter}
+      <Viewer bind:commands={viewerCommands} ontap={toggleHud} />
+    {:else if manga.selectedChapter === null}
       <EmptyState>
-        <Button size="lg" variant="primary" onclick={() => (manga.sidebarOpen = true)}>
+        <Button
+          size="lg"
+          variant="primary"
+          onclick={() => {
+            manga.sidebarOpen = true;
+            showHud();
+          }}
+        >
           Select a chapter
         </Button>
       </EmptyState>
     {/if}
+
+    <ReaderHud
+      visible={hudVisible}
+      mangaName={svc.provider?.mangaName ?? ''}
+      chapterName={manga.selectedChapter}
+      currentPage={manga.currentPage}
+      totalPages={svc.chapters.find((c) => c.name === manga.selectedChapter)?.pageCount ?? 0}
+      onback={() => {
+        hideHud();
+        svc.clearManga();
+      }}
+      onmenu={() => {
+        hideHud();
+        manga.sidebarOpen = true;
+      }}
+    />
   </div>
 {/if}

@@ -67,7 +67,7 @@
             }
           }
         }
-      }, ANIM_DURATION + 10); // +10ms buffer so scroll happens after transition settles
+      }, ANIM_DURATION + 10);
       return () => clearTimeout(id);
     }
   });
@@ -97,45 +97,49 @@
   };
 </script>
 
-<ul bind:this={listEl} class="space-y-2">
+<ul bind:this={listEl}>
   {#each chapters as chapter (chapter.name)}
     {@const isOpen = manga.selectedChapter === chapter.name}
-    <li>
+    <li class="border-b border-white/10 last:border-b-0">
       <button
-        class="flex w-full cursor-pointer items-center justify-between border-2 px-3 py-2 text-left
-          {isOpen ? 'border-white' : 'border-transparent hover:bg-white/10'}"
+        class="flex w-full cursor-pointer items-center justify-between px-4 py-3 text-left text-sm
+          {isOpen ? 'bg-white text-black' : 'hover:bg-white/10'}"
         onclick={(e) => toggleChapter(chapter.name, e.currentTarget)}
       >
-        <span class="truncate">{chapter.name}</span>
-        <span class="ml-2 shrink-0 text-white/60">({chapter.pageCount})</span>
-        <span
-          class="ml-1 shrink-0 transition-transform duration-[var(--duration-anim)] ease-[var(--ease-snappy)]"
-          style="transform: rotate({isOpen ? '90deg' : '0deg'})"><ChevronRight size={16} /></span
-        >
+        <span class="truncate font-bold">{chapter.name}</span>
+        <div class="ml-2 flex shrink-0 items-center gap-2">
+          <span class="text-xs {isOpen ? 'text-black/40' : 'text-white/30'}">{chapter.pageCount}</span>
+          <span
+            class="transition-transform duration-[var(--duration-anim)] ease-[var(--ease-snappy)]"
+            style="transform: rotate({isOpen ? '90deg' : '0deg'})"
+          >
+            <ChevronRight size={14} />
+          </span>
+        </div>
       </button>
 
       {#if isOpen}
         <div
-          class="mt-1 space-y-1 overflow-hidden"
+          class="overflow-hidden"
           transition:slide={{ duration: ANIM_DURATION, easing: ANIM_EASE }}
         >
           {#if canDownload && !downloadedChapters.has(chapter.name)}
             <button
-              class="mt-1 mb-2 flex w-full cursor-pointer items-center justify-center gap-2 border border-white/30 px-3 py-2 text-sm text-white/60 hover:border-white/70 hover:text-white"
+              class="flex w-full cursor-pointer items-center justify-center gap-2 border-b border-white/10 px-4 py-2.5 text-xs opacity-40 hover:opacity-100"
               onclick={(e) => downloadChapter(chapter.name, e)}
             >
-              <Download size={16} />
+              <Download size={13} />
               Download chapter
             </button>
           {/if}
-          <ul class="space-y-1">
+          <ul>
             {#each Array.from({ length: chapter.pageCount }, (_, i) => i) as i (i)}
               <li>
                 <button
-                  class="w-full cursor-pointer truncate py-1 pr-2 pl-6 text-left text-sm
+                  class="w-full cursor-pointer px-4 py-1.5 text-left text-xs
                     {manga.currentPage === i
-                    ? 'bg-white text-black'
-                    : 'opacity-60 hover:bg-white/10 hover:opacity-100'}"
+                      ? 'bg-white text-black font-bold'
+                      : 'opacity-40 hover:bg-white/10 hover:opacity-100'}"
                   data-active={manga.currentPage === i}
                   onclick={() => {
                     manga.currentPage = i;

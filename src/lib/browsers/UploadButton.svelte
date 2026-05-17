@@ -2,25 +2,62 @@
   import { getReaderContext } from '$lib/context';
   import { ZipUploadProvider } from '$lib/sources';
   import { showError } from '$lib/ui/toast.svelte';
-  import Button from '$lib/ui/Button.svelte';
+  import { isNative } from '$lib/utils/platform';
+  import { convertFileSrc } from '@tauri-apps/api/core';
+
+  let { isDragOver = false }: { isDragOver?: boolean } = $props();
 
   const { setSource } = getReaderContext();
-</script>
 
-<label class="cursor-pointer">
-  <Button size="lg" as="span" variant="primary">Upload manga</Button>
-  <input
-    type="file"
-    accept=".zip,.cbz"
-    onchange={async (e) => {
-      const input = e.target as HTMLInputElement;
-      if (!input.files?.[0]) return;
+  async function handleClick() {
+    if (isNative()) {
       try {
-        await setSource(new ZipUploadProvider(input.files[0]));
+        const { open } = await import('@tauri-apps/plugin-dialog');
+        const filePath = await open({
+          multiple: false,
+          filters: [{ name: 'ZIP / CBZ', extensions: ['zip', 'cbz'] }]
+        });
+        if (!filePath || typeof filePath !== 'string') return;
+        const url = convertFileSrc(filePath);
+        const response = await fetch(url);
+        const blob = await response.blob();
+        const fileName = filePath.split('/').pop() ?? 'manga.cbz';
+        const file = new File([blob], fileName, { type: 'application/zip' });
+        await setSource(new ZipUploadProvider(file));
       } catch (err) {
         showError(`Failed to open file: ${err instanceof Error ? err.message : err}`);
       }
-    }}
-    class="hidden"
-  />
-</label>
+      return;
+    }
+
+    if (!('showOpenFilePicker' in window)) {
+      showError('File picker not supported — try dragging your file here instead');
+      return;
+    }
+    try {
+      const [handle] = await (window as any).showOpenFilePicker({
+        types: [{ description: 'ZIP / CBZ', accept: { 'application/zip': ['.zip', '.cbz'] } }],
+        multiple: false
+      });
+      await setSource(new ZipUploadProvider(await handle.getFile()));
+    } catch (err) {
+      if (err instanceof Error && err.name === 'AbortError') return;
+      showError(`Failed to open file: ${err instanceof Error ? err.message : err}`);
+    }
+  }
+</script>
+
+<button
+  type="button"
+  onclick={handleClick}
+  class="group flex w-full max-w-lg cursor-pointer flex-col items-center justify-center gap-3 border-2 px-8 py-16 text-center transition-colors duration-150
+    {isDragOver ? 'border-white bg-white/5' : 'border-white/30 hover:border-white/70'}"
+>
+  <span class="block text-3xl font-bold tracking-wider">DROP FILE HERE</span>
+  <span class="block text-xs tracking-widest opacity-30">.ZIP · .CBZ</span>
+  <span
+    class="mt-4 inline-block border-2 border-white/50 px-6 py-2 text-sm font-bold tracking-wide group-hover:border-white group-hover:bg-white/10"
+  >
+    OR BROWSE
+  </span>
+</button>

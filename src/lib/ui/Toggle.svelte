@@ -14,25 +14,28 @@
   } = $props();
 </script>
 
-<button
-  class="flex w-full max-w-36 flex-col gap-1 self-center {locked
-    ? 'cursor-not-allowed opacity-40'
-    : 'cursor-pointer'}"
-  onclick={locked ? undefined : onclick}
-  disabled={locked}
-  role="switch"
-  aria-checked={active}
+<div
+  class="flex w-full border-2 text-xs font-bold tracking-wide {locked ? 'pointer-events-none opacity-30' : ''}"
+  role="group"
   aria-label="{labelA} / {labelB}"
 >
-  <span class="flex justify-between text-sm">
-    <span class={active ? 'opacity-40' : ''}>{labelA}</span>
-    <span class={active ? '' : 'opacity-40'}>{labelB}</span>
-  </span>
-  <span class="flex h-7 w-full items-center border-2 px-1">
-    <span
-      class="duration-anim h-4 w-[calc(50%-4px)] bg-white transition-all ease-anim {active
-        ? 'ml-[calc(50%+4px)]'
-        : ''}"
-    ></span>
-  </span>
-</button>
+  <button
+    class="flex-1 py-2 text-center {!active
+      ? 'bg-white text-black'
+      : 'cursor-pointer hover:bg-white/10'}"
+    onclick={active ? onclick : undefined}
+    disabled={!active}
+  >
+    {labelA}
+  </button>
+  <div class="w-px bg-white/20"></div>
+  <button
+    class="flex-1 py-2 text-center {active
+      ? 'bg-white text-black'
+      : 'cursor-pointer hover:bg-white/10'}"
+    onclick={!active ? onclick : undefined}
+    disabled={active}
+  >
+    {labelB}
+  </button>
+</div>

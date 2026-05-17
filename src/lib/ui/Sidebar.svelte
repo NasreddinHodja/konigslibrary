@@ -4,18 +4,13 @@
   import { SIDEBAR_WIDTH_PX } from '$lib/utils/constants';
   import ChapterList from '$lib/chapters/ChapterList.svelte';
   import Toggle from '$lib/ui/Toggle.svelte';
-  import Button from '$lib/ui/Button.svelte';
   import Backdrop from '$lib/ui/Backdrop.svelte';
   import { drawer, createDrawerHandlers } from '$lib/actions/edgeSwipe.svelte';
 
-  const {
-    state: manga,
-    clearManga,
-    toggleScrollMode,
-    toggleRtl,
-    zoomIn,
-    zoomOut
-  } = getReaderContext();
+  const svc = getReaderContext();
+  const { state: manga, clearManga, toggleScrollMode, toggleRtl, zoomIn, zoomOut } = svc;
+
+  const mangaName = $derived(svc.provider?.mangaName ?? '');
 
   let isMobile = $state(false);
 
@@ -41,9 +36,7 @@
       ? `${(drawer.progress - 1) * 100}%`
       : manga.sidebarOpen
         ? '0'
-        : isMobile
-          ? '-100%'
-          : 'calc(-100% + var(--sidebar-peek))'
+        : '-100%'
   );
 </script>
 
@@ -62,24 +55,23 @@
 {/if}
 
 <aside
-  class="fixed top-0 left-0 z-50 flex h-full w-80 flex-col border-r-2 bg-black shadow-xl {drawer.dragging
+  class="fixed top-0 left-0 z-50 flex h-full w-80 flex-col border-r-2 bg-black {drawer.dragging
     ? ''
     : 'duration-anim transition-transform ease-anim'}"
   style="padding-left: var(--safe-left); transform: translateX({sidebarTransform})"
 >
-  {#if !manga.sidebarOpen && !isMobile}
+  <!-- Toggle button — visible when sidebar is open -->
+  <div class="absolute right-3 z-20" style="top: calc(0.875rem + var(--safe-top))">
     <button
-      class="absolute inset-0 z-10 cursor-pointer"
-      aria-label="Open sidebar"
-      onclick={() => (manga.sidebarOpen = true)}
-    ></button>
-  {/if}
-  <div class="absolute right-2 z-20" style="top: calc(0.5rem + var(--safe-top))">
-    <Button size="icon" variant="ghost" onclick={() => (manga.sidebarOpen = !manga.sidebarOpen)}>
-      {#if manga.sidebarOpen}<X size={20} />{:else}<Menu size={20} />{/if}
-    </Button>
+      class="cursor-pointer p-1 opacity-40 hover:opacity-100"
+      onclick={() => (manga.sidebarOpen = !manga.sidebarOpen)}
+      aria-label={manga.sidebarOpen ? 'Close sidebar' : 'Open sidebar'}
+    >
+      {#if manga.sidebarOpen}<X size={18} />{:else}<Menu size={18} />{/if}
+    </button>
   </div>
 
+  <!-- Content that fades when collapsed -->
   <div
     class="flex flex-1 flex-col overflow-hidden {drawer.dragging
       ? ''
@@ -90,62 +82,59 @@
         ? '1'
         : '0'}; pointer-events: {manga.sidebarOpen ? 'auto' : 'none'}"
   >
-    <div class="space-y-4 p-6" style="padding-top: calc(3.5rem + var(--safe-top))">
-      <div class="flex items-center gap-3">
-        <Button size="icon" variant="ghost" onclick={clearManga}>
-          <ArrowLeft size={16} />
-        </Button>
-        <h2 class="text-sm font-bold tracking-widest opacity-80">KONIGSLIBRARY</h2>
-      </div>
+    <!-- Header: back link + manga title -->
+    <div class="shrink-0 px-4 pr-10" style="padding-top: calc(0.875rem + var(--safe-top))">
+      <button
+        class="mb-3 flex cursor-pointer items-center gap-1.5 text-xs tracking-widest opacity-30 hover:opacity-80"
+        onclick={clearManga}
+      >
+        <ArrowLeft size={12} />
+        LIBRARY
+      </button>
+      <h1 class="text-xl font-bold leading-snug break-words">{mangaName}</h1>
     </div>
 
-    <div class="flex-1 space-y-2 overflow-y-auto px-6">
+    <div class="mx-4 mt-4 mb-0 border-t border-white/10"></div>
+
+    <!-- Chapter list -->
+    <div class="flex-1 overflow-y-auto">
       <ChapterList />
     </div>
 
+    <!-- Controls -->
     <div
-      class="flex shrink-0 flex-col border-t border-white/20 p-4"
+      class="shrink-0 space-y-3 border-t border-white/10 p-4"
       style="padding-bottom: calc(1rem + var(--safe-bottom))"
     >
-      <div
-        class={manga.scrollMode ? '' : 'pointer-events-none'}
-        style:display="grid"
-        style:grid-template-rows={manga.scrollMode ? '1fr' : '0fr'}
-        style:transition="grid-template-rows var(--duration-anim) var(--ease-anim)"
-      >
-        <div class="overflow-hidden">
-          <div class="flex items-center justify-center gap-2 pb-4">
-            <Button size="icon" variant="ghost" onclick={zoomOut}>
-              <Minus size={16} />
-            </Button>
-            <span class="w-12 text-center text-sm opacity-80">
+      {#if manga.scrollMode}
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold tracking-widest opacity-30">ZOOM</span>
+          <div class="flex items-center gap-3">
+            <button class="cursor-pointer p-1 opacity-40 hover:opacity-100" onclick={zoomOut}>
+              <Minus size={14} />
+            </button>
+            <span class="w-10 text-center text-sm tabular-nums">
               {Math.round(manga.zoom * 100)}%
             </span>
-            <Button size="icon" variant="ghost" onclick={zoomIn}>
-              <Plus size={16} />
-            </Button>
+            <button class="cursor-pointer p-1 opacity-40 hover:opacity-100" onclick={zoomIn}>
+              <Plus size={14} />
+            </button>
           </div>
         </div>
-      </div>
-      <div
-        class={!manga.scrollMode ? '' : 'pointer-events-none'}
-        style:display="grid"
-        style:grid-template-rows={!manga.scrollMode ? '1fr' : '0fr'}
-        style:transition="grid-template-rows var(--duration-anim) var(--ease-anim)"
-      >
-        <div class="overflow-hidden">
-          <div class="flex flex-col pb-3">
-            <Toggle labelA="LTR" labelB="RTL" active={manga.rtl} onclick={toggleRtl} />
-          </div>
-        </div>
-      </div>
+      {/if}
+
+      {#if !manga.scrollMode}
+        <Toggle labelA="LTR" labelB="RTL" active={manga.rtl} onclick={toggleRtl} />
+      {/if}
+
       <Toggle labelA="Turn" labelB="Scroll" active={manga.scrollMode} onclick={toggleScrollMode} />
+
       <a
         href="/settings"
-        class="mt-4 flex items-center justify-center gap-2 py-1 text-sm opacity-40 hover:opacity-80"
+        class="flex items-center justify-center gap-1.5 pt-1 text-xs tracking-widest opacity-20 hover:opacity-60"
       >
-        <Settings size={14} />
-        Settings
+        <Settings size={12} />
+        SETTINGS
       </a>
     </div>
   </div>
