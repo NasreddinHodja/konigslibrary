@@ -2,11 +2,14 @@
   import { listOfflineManga, deleteOfflineManga } from '$lib/sources/offline-db';
   import { getReaderContext } from '$lib/context';
   import { OfflineDbProvider } from '$lib/sources';
+  import { addToast, updateToast } from '$lib/ui/toast.svelte';
   import { Trash2 } from 'lucide-svelte';
+  import ConfirmDialog from '$lib/ui/ConfirmDialog.svelte';
 
   const { setSource, events } = getReaderContext();
 
   let entries: { slug: string; name: string }[] = $state([]);
+  let pendingDelete: { slug: string; name: string } | null = $state(null);
 
   function refreshEntries() {
     listOfflineManga().then((list) => {
@@ -20,11 +23,32 @@
     return unsub;
   });
 
-  async function remove(slug: string) {
-    await deleteOfflineManga(slug);
+  async function confirmRemove() {
+    if (!pendingDelete) return;
+    const { slug, name } = pendingDelete;
+    pendingDelete = null;
+
+    const id = `del-${Date.now()}`;
+    addToast({ id, label: name, current: 0, total: 0, phase: 'deleting' });
+
+    await deleteOfflineManga(slug, (current, total) => {
+      updateToast(id, { current, total });
+    });
+
     entries = entries.filter((e) => e.slug !== slug);
+    events.emit('download:deleted', { slug });
+    updateToast(id, { phase: 'done' });
   }
 </script>
+
+{#if pendingDelete}
+  <ConfirmDialog
+    message={`Delete "${pendingDelete.name}"? This will remove all downloaded pages.`}
+    confirmLabel="Delete"
+    onconfirm={confirmRemove}
+    oncancel={() => (pendingDelete = null)}
+  />
+{/if}
 
 {#if entries.length > 0}
   <div class="w-full min-w-0">
@@ -40,7 +64,7 @@
           </button>
           <button
             class="shrink-0 cursor-pointer px-3 py-3 opacity-20 hover:opacity-80"
-            onclick={() => remove(entry.slug)}
+            onclick={() => (pendingDelete = entry)}
             aria-label="Delete {entry.name}"
           >
             <Trash2 size={14} />

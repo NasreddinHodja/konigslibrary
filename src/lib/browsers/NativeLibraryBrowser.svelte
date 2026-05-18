@@ -50,7 +50,11 @@
 <div class="w-full min-w-0">
   <div class="mb-2 flex items-center gap-3">
     <p class="text-xs font-bold tracking-widest opacity-30">DEVICE LIBRARY</p>
-    <button class="cursor-pointer opacity-20 hover:opacity-70" onclick={loadEntries} aria-label="Refresh">
+    <button
+      class="cursor-pointer opacity-20 hover:opacity-70"
+      onclick={loadEntries}
+      aria-label="Refresh"
+    >
       <RefreshCw size={12} />
     </button>
   </div>

@@ -108,7 +108,9 @@
       >
         <span class="truncate font-bold">{chapter.name}</span>
         <div class="ml-2 flex shrink-0 items-center gap-2">
-          <span class="text-xs {isOpen ? 'text-black/40' : 'text-white/30'}">{chapter.pageCount}</span>
+          <span class="text-xs {isOpen ? 'text-black/40' : 'text-white/30'}"
+            >{chapter.pageCount}</span
+          >
           <span
             class="transition-transform duration-[var(--duration-anim)] ease-[var(--ease-snappy)]"
             style="transform: rotate({isOpen ? '90deg' : '0deg'})"
@@ -138,8 +140,8 @@
                 <button
                   class="w-full cursor-pointer px-4 py-1.5 text-left text-xs
                     {manga.currentPage === i
-                      ? 'bg-white text-black font-bold'
-                      : 'opacity-40 hover:bg-white/10 hover:opacity-100'}"
+                    ? 'bg-white font-bold text-black'
+                    : 'opacity-40 hover:bg-white/10 hover:opacity-100'}"
                   data-active={manga.currentPage === i}
                   onclick={() => {
                     manga.currentPage = i;

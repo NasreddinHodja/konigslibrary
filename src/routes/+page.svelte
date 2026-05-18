@@ -14,20 +14,11 @@
   import KeyboardHelp from '$lib/keyboard/KeyboardHelp.svelte';
   import { isNative } from '$lib/utils/platform';
   import { invoke } from '@tauri-apps/api/core';
-  import { isLocalServer, ANIM_DURATION, ANIM_EASE } from '$lib/utils/constants';
+  import { isLocalServer } from '$lib/utils/constants';
   import { pushState } from '$app/navigation';
   import { CircleQuestionMark } from 'lucide-svelte';
   import ToastStack from '$lib/ui/ToastStack.svelte';
   import { showError } from '$lib/ui/toast.svelte';
-  import { fade } from 'svelte/transition';
-
-  function slideFromRight(_node: Element, { duration = ANIM_DURATION } = {}) {
-    return {
-      duration,
-      easing: ANIM_EASE,
-      css: (t: number) => `transform: translateX(${(1 - t) * 100}%)`
-    };
-  }
 
   const svc = createReaderServices();
   setReaderContext(svc);
@@ -221,24 +212,23 @@
 
 {#if chapters.length === 0}
   <div class="flex min-h-screen flex-col">
-    <!-- Top bar -->
-    <div
-      class="flex shrink-0 items-center justify-between border-b border-white/10 px-6 py-4"
-      style="padding-top: calc(1rem + var(--safe-top)); padding-left: calc(1.5rem + var(--safe-left)); padding-right: calc(1.5rem + var(--safe-right))"
-    >
-      <span class="text-base font-bold tracking-widest">KONIGSLIBRARY</span>
-      {#if !native}
-        <a href="/about" class="opacity-30 hover:opacity-80" aria-label="How to use">
-          <CircleQuestionMark size={18} />
-        </a>
-      {/if}
-    </div>
+    {#if !native}
+      <a
+        href="/about"
+        class="fixed z-10 opacity-30 hover:opacity-80"
+        style="top: calc(1rem + var(--safe-top)); right: calc(1rem + var(--safe-right))"
+        aria-label="How to use"
+      >
+        <CircleQuestionMark size={18} />
+      </a>
+    {/if}
 
     <!-- Main content -->
     <div
-      class="flex flex-1 flex-col items-center gap-10 px-6 py-10"
-      style="padding-bottom: calc(2.5rem + var(--safe-bottom))"
+      class="flex flex-1 flex-col items-center gap-10 px-6 py-16"
+      style="padding-top: calc(4rem + var(--safe-top)); padding-bottom: calc(2.5rem + var(--safe-bottom))"
     >
+      <h1 class="text-4xl font-bold tracking-widest opacity-90">KONIGSLIBRARY</h1>
       <UploadButton {isDragOver} />
       {#if native}
         <div class="w-full max-w-lg space-y-8">

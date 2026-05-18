@@ -6,10 +6,8 @@
   import { SvelteSet } from 'svelte/reactivity';
   import Loader from '$lib/ui/Loader.svelte';
 
-  let {
-    commands = $bindable(),
-    ontap
-  }: { commands?: ViewerCommands | null; ontap?: () => void } = $props();
+  let { commands = $bindable(), ontap }: { commands?: ViewerCommands | null; ontap?: () => void } =
+    $props();
 
   const svc = getReaderContext();
   const { state: manga } = svc;
@@ -195,10 +193,7 @@
   }
 
   function onPointerMove(e: PointerEvent) {
-    if (
-      Math.abs(e.clientX - tapStartX) > 10 ||
-      Math.abs(e.clientY - tapStartY) > 10
-    ) {
+    if (Math.abs(e.clientX - tapStartX) > 10 || Math.abs(e.clientY - tapStartY) > 10) {
       tapMoved = true;
     }
   }

@@ -15,7 +15,9 @@
 </script>
 
 <div
-  class="flex w-full border-2 text-xs font-bold tracking-wide {locked ? 'pointer-events-none opacity-30' : ''}"
+  class="flex w-full border-2 text-xs font-bold tracking-wide {locked
+    ? 'pointer-events-none opacity-30'
+    : ''}"
   role="group"
   aria-label="{labelA} / {labelB}"
 >

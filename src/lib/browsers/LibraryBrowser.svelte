@@ -9,6 +9,7 @@
   import { Download, Check } from 'lucide-svelte';
   import { showError } from '$lib/ui/toast.svelte';
   import Loader from '$lib/ui/Loader.svelte';
+  import ConfirmDialog from '$lib/ui/ConfirmDialog.svelte';
 
   const { setSource, events } = getReaderContext();
 
@@ -17,6 +18,7 @@
   let error: string | null = $state(null);
   let downloadedSlugs: Set<string> = $state.raw(new Set());
   let downloadingSlug: string | null = $state(null);
+  let pendingDownload: LibraryEntry | null = $state(null);
 
   function refreshDownloadedSlugs() {
     listOfflineManga().then((list) => {
@@ -26,8 +28,12 @@
 
   $effect(() => {
     refreshDownloadedSlugs();
-    const unsub = events.on('download:complete', () => refreshDownloadedSlugs());
-    return unsub;
+    const unsubComplete = events.on('download:complete', () => refreshDownloadedSlugs());
+    const unsubDeleted = events.on('download:deleted', () => refreshDownloadedSlugs());
+    return () => {
+      unsubComplete();
+      unsubDeleted();
+    };
   });
 
   $effect(() => {
@@ -59,8 +65,7 @@
     }
   };
 
-  async function startDownload(e: MouseEvent, entry: LibraryEntry) {
-    e.stopPropagation();
+  async function startDownload(entry: LibraryEntry) {
     if (downloadingSlug === entry.slug) return;
     downloadingSlug = entry.slug;
     try {
@@ -77,7 +82,25 @@
       downloadingSlug = null;
     }
   }
+
+  function requestDownload(e: MouseEvent, entry: LibraryEntry) {
+    e.stopPropagation();
+    pendingDownload = entry;
+  }
 </script>
+
+{#if pendingDownload}
+  <ConfirmDialog
+    message={`Download "${pendingDownload.name}"? This may take a while depending on size.`}
+    confirmLabel="Download"
+    onconfirm={() => {
+      const entry = pendingDownload!;
+      pendingDownload = null;
+      startDownload(entry);
+    }}
+    oncancel={() => (pendingDownload = null)}
+  />
+{/if}
 
 {#if loading}
   <Loader />
@@ -101,8 +124,10 @@
             </span>
           {:else}
             <button
-              class="shrink-0 px-3 py-3 {downloadingSlug === entry.slug ? 'animate-pulse opacity-50 cursor-wait' : 'cursor-pointer opacity-20 hover:opacity-80'}"
-              onclick={(e) => startDownload(e, entry)}
+              class="shrink-0 px-3 py-3 {downloadingSlug === entry.slug
+                ? 'animate-pulse cursor-wait opacity-50'
+                : 'cursor-pointer opacity-20 hover:opacity-80'}"
+              onclick={(e) => requestDownload(e, entry)}
               disabled={downloadingSlug === entry.slug}
               aria-label="Download {entry.name}"
             >

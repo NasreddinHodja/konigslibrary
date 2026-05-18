@@ -5,7 +5,7 @@ export type Toast = {
   label: string;
   current: number;
   total: number;
-  phase: 'fetching' | 'packaging' | 'done' | 'error';
+  phase: 'fetching' | 'packaging' | 'deleting' | 'done' | 'error';
   cancel?: () => void;
 };
 

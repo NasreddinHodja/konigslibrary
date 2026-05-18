@@ -35,7 +35,10 @@
       return;
     }
     try {
-      const [handle] = await (window as any).showOpenFilePicker({
+      const picker = (
+        window as unknown as { showOpenFilePicker: (o: object) => Promise<FileSystemFileHandle[]> }
+      ).showOpenFilePicker;
+      const [handle] = await picker({
         types: [{ description: 'ZIP / CBZ', accept: { 'application/zip': ['.zip', '.cbz'] } }],
         multiple: false
       });

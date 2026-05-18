@@ -6,10 +6,8 @@
   import Loader from '$lib/ui/Loader.svelte';
   import EndOfChapter from '$lib/chapters/EndOfChapter.svelte';
 
-  let {
-    commands = $bindable(),
-    ontap
-  }: { commands?: ViewerCommands | null; ontap?: () => void } = $props();
+  let { commands = $bindable(), ontap }: { commands?: ViewerCommands | null; ontap?: () => void } =
+    $props();
 
   const svc = getReaderContext();
   const { state: manga } = svc;
@@ -105,7 +103,6 @@
     if (zoomHeld) return;
     ontap?.();
   };
-
 </script>
 
 <div

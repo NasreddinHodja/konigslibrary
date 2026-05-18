@@ -119,13 +119,24 @@ export async function getOfflinePageBlob(
   });
 }
 
-export async function deleteOfflineManga(slug: string): Promise<void> {
+export async function deleteOfflineManga(
+  slug: string,
+  onProgress?: (current: number, total: number) => void
+): Promise<void> {
   const db = await openDB();
+  const range = IDBKeyRange.bound(`${slug}/`, `${slug}/\uffff`);
 
+  const total = await new Promise<number>((resolve, reject) => {
+    const tx = db.transaction('pages', 'readonly');
+    const req = tx.objectStore('pages').count(range);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+
+  let deleted = 0;
   await new Promise<void>((resolve, reject) => {
     const tx = db.transaction('pages', 'readwrite');
     const store = tx.objectStore('pages');
-    const range = IDBKeyRange.bound(`${slug}/`, `${slug}/\uffff`);
     const req = store.openCursor(range);
     req.onsuccess = () => {
       const cursor = req.result;
@@ -134,6 +145,8 @@ export async function deleteOfflineManga(slug: string): Promise<void> {
         return;
       }
       cursor.delete();
+      deleted++;
+      onProgress?.(deleted, total);
       cursor.continue();
     };
     req.onerror = () => reject(req.error);

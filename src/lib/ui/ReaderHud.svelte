@@ -25,7 +25,7 @@
 <!-- Top bar -->
 <div
   class="fixed inset-x-0 top-0 z-40 flex items-center gap-4 border-b border-white/10 px-4 transition-transform duration-200 ease-out
-    {visible ? 'translate-y-0 pointer-events-auto' : '-translate-y-full pointer-events-none'}"
+    {visible ? 'pointer-events-auto translate-y-0' : 'pointer-events-none -translate-y-full'}"
   style="background: rgba(0,0,0,0.92); padding-top: calc(0.75rem + var(--safe-top)); padding-bottom: 0.75rem;"
 >
   <button
@@ -58,10 +58,7 @@
 </div>
 
 <!-- Bottom progress line — always rendered, brightens with HUD -->
-<div
-  class="pointer-events-none fixed inset-x-0 z-40"
-  style="bottom: var(--safe-bottom, 0px)"
->
+<div class="pointer-events-none fixed inset-x-0 z-40" style="bottom: var(--safe-bottom, 0px)">
   <div class="h-px bg-white/10">
     <div
       class="h-full bg-white transition-[width,opacity] duration-300 ease-out"

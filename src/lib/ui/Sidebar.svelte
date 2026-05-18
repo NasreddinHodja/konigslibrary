@@ -12,16 +12,6 @@
 
   const mangaName = $derived(svc.provider?.mangaName ?? '');
 
-  let isMobile = $state(false);
-
-  $effect(() => {
-    const mql = window.matchMedia('(max-width: 767px)');
-    isMobile = mql.matches;
-    const onChange = (e: MediaQueryListEvent) => (isMobile = e.matches);
-    mql.addEventListener('change', onChange);
-    return () => mql.removeEventListener('change', onChange);
-  });
-
   const { handleTouchStart, handleTouchMove, handleTouchEnd, handleTouchCancel } =
     createDrawerHandlers({
       sidebarWidth: SIDEBAR_WIDTH_PX,
@@ -32,11 +22,7 @@
     });
 
   const sidebarTransform = $derived(
-    drawer.dragging
-      ? `${(drawer.progress - 1) * 100}%`
-      : manga.sidebarOpen
-        ? '0'
-        : '-100%'
+    drawer.dragging ? `${(drawer.progress - 1) * 100}%` : manga.sidebarOpen ? '0' : '-100%'
   );
 </script>
 
@@ -91,7 +77,7 @@
         <ArrowLeft size={12} />
         LIBRARY
       </button>
-      <h1 class="text-xl font-bold leading-snug break-words">{mangaName}</h1>
+      <h1 class="text-xl leading-snug font-bold break-words">{mangaName}</h1>
     </div>
 
     <div class="mx-4 mt-4 mb-0 border-t border-white/10"></div>
