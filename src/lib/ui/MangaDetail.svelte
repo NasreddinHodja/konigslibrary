@@ -375,7 +375,7 @@
           <li class="border-b border-white/10 last:border-b-0">
             <button
               class="flex w-full cursor-pointer items-center justify-between px-2 py-3 text-left
-                {isResume ? 'text-white' : 'hover:bg-white/5'}"
+                {isResume ? 'text-white hover:bg-white/5' : 'hover:bg-white/5'}"
               onclick={() => readChapter(chapter.name)}
             >
               <span class="truncate text-sm {isResume ? 'font-bold' : 'opacity-70'}"
