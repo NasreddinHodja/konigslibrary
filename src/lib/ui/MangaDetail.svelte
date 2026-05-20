@@ -155,12 +155,12 @@
     <!-- Cover + info side by side -->
     <div class="flex flex-col gap-6 sm:flex-row">
       <!-- Cover -->
-      <div class="relative h-56 w-40 shrink-0 self-center border-2 border-white/10 sm:self-auto">
+      <div class="relative h-56 w-40 shrink-0 self-center sm:self-auto">
         {#if meta?.coverUrl && !coverFailed}
           <img
             src={meta.coverUrl}
             alt={meta?.title ?? mangaName}
-            class="absolute inset-0 h-full w-full object-cover"
+            class="absolute inset-0 h-full w-full object-contain"
             onerror={() => (coverFailed = true)}
           />
         {:else}

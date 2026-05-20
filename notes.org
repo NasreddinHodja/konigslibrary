@@ -63,7 +63,7 @@ Performing Streamed Install
 * DONE Dont show "Drop here" on mobile
 It doesn't make sense
 
-* TODO fix manga cover image being cropped
+* DONE fix manga cover image being cropped
 we want fixed dimension still so we have to contain the whole image inside our defined dimensions
 
 * TODO "SETTINGS" button in home should have the gear icon
