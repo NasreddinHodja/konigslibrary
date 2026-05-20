@@ -80,11 +80,7 @@
   class="group flex w-full max-w-lg cursor-pointer flex-col items-center justify-center gap-3 border-2 px-8 py-16 text-center transition-colors duration-150
     {isDragOver ? 'border-white bg-white/5' : 'border-white/30 hover:border-white/70'}"
 >
-  <span class="block text-3xl font-bold tracking-wider">DROP FILE HERE</span>
+  <span class="block text-xl font-bold tracking-wider">SELECT MANGA FILE</span>
   <span class="block text-xs tracking-widest opacity-30">.ZIP · .CBZ</span>
-  <span
-    class="mt-4 inline-block border-2 border-white/50 px-6 py-2 text-sm font-bold tracking-wide group-hover:border-white group-hover:bg-white/10"
-  >
-    OR BROWSE
-  </span>
+  <span class="hidden text-xs tracking-widest opacity-30 md:block">or drag and drop</span>
 </button>
