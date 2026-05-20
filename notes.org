@@ -41,7 +41,7 @@ Example: "Not this manga button" openst a search, causing everything to shift. A
 on mobile, the span the whole width of the screen
 also they have a size mismatch... its ugly
 
-* STRT we need skeleton loaders for the search of manga
+* DONE we need skeleton loaders for the search of manga
 the search inside the "not this manga?" menu
 
 * TODO reader tutorial overlay

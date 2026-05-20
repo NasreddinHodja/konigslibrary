@@ -9,6 +9,7 @@
   import { Download, Check } from 'lucide-svelte';
   import { showError } from '$lib/ui/toast.svelte';
   import ConfirmDialog from '$lib/ui/ConfirmDialog.svelte';
+  import Skeleton from '$lib/ui/Skeleton.svelte';
 
   const { setSource, events } = getReaderContext();
 
@@ -103,11 +104,11 @@
 
 {#if loading}
   <div class="w-full min-w-0">
-    <div class="skeleton mb-2 h-3.5 w-14"></div>
+    <Skeleton class="mb-2 h-3.5 w-14" />
     <div class="border-2">
       {#each [180, 140, 210, 160] as w}
         <div class="flex items-center border-b border-white/10 px-4 py-3 last:border-b-0">
-          <div class="skeleton h-5" style="width: {w}px"></div>
+          <Skeleton class="h-5" style="width: {w}px" />
         </div>
       {/each}
     </div>

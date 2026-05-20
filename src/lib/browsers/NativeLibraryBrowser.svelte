@@ -8,6 +8,7 @@
   import { convertFileSrc } from '@tauri-apps/api/core';
   import { getReaderContext } from '$lib/context';
   import { ZipUploadProvider, NativeFilesystemProvider } from '$lib/sources';
+  import Skeleton from '$lib/ui/Skeleton.svelte';
   import { RefreshCw } from 'lucide-svelte';
 
   const { setSource } = getReaderContext();
@@ -66,7 +67,7 @@
     <div class="border-2">
       {#each [170, 200, 145, 185] as w}
         <div class="flex items-center border-b border-white/10 px-4 py-3 last:border-b-0">
-          <div class="skeleton h-5" style="width: {w}px"></div>
+          <Skeleton class="h-5" style="width: {w}px" />
         </div>
       {/each}
     </div>

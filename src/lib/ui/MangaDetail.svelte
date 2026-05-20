@@ -1,5 +1,6 @@
 <script lang="ts">
   import { ArrowLeft, Search, X, BookOpen } from 'lucide-svelte';
+  import Skeleton from '$lib/ui/Skeleton.svelte';
   import { getReaderContext } from '$lib/context';
   import { searchManga, searchMangaMultiple } from '$lib/api/anilist';
   import type { MangaMeta } from '$lib/api/anilist';
@@ -16,27 +17,6 @@
   let metaError = $state(false);
   let coverFailed = $state(false);
   let search = $state('');
-
-  let devForceEmpty = $state(false);
-  let _savedMeta: MangaMeta | null = null;
-  let _savedMetaError = false;
-  let _savedCoverFailed = false;
-
-  function toggleDevEmpty() {
-    if (!devForceEmpty) {
-      _savedMeta = meta;
-      _savedMetaError = metaError;
-      _savedCoverFailed = coverFailed;
-      meta = null;
-      metaError = true;
-      coverFailed = true;
-    } else {
-      meta = _savedMeta;
-      metaError = _savedMetaError;
-      coverFailed = _savedCoverFailed;
-    }
-    devForceEmpty = !devForceEmpty;
-  }
 
   let pickerOpen = $state(false);
   let pickerQuery = $state('');
@@ -156,15 +136,6 @@
       <ArrowLeft size={12} />
       LIBRARY
     </button>
-    {#if import.meta.env.DEV}
-      <button
-        class="cursor-pointer border px-2 py-0.5 text-xs tracking-widest
-          {devForceEmpty ? 'border-white/40 opacity-80' : 'border-white/15 opacity-30 hover:opacity-60'}"
-        onclick={toggleDevEmpty}
-      >
-        {devForceEmpty ? 'EMPTY' : 'DATA'}
-      </button>
-    {/if}
   </div>
 
   {#if metaError && !meta}
@@ -193,7 +164,7 @@
             onerror={() => (coverFailed = true)}
           />
         {:else}
-          <div class="skeleton absolute inset-0"></div>
+          <Skeleton class="absolute inset-0" />
         {/if}
       </div>
 
@@ -244,13 +215,13 @@
             {/if}
           {:else}
             <div class="flex flex-wrap items-center gap-3">
-              <div class="skeleton h-[22px] w-20"></div>
-              <div class="skeleton h-[22px] w-10"></div>
-              <div class="skeleton h-[22px] w-52"></div>
+              <Skeleton class="h-[22px] w-20" />
+              <Skeleton class="h-[22px] w-10" />
+              <Skeleton class="h-[22px] w-52" />
             </div>
             <div class="flex flex-wrap gap-1.5">
               {#each [64, 72, 56, 90, 200, 180] as w}
-                <div class="skeleton h-[22px]" style="width: {w}px"></div>
+                <Skeleton class="h-[22px]" style="width: {w}px" />
               {/each}
             </div>
           {/if}
@@ -313,7 +284,25 @@
           {/if}
         </div>
 
-        {#if pickerError}
+        {#if pickerLoading}
+          <ul class="mt-3 flex flex-col gap-0 border border-white/10">
+            {#each { length: 4 } as _}
+              <li class="border-b border-white/10 last:border-b-0">
+                <div class="flex items-center gap-3 px-3 py-2.5">
+                  <Skeleton class="h-12 w-9 shrink-0" />
+                  <div class="min-w-0 flex-1">
+                    <Skeleton class="h-[14px] w-3/4" />
+                    <div class="mt-1.5 flex gap-2">
+                      <Skeleton class="h-[11px] w-8" />
+                      <Skeleton class="h-[11px] w-14" />
+                      <Skeleton class="h-[11px] w-20" />
+                    </div>
+                  </div>
+                </div>
+              </li>
+            {/each}
+          </ul>
+        {:else if pickerError}
           <p class="mt-3 text-xs opacity-40">No results found.</p>
         {:else if pickerResults.length}
           <ul class="mt-3 flex flex-col gap-0 border border-white/10">

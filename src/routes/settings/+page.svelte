@@ -14,6 +14,7 @@
   import { isNative } from '$lib/utils/platform';
   import { getMangaDir, setMangaDir } from '$lib/sources/native-library';
   import { FolderOpen } from 'lucide-svelte';
+  import Skeleton from '$lib/ui/Skeleton.svelte';
 
   const isMobile = typeof window !== 'undefined' && 'ontouchstart' in window;
 
@@ -216,7 +217,7 @@
       <h2 class="text-lg font-bold opacity-80">Server</h2>
       <h3 class="text-sm font-bold opacity-60">Manga directory</h3>
       {#if loadingDir}
-        <div class="skeleton h-10 w-full border-2 border-transparent"></div>
+        <Skeleton class="h-10 w-full border-2 border-transparent" />
       {:else}
         <input
           type="text"
