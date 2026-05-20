@@ -1,35 +1,43 @@
 #+title: Notes
 
-* TODO resume the "not this manga?" feature (manga details)
+* DONE resume the "not this manga?" feature (manga details)
 friend i got this problem, where, in manga details page, if the title of the manga is ambiguous (there are multiple different manga with that name), then our search fill sometimes find the wrong manga. I want a way for the user to pick the correct manga, searching for matches themselves.
 
 You undestand what i want?
 
-* desktop reader
+* DONE desktop reader
 After the rework of the reader, its too mobile oriented. i would like to ultimately have 2 separate readers.
 
 But, for now: can the bottom bar become a bottom island? it feels too wierd it streching over the whole length of the screen
 
-* File picker
+* TODO File picker
 The file picker isnt working. not on mobile. not on desktop.
 
-* i want real skeleton loader components
+* TODO i want real skeleton loader components
 Industry level.
 IN EACH SINGLE UI THING THAT LOAD (in tha manga details page)
 Be careful of the sizes. i dont want any layout poping from the loadings
 
-* back button on mobile
+* TODO back button on mobile
 i want it to work. right now i just throws me out of the app
 
-* all of the data that is api fetched should be omissable
+* TODO all of the data that is api fetched should be omissable
 i want the app to be able to function and look proper even when no internet connection
 
-* the toggles for the settings in the reader
+* TODO the toggles for the settings in the reader
 see how some appear and disappear? making the bottom bar grow or shrink in height.
 i want all this to be transitioned/animated.
 
-* next chapter screen buttons are too wide
+* TODO next chapter screen buttons are too wide
 on mobile, the span the whole width of the screen
 
-* trasitions/animations everytime something moves!
+* TODO trasitions/animations everytime something moves!
 Lets do a big pass of the code and notice all things that toggle in and out of view
+
+Example: "Not this manga button" openst a search, causing everything to shift. And each time the search is reexecuted, things also shift.
+
+* TODO reader tutorial overlay
+First time opening the reader causes a tutorial overlay showing the gestures/click areas and shit
+
+* TODO Current manga on hover should also change style
+like, the other ones when we hover they become a little lighter. i want also a hover reaction for the current chapter. for some reason it doesnt have any

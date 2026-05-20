@@ -49,13 +49,13 @@
 
 </div>
 
-<!-- Bottom controls bar -->
+<!-- Bottom controls island -->
 <div
-    class="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 px-4 transition-transform duration-200 ease-out
-      {visible ? 'pointer-events-auto translate-y-0' : 'pointer-events-none translate-y-full'}"
+    class="fixed bottom-4 left-1/2 z-40 w-full max-w-xs -translate-x-1/2 border border-white/10 px-4 transition-transform duration-200 ease-out
+      {visible ? 'pointer-events-auto translate-y-0' : 'pointer-events-none translate-y-[calc(100%+1rem)]'}"
     style="background: rgba(0,0,0,0.92); padding-top: 1rem; padding-bottom: calc(1rem + var(--safe-bottom, 0px));"
   >
-    <div class="mx-auto w-full max-w-xs space-y-3">
+    <div class="w-full space-y-3">
       {#if manga.scrollMode}
         <div class="flex items-center justify-between">
           <span class="text-xs font-bold tracking-widest opacity-30">ZOOM</span>

@@ -9,6 +9,12 @@
 
   const { setSource } = getReaderContext();
 
+  let fileInput = $state<HTMLInputElement | null>(null);
+
+  async function loadFile(file: File) {
+    await setSource(new ZipUploadProvider(file));
+  }
+
   async function handleClick() {
     if (isNative()) {
       try {
@@ -23,33 +29,51 @@
         const blob = await response.blob();
         const fileName = filePath.split('/').pop() ?? 'manga.cbz';
         const file = new File([blob], fileName, { type: 'application/zip' });
-        await setSource(new ZipUploadProvider(file));
+        await loadFile(file);
       } catch (err) {
         showError(`Failed to open file: ${err instanceof Error ? err.message : err}`);
       }
       return;
     }
 
-    if (!('showOpenFilePicker' in window)) {
-      showError('File picker not supported - try dragging your file here instead');
-      return;
+    if ('showOpenFilePicker' in window) {
+      try {
+        const [handle] = await window.showOpenFilePicker({
+          types: [{ description: 'ZIP / CBZ', accept: { 'application/zip': ['.zip', '.cbz'] } }],
+          multiple: false
+        });
+        await loadFile(await handle.getFile());
+        return;
+      } catch (err) {
+        if (err instanceof Error && err.name === 'AbortError') return;
+        showError(`Failed to open file: ${err instanceof Error ? err.message : err}`);
+        return;
+      }
     }
+
+    fileInput?.click();
+  }
+
+  async function handleInputChange(e: Event) {
+    const input = e.currentTarget as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+    input.value = '';
     try {
-      const picker = (
-        window as unknown as { showOpenFilePicker: (o: object) => Promise<FileSystemFileHandle[]> }
-      ).showOpenFilePicker;
-      const [handle] = await picker({
-        types: [{ description: 'ZIP / CBZ', accept: { 'application/zip': ['.zip', '.cbz'] } }],
-        multiple: false
-      });
-      await setSource(new ZipUploadProvider(await handle.getFile()));
+      await loadFile(file);
     } catch (err) {
-      if (err instanceof Error && err.name === 'AbortError') return;
       showError(`Failed to open file: ${err instanceof Error ? err.message : err}`);
     }
   }
 </script>
 
+<input
+  bind:this={fileInput}
+  type="file"
+  accept=".zip,.cbz"
+  onchange={handleInputChange}
+  class="hidden"
+/>
 <button
   type="button"
   onclick={handleClick}
