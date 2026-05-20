@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { fly, fade } from 'svelte/transition';
+  import { ANIM_DURATION, ANIM_EASE } from '$lib/utils/constants';
   import { getBindings, formatKey } from '$lib/keyboard/keybindings.svelte';
   import Backdrop from '$lib/ui/Backdrop.svelte';
 
@@ -58,6 +60,8 @@
 >
   <div
     class="max-h-[calc(100vh-2rem)] w-full max-w-lg overflow-y-auto border-2 bg-black p-6 shadow-xl"
+    in:fly={{ y: 16, duration: ANIM_DURATION, easing: ANIM_EASE }}
+    out:fade={{ duration: Math.round(ANIM_DURATION * 0.5), easing: ANIM_EASE }}
   >
     <div class="mb-4 flex items-center justify-between">
       <h2 class="text-lg font-bold">Keyboard shortcuts</h2>

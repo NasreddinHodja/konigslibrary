@@ -1,6 +1,10 @@
 <script lang="ts">
+  import { tick } from 'svelte';
+  import { fade, fly, slide } from 'svelte/transition';
+  import { ANIM_DURATION, ANIM_EASE } from '$lib/utils/constants';
   import { ArrowLeft, Search, X, BookOpen } from 'lucide-svelte';
   import Skeleton from '$lib/ui/Skeleton.svelte';
+  import Loader from '$lib/ui/Loader.svelte';
   import { getReaderContext } from '$lib/context';
   import { searchManga, searchMangaMultiple } from '$lib/api/anilist';
   import type { MangaMeta } from '$lib/api/anilist';
@@ -22,6 +26,43 @@
   let authorsTruncated = $state(false);
   let authorsEl: HTMLSpanElement | undefined = $state();
   let tagsExpanded = $state(false);
+  let tagsEl: HTMLDivElement | undefined = $state();
+  let tagsCollapsedH = 0;
+
+  async function expandTags() {
+    if (!tagsEl) { tagsExpanded = true; return; }
+    tagsCollapsedH = tagsEl.scrollHeight;
+    tagsEl.style.height = tagsCollapsedH + 'px';
+    tagsEl.style.overflow = 'hidden';
+    tagsExpanded = true;
+    await tick();
+    const to = tagsEl.scrollHeight;
+    requestAnimationFrame(() => {
+      if (!tagsEl) return;
+      tagsEl.style.transition = `height ${ANIM_DURATION}ms ease-out`;
+      tagsEl.style.height = to + 'px';
+      setTimeout(() => { if (tagsEl) resetTagsStyle(tagsEl); }, ANIM_DURATION + 20);
+    });
+  }
+
+  function collapseTags() {
+    if (!tagsEl) { tagsExpanded = false; return; }
+    tagsEl.style.height = tagsEl.scrollHeight + 'px';
+    tagsEl.style.overflow = 'hidden';
+    tagsEl.offsetHeight; // force reflow so the browser registers the starting height
+    tagsEl.style.transition = `height ${ANIM_DURATION}ms ease-out`;
+    tagsEl.style.height = tagsCollapsedH + 'px';
+    setTimeout(() => {
+      tagsExpanded = false;
+      tick().then(() => { if (tagsEl) resetTagsStyle(tagsEl); });
+    }, ANIM_DURATION + 20);
+  }
+
+  function resetTagsStyle(el: HTMLDivElement) {
+    el.style.height = '';
+    el.style.overflow = '';
+    el.style.transition = '';
+  }
 
   let pickerOpen = $state(false);
   let pickerQuery = $state('');
@@ -192,77 +233,106 @@
 
         <div class="mt-3 flex min-h-[7rem] flex-col gap-3 sm:min-h-0 sm:flex-1 sm:overflow-hidden">
           {#if meta}
-            <div class="flex flex-wrap items-center gap-3">
-              {#if meta.status}
-                <span
-                  class="border px-2 py-0.5 text-xs font-bold tracking-widest
-                  {meta.status === 'ongoing'
-                    ? 'border-green-500/50 text-green-400'
-                    : 'border-white/20 opacity-50'}"
-                >
-                  {STATUS_LABEL[meta.status] ?? meta.status.toUpperCase()}
-                </span>
-              {/if}
-              {#if meta.year}
-                <span class="text-xs opacity-40">{meta.year}</span>
-              {/if}
+            <div
+              class="flex flex-col gap-3"
+              in:fade={{ duration: ANIM_DURATION, delay: 50, easing: ANIM_EASE }}
+            >
+              <div class="flex flex-wrap items-center gap-3">
+                {#if meta.status}
+                  <span
+                    class="border px-2 py-0.5 text-xs font-bold tracking-widest
+                    {meta.status === 'ongoing'
+                      ? 'border-green-500/50 text-green-400'
+                      : 'border-white/20 opacity-50'}"
+                  >
+                    {STATUS_LABEL[meta.status] ?? meta.status.toUpperCase()}
+                  </span>
+                {/if}
+                {#if meta.year}
+                  <span class="text-xs opacity-40">{meta.year}</span>
+                {/if}
+                {#if meta.authors.length}
+                  <span class="hidden text-xs opacity-40 sm:inline">{meta.authors.join(', ')}</span>
+                {/if}
+              </div>
+
               {#if meta.authors.length}
-                <span class="hidden text-xs opacity-40 sm:inline">{meta.authors.join(', ')}</span>
+                <div class="flex flex-col gap-1 sm:hidden">
+                  <div class="flex items-center gap-1.5">
+                    <span
+                      bind:this={authorsEl}
+                      class="min-w-0 truncate text-xs opacity-40"
+                      >{meta.authors.join(', ')}</span
+                    >
+                    {#if !authorsExpanded && authorsTruncated}
+                      <button
+                        class="shrink-0 cursor-pointer border border-white/15 px-2 py-0.5 text-xs opacity-60 hover:opacity-100"
+                        onclick={() => (authorsExpanded = true)}
+                        >more</button
+                      >
+                    {/if}
+                  </div>
+                  {#if authorsExpanded}
+                    <div
+                      class="overflow-hidden text-xs opacity-40"
+                      transition:slide={{ duration: ANIM_DURATION, easing: ANIM_EASE }}
+                    >
+                      {meta.authors.join(', ')}
+                      <button
+                        class="cursor-pointer border border-white/15 px-2 py-0.5 text-xs opacity-60 hover:opacity-100"
+                        onclick={() => (authorsExpanded = false)}
+                        >less</button
+                      >
+                    </div>
+                  {/if}
+                </div>
+              {/if}
+
+              {#if meta.tags.length}
+                <div class="flex flex-wrap gap-1.5" bind:this={tagsEl}>
+                  {#each meta.tags.slice(0, TAGS_COLLAPSED) as tag}
+                    <span class="border border-white/30 px-2 py-0.5 text-xs opacity-50">{tag}</span>
+                  {/each}
+                  {#if tagsExpanded}
+                    {#each meta.tags.slice(TAGS_COLLAPSED, 6) as tag}
+                      <span class="border border-white/30 px-2 py-0.5 text-xs opacity-50">{tag}</span>
+                    {/each}
+                    <button
+                      class="cursor-pointer border border-white/15 px-2 py-0.5 text-xs opacity-60 hover:opacity-100"
+                      onclick={collapseTags}
+                    >less</button>
+                  {:else if meta.tags.length > TAGS_COLLAPSED}
+                    <button
+                      class="cursor-pointer border border-white/15 px-2 py-0.5 text-xs opacity-60 hover:opacity-100"
+                      onclick={expandTags}
+                    >more</button>
+                  {/if}
+                </div>
+              {/if}
+
+              {#if meta.status === 'ongoing' && meta.latestChapter}
+                <div class="self-start border border-white/10 px-3 py-2 text-xs">
+                  <span class="opacity-40">Latest on MangaDex: </span>
+                  <span class="">Ch. {meta.latestChapter}</span>
+                  {#if meta.latestChapterDate}
+                    <span class="opacity-30"> · {formatDate(meta.latestChapterDate)}</span>
+                  {/if}
+                </div>
               {/if}
             </div>
-
-            {#if meta.authors.length}
-              <div class="flex items-center gap-1.5 sm:hidden">
-                <span
-                  bind:this={authorsEl}
-                  class="min-w-0 text-xs opacity-40 {authorsExpanded ? '' : 'truncate'}"
-                  >{meta.authors.join(', ')}</span
-                >
-                {#if authorsExpanded || authorsTruncated}
-                  <button
-                    class="shrink-0 cursor-pointer text-xs opacity-30 hover:opacity-70"
-                    onclick={() => (authorsExpanded = !authorsExpanded)}
-                    >{authorsExpanded ? 'less' : 'more'}</button
-                  >
-                {/if}
-              </div>
-            {/if}
-
-            {#if meta.tags.length}
-              <div class="flex flex-wrap gap-1.5">
-                {#each tagsExpanded ? meta.tags.slice(0, 6) : meta.tags.slice(0, TAGS_COLLAPSED) as tag}
-                  <span class="border border-white/15 px-2 py-0.5 text-xs opacity-50">{tag}</span>
-                {/each}
-                {#if meta.tags.length > TAGS_COLLAPSED}
-                  <button
-                    class="cursor-pointer text-xs opacity-30 hover:opacity-70"
-                    onclick={() => (tagsExpanded = !tagsExpanded)}
-                    >{tagsExpanded ? 'less' : 'more'}</button
-                  >
-                {/if}
-              </div>
-            {/if}
-
-            {#if meta.status === 'ongoing' && meta.latestChapter}
-              <div class="self-start border border-white/10 px-3 py-2 text-xs">
-                <span class="opacity-40">Latest on MangaDex: </span>
-                <span class="">Ch. {meta.latestChapter}</span>
-                {#if meta.latestChapterDate}
-                  <span class="opacity-30"> · {formatDate(meta.latestChapterDate)}</span>
-                {/if}
-              </div>
-            {/if}
           {:else}
-            <div class="flex flex-wrap items-center gap-3">
-              <Skeleton class="h-[22px] w-20" />
-              <Skeleton class="h-[22px] w-8" />
-              <Skeleton class="hidden h-[22px] w-32 sm:block" />
-            </div>
-            <Skeleton class="h-4 w-40 sm:hidden" />
-            <div class="flex flex-wrap gap-1.5">
-              {#each [60, 52, 56, 48] as w}
-                <Skeleton class="h-[22px]" style="width: {w}px" />
-              {/each}
+            <div class="flex flex-col gap-3">
+              <div class="flex flex-wrap items-center gap-3">
+                <Skeleton class="h-[22px] w-20" />
+                <Skeleton class="h-[22px] w-8" />
+                <Skeleton class="hidden h-[22px] w-32 sm:block" />
+              </div>
+              <Skeleton class="h-4 w-40 sm:hidden" />
+              <div class="flex flex-wrap gap-1.5">
+                {#each [60, 52, 56, 48] as w}
+                  <Skeleton class="h-[22px]" style="width: {w}px" />
+                {/each}
+              </div>
             </div>
           {/if}
         </div>
@@ -273,6 +343,7 @@
             <button
               class="cursor-pointer border-1 border-white px-4 py-2 text-sm hover:bg-white hover:text-black"
               onclick={resume}
+              in:fade={{ duration: ANIM_DURATION, easing: ANIM_EASE }}
             >
               RESUME: {savedProgress.chapter}, p.{savedProgress.page + 1}
             </button>
@@ -282,6 +353,7 @@
               class="cursor-pointer text-xs underline opacity-30 hover:opacity-70
                 {meta ? '' : 'pointer-events-none invisible'}"
               onclick={openPicker}
+              transition:fade={{ duration: ANIM_DURATION, easing: ANIM_EASE }}
             >
               Not this manga?
             </button>
@@ -293,7 +365,10 @@
 
   <!-- Picker panel (outside fixed section) -->
   {#if pickerOpen && meta}
-    <div class="mt-4 border border-white/15 p-4">
+    <div
+      class="mt-4 overflow-hidden border border-white/15 p-4"
+      transition:slide={{ duration: ANIM_DURATION, easing: ANIM_EASE }}
+    >
       <div class="mb-3 flex items-center justify-between">
         <span class="text-xs font-bold tracking-widest opacity-50">SEARCH ANILIST</span>
         <button
@@ -327,27 +402,22 @@
       </div>
 
       {#if pickerLoading}
-        <ul class="mt-3 flex flex-col gap-0 border border-white/10">
-          {#each { length: 4 } as _}
-            <li class="border-b border-white/10 last:border-b-0">
-              <div class="flex items-center gap-3 px-3 py-2.5">
-                <Skeleton class="h-12 w-9 shrink-0" />
-                <div class="min-w-0 flex-1">
-                  <Skeleton class="h-[14px] w-3/4" />
-                  <div class="mt-1.5 flex gap-2">
-                    <Skeleton class="h-[11px] w-8" />
-                    <Skeleton class="h-[11px] w-14" />
-                    <Skeleton class="h-[11px] w-20" />
-                  </div>
-                </div>
-              </div>
-            </li>
-          {/each}
-        </ul>
+        <div
+          class="mt-3 overflow-hidden py-6"
+          transition:slide={{ duration: ANIM_DURATION, easing: ANIM_EASE }}
+        >
+          <Loader />
+        </div>
       {:else if pickerError}
-        <p class="mt-3 text-xs opacity-40">No results found.</p>
+        <p
+          class="mt-3 overflow-hidden text-xs opacity-40"
+          transition:slide={{ duration: ANIM_DURATION, easing: ANIM_EASE }}
+        >No results found.</p>
       {:else if pickerResults.length}
-        <ul class="mt-3 flex flex-col gap-0 border border-white/10">
+        <ul
+          class="mt-3 flex flex-col gap-0 overflow-hidden border border-white/10"
+          transition:slide={{ duration: ANIM_DURATION, easing: ANIM_EASE }}
+        >
           {#each pickerResults as result}
             <li class="border-b border-white/10 last:border-b-0">
               <button
@@ -393,7 +463,7 @@
       <span class="shrink-0 text-xs font-bold tracking-widest opacity-30">
         CHAPTERS ({chapters.length})
       </span>
-      <div class="flex flex-1 items-center gap-2 border border-white/15 px-3 py-1.5">
+      <div class="flex min-w-0 flex-1 items-center gap-2 border border-white/15 px-3 py-1.5">
         <Search size={12} class="shrink-0 opacity-30" />
         <input
           bind:value={search}
@@ -409,7 +479,10 @@
     </div>
 
     {#if filteredChapters.length === 0}
-      <p class="py-8 text-center text-xs opacity-30">No chapters match "{search}"</p>
+      <p
+        class="py-8 text-center text-xs opacity-30"
+        in:fade={{ duration: ANIM_DURATION, easing: ANIM_EASE }}
+      >No chapters match "{search}"</p>
     {:else}
       <ul>
         {#each filteredChapters as chapter (chapter.name)}

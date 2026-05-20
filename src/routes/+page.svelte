@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { fade } from 'svelte/transition';
+  import { ANIM_DURATION, ANIM_EASE } from '$lib/utils/constants';
   import { ZipUploadProvider } from '$lib/sources';
   import { resolveKey } from '$lib/keyboard/keybindings.svelte';
   import type { ViewerCommands } from '$lib/commands';
@@ -219,7 +221,11 @@
 {/if}
 
 {#if chapters.length === 0}
-  <div class="flex min-h-screen flex-col">
+  <div
+    class="flex min-h-screen flex-col"
+    out:fade={{ duration: Math.round(ANIM_DURATION * 0.5), easing: ANIM_EASE }}
+    in:fade={{ duration: ANIM_DURATION, delay: Math.round(ANIM_DURATION * 0.5), easing: ANIM_EASE }}
+  >
     {#if !native}
       <a
         href="/about"
@@ -289,9 +295,19 @@
     </div>
   </div>
 {:else if manga.selectedChapter === null}
-  <MangaDetail />
+  <div
+    out:fade={{ duration: Math.round(ANIM_DURATION * 0.5), easing: ANIM_EASE }}
+    in:fade={{ duration: ANIM_DURATION, delay: Math.round(ANIM_DURATION * 0.5), easing: ANIM_EASE }}
+  >
+    <MangaDetail />
+  </div>
 {:else}
-  <div class="flex h-dvh select-none" role="presentation">
+  <div
+    class="flex h-dvh select-none"
+    role="presentation"
+    out:fade={{ duration: Math.round(ANIM_DURATION * 0.5), easing: ANIM_EASE }}
+    in:fade={{ duration: ANIM_DURATION, delay: Math.round(ANIM_DURATION * 0.5), easing: ANIM_EASE }}
+  >
     {#if activeViewer}
       {@const Viewer = activeViewer.component}
       <Viewer bind:commands={viewerCommands} ontap={toggleHud} />

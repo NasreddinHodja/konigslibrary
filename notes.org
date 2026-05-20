@@ -1,5 +1,50 @@
 #+title: Notes
 
+* DONE there is still layout shift
+the loader assumes there is just one line of tags. i want it to be 2
+
+the whole container should have a min height equal to this.
+
+* DONE the toggles for the settings in the reader
+see how some appear and disappear? making the bottom bar grow or shrink in height.
+i want all this to be transitioned/animated.
+
+actually, let me generalize...:
+
+** DONE trasitions/animations everytime something moves!
+Lets do a big pass of the code and notice all things that toggle in and out of view
+
+Example: "Not this manga button" openst a search, causing everything to shift. And each time the search is reexecuted, things also shift.
+
+i want EVERYTHING TO HAVE PROPER INDUSTY LEVEL TRANSITIONS AND ANIMATIONS
+
+* TODO page turn really turns pages lol
+Visually, like media/gallery apps.
+Also, on mobile the swiping to pass pages should work and be very responsive (i want it to feel like the page is following my finger turning it.). and remember to update the tutorial overlays
+
+* DONE still slight layout shift when loading manga info
+
+* DONE chapters list header is too wide! :mobile:
+
+* DONE fix big space between tags and resume/not this manga buttons :mobile:
+Because we had to fix it at a certain height, to not allow layout shift from different quantities of tags.
+But the space is too big on mobile...
+
+* TODO navigation on mobile :mobile:
+i want it to work. right now, when i swipe for "back" it just throws me out of the app
+
+* TODO fix graddle :mobile:
+when runnig "dev:mobile":
+
+[Incubating] Problems report is available at: file:///home/nasreddin/Prog/konigslibrary/src-tauri/gen/android/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.14.3/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+Performing Streamed Install
+
 * DONE resume the "not this manga?" feature (manga details)
 friend i got this problem, where, in manga details page, if the title of the manga is ambiguous (there are multiple different manga with that name), then our search fill sometimes find the wrong manga. I want a way for the user to pick the correct manga, searching for matches themselves.
 
@@ -20,22 +65,8 @@ Be careful of the sizes. i dont want any layout poping from the loadings
 
 + manga details page: there is still layout shift on mobile because of the number of tags. maybe fix the position of the "not this manga?" button to leave space?
 
-* TODO navigation on mobile :mobile:
-i want it to work. right now, when i swipe for "back" it just throws me out of the app
-
 * DONE all of the data that is api fetched should be omissable
 i want the app to be able to function and look proper even when no internet connection
-
-* TODO the toggles for the settings in the reader
-see how some appear and disappear? making the bottom bar grow or shrink in height.
-i want all this to be transitioned/animated.
-
-actually, let me generalize...:
-
-** TODO trasitions/animations everytime something moves!
-Lets do a big pass of the code and notice all things that toggle in and out of view
-
-Example: "Not this manga button" openst a search, causing everything to shift. And each time the search is reexecuted, things also shift.
 
 * DONE next chapter screen buttons are too wide
 on mobile, the span the whole width of the screen
@@ -50,18 +81,6 @@ First time opening the reader causes a tutorial overlay showing the gestures/cli
 * DONE Current manga on hover should also change style
 like, the other ones when we hover they become a little lighter. i want also a hover reaction for the current chapter. for some reason it doesnt have any
 
-* TODO fix graddle :mobile:
-when runnig "dev:mobile":
-
-[Incubating] Problems report is available at: file:///home/nasreddin/Prog/konigslibrary/src-tauri/gen/android/build/reports/problems/problems-report.html
-
-Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
-
-You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
-
-For more on this, please refer to https://docs.gradle.org/8.14.3/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
-Performing Streamed Install
-
 * DONE Dont show "Drop here" on mobile
 It doesn't make sense
 
@@ -70,15 +89,3 @@ we want fixed dimension still so we have to contain the whole image inside our d
 
 * DONE "SETTINGS" button in home should have the gear icon
 
-* TODO fix big space between tags and resume/not this manga buttons :mobile:
-Because we had to fix it at a certain height, to not allow layout shift from different quantities of tags.
-But the space is too big on mobile...
-
-* TODO page turn really turns pages lol
-Visually, like media/gallery apps.
-Also, on mobile the swipes should work. and remember to update the tutorial overlays
-
-* STRT there is still layout shift
-the loader assumes there is just one line of tags. i want it to be 2
-
-the whole container should have a min height equal to this.

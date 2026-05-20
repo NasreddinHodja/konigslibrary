@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { fly, fade } from 'svelte/transition';
+  import { ANIM_DURATION, ANIM_EASE } from '$lib/utils/constants';
   import Backdrop from './Backdrop.svelte';
 
   let {
@@ -16,7 +18,11 @@
 
 <Backdrop onclick={oncancel} />
 <div class="pointer-events-none fixed inset-0 z-50 flex items-center justify-center p-4">
-  <div class="pointer-events-auto w-full max-w-sm border-2 bg-black px-6 py-5">
+  <div
+    class="pointer-events-auto w-full max-w-sm border-2 bg-black px-6 py-5"
+    in:fly={{ y: 10, duration: ANIM_DURATION, easing: ANIM_EASE }}
+    out:fade={{ duration: Math.round(ANIM_DURATION * 0.5), easing: ANIM_EASE }}
+  >
     <p class="mb-5 text-sm leading-relaxed">{message}</p>
     <div class="flex justify-end gap-3">
       <button
