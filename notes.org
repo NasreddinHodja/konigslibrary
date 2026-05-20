@@ -20,23 +20,26 @@ Be careful of the sizes. i dont want any layout poping from the loadings
 
 + manga details page: there is still layout shift on mobile because of the number of tags. maybe fix the position of the "not this manga?" button to leave space?
 
-* DONE back button on mobile
+* TODO back button on mobile :mobile:
 i want it to work. right now i just throws me out of the app
 
-* TODO all of the data that is api fetched should be omissable
+* DONE all of the data that is api fetched should be omissable
 i want the app to be able to function and look proper even when no internet connection
 
 * TODO the toggles for the settings in the reader
 see how some appear and disappear? making the bottom bar grow or shrink in height.
 i want all this to be transitioned/animated.
 
-* TODO next chapter screen buttons are too wide
-on mobile, the span the whole width of the screen
+actually, let me generalize...:
 
-* TODO trasitions/animations everytime something moves!
+** TODO trasitions/animations everytime something moves!
 Lets do a big pass of the code and notice all things that toggle in and out of view
 
 Example: "Not this manga button" openst a search, causing everything to shift. And each time the search is reexecuted, things also shift.
+
+* TODO next chapter screen buttons are too wide
+on mobile, the span the whole width of the screen
+
 
 * TODO reader tutorial overlay
 First time opening the reader causes a tutorial overlay showing the gestures/click areas and shit
@@ -44,7 +47,7 @@ First time opening the reader causes a tutorial overlay showing the gestures/cli
 * TODO Current manga on hover should also change style
 like, the other ones when we hover they become a little lighter. i want also a hover reaction for the current chapter. for some reason it doesnt have any
 
-* TODO fix graddle
+* TODO fix graddle :mobile:
 [Incubating] Problems report is available at: file:///home/nasreddin/Prog/konigslibrary/src-tauri/gen/android/build/reports/problems/problems-report.html
 
 Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
@@ -59,3 +62,4 @@ It doesn't make sense
 
 * TODO fix manga cover image being cropped
 we want fixed dimension still so we have to contain the whole image inside our defined dimensions
+* TODO "SETTINGS" button in home should have the gear icon
