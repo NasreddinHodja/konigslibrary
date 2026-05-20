@@ -20,8 +20,8 @@ Be careful of the sizes. i dont want any layout poping from the loadings
 
 + manga details page: there is still layout shift on mobile because of the number of tags. maybe fix the position of the "not this manga?" button to leave space?
 
-* TODO back button on mobile :mobile:
-i want it to work. right now i just throws me out of the app
+* TODO navigation on mobile :mobile:
+i want it to work. right now, when i swipe for "back" it just throws me out of the app
 
 * DONE all of the data that is api fetched should be omissable
 i want the app to be able to function and look proper even when no internet connection
@@ -44,13 +44,15 @@ also they have a size mismatch... its ugly
 * DONE we need skeleton loaders for the search of manga
 the search inside the "not this manga?" menu
 
-* TODO reader tutorial overlay
+* DONE reader tutorial overlay
 First time opening the reader causes a tutorial overlay showing the gestures/click areas and shit
 
 * DONE Current manga on hover should also change style
 like, the other ones when we hover they become a little lighter. i want also a hover reaction for the current chapter. for some reason it doesnt have any
 
 * TODO fix graddle :mobile:
+when runnig "dev:mobile":
+
 [Incubating] Problems report is available at: file:///home/nasreddin/Prog/konigslibrary/src-tauri/gen/android/build/reports/problems/problems-report.html
 
 Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
@@ -66,4 +68,17 @@ It doesn't make sense
 * DONE fix manga cover image being cropped
 we want fixed dimension still so we have to contain the whole image inside our defined dimensions
 
-* STRT "SETTINGS" button in home should have the gear icon
+* DONE "SETTINGS" button in home should have the gear icon
+
+* TODO fix big space between tags and resume/not this manga buttons :mobile:
+Because we had to fix it at a certain height, to not allow layout shift from different quantities of tags.
+But the space is too big on mobile...
+
+* TODO page turn really turns pages lol
+Visually, like media/gallery apps.
+Also, on mobile the swipes should work. and remember to update the tutorial overlays
+
+* STRT there is still layout shift
+the loader assumes there is just one line of tags. i want it to be 2
+
+the whole container should have a min height equal to this.

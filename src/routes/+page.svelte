@@ -16,6 +16,7 @@
   import { pushState } from '$app/navigation';
   import { CircleQuestionMark, Settings } from 'lucide-svelte';
   import ToastStack from '$lib/ui/ToastStack.svelte';
+  import ReaderTutorial from '$lib/ui/ReaderTutorial.svelte';
   import { showError } from '$lib/ui/toast.svelte';
 
   const svc = createReaderServices();
@@ -30,6 +31,18 @@
 
   let dragCount = $state(0);
   const isDragOver = $derived(dragCount > 0 && chapters.length === 0);
+
+  const TUTORIAL_PAGETURN_KEY = 'kl:tutorial:pageTurn';
+  const TUTORIAL_SCROLL_KEY = 'kl:tutorial:scroll';
+  let tutorialVisible = $state(false);
+
+  function maybeShowTutorial(scrollMode: boolean) {
+    const key = scrollMode ? TUTORIAL_SCROLL_KEY : TUTORIAL_PAGETURN_KEY;
+    if (!localStorage.getItem(key)) {
+      tutorialVisible = true;
+      localStorage.setItem(key, '1');
+    }
+  }
 
   let hudVisible = $state(false);
   let hudTimer: ReturnType<typeof setTimeout> | undefined;
@@ -53,9 +66,16 @@
   }
 
   let prevSelectedChapter = $state<string | null>(null);
+  let prevScrollMode = $state(manga.scrollMode);
   $effect(() => {
-    if (manga.selectedChapter !== null && prevSelectedChapter === null) showHud();
+    if (manga.selectedChapter !== null && prevSelectedChapter === null) {
+      showHud();
+      maybeShowTutorial(manga.scrollMode);
+    } else if (manga.selectedChapter !== null && manga.scrollMode !== prevScrollMode) {
+      maybeShowTutorial(manga.scrollMode);
+    }
     prevSelectedChapter = manga.selectedChapter;
+    prevScrollMode = manga.scrollMode;
   });
 
   let saveTimer: ReturnType<typeof setTimeout> | undefined;
@@ -284,5 +304,9 @@
         manga.selectedChapter = null;
       }}
     />
+
+    {#if tutorialVisible}
+      <ReaderTutorial ondismiss={() => (tutorialVisible = false)} />
+    {/if}
   </div>
 {/if}
