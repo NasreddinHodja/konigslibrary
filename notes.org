@@ -37,9 +37,12 @@ Lets do a big pass of the code and notice all things that toggle in and out of v
 
 Example: "Not this manga button" openst a search, causing everything to shift. And each time the search is reexecuted, things also shift.
 
-* TODO next chapter screen buttons are too wide
+* DONE next chapter screen buttons are too wide
 on mobile, the span the whole width of the screen
+also they have a size mismatch... its ugly
 
+* STRT we need skeleton loaders for the search of manga
+the search inside the "not this manga?" menu
 
 * TODO reader tutorial overlay
 First time opening the reader causes a tutorial overlay showing the gestures/click areas and shit

@@ -21,10 +21,16 @@
   );
 
   let showEndScreen = $state(false);
+  let pendingEndScreen = false;
 
   $effect(() => {
     manga.selectedChapter; // eslint-disable-line @typescript-eslint/no-unused-expressions
-    showEndScreen = false;
+    if (pendingEndScreen) {
+      showEndScreen = true;
+      pendingEndScreen = false;
+    } else {
+      showEndScreen = false;
+    }
   });
 
   let domPages: number[] = $derived.by(() => {
@@ -41,15 +47,22 @@
   const prev = () => {
     if (showEndScreen) {
       showEndScreen = false;
+      manga.currentPage = chapter.pageUrls.length - 1;
       return;
     }
     if (manga.currentPage > 0) {
       manga.currentPage--;
+    } else if (svc.getPrevChapter()) {
+      pendingEndScreen = true;
+      svc.goToPrevChapter();
     }
   };
 
   const next = () => {
-    if (showEndScreen) return;
+    if (showEndScreen) {
+      svc.goToNextChapter();
+      return;
+    }
     if (manga.currentPage < chapter.pageUrls.length - 1) {
       manga.currentPage++;
     } else {
@@ -145,31 +158,29 @@
     </div>
   {/if}
 
-  {#if !showEndScreen}
-    <!-- Left zone: previous page -->
-    <button
-      class="absolute inset-y-0 left-0 w-[40%]"
-      class:cursor-zoom-in={zoomHeld}
-      class:cursor-w-resize={!zoomHeld}
-      aria-label="Previous page"
-      onclick={handleClickLeft}
-    ></button>
+  <!-- Left zone: previous page / back -->
+  <button
+    class="absolute inset-y-0 left-0 w-[40%]"
+    class:cursor-zoom-in={zoomHeld}
+    class:cursor-w-resize={!zoomHeld}
+    aria-label="Previous page"
+    onclick={handleClickLeft}
+  ></button>
 
-    <!-- Center zone: toggle HUD -->
-    <button
-      class="absolute inset-y-0 left-[40%] w-[20%]"
-      class:cursor-zoom-in={zoomHeld}
-      aria-label="Toggle menu"
-      onclick={handleClickCenter}
-    ></button>
+  <!-- Center zone: toggle HUD -->
+  <button
+    class="absolute inset-y-0 left-[40%] w-[20%]"
+    class:cursor-zoom-in={zoomHeld}
+    aria-label="Toggle menu"
+    onclick={handleClickCenter}
+  ></button>
 
-    <!-- Right zone: next page -->
-    <button
-      class="absolute inset-y-0 right-0 w-[40%]"
-      class:cursor-zoom-in={zoomHeld}
-      class:cursor-e-resize={!zoomHeld}
-      aria-label="Next page"
-      onclick={handleClickRight}
-    ></button>
-  {/if}
+  <!-- Right zone: next page / next chapter -->
+  <button
+    class="absolute inset-y-0 right-0 w-[40%]"
+    class:cursor-zoom-in={zoomHeld}
+    class:cursor-e-resize={!zoomHeld}
+    aria-label="Next page"
+    onclick={handleClickRight}
+  ></button>
 </div>

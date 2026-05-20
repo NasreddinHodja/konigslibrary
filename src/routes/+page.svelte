@@ -52,8 +52,10 @@
     else showHud();
   }
 
+  let prevSelectedChapter = $state<string | null>(null);
   $effect(() => {
-    if (manga.selectedChapter !== null) showHud();
+    if (manga.selectedChapter !== null && prevSelectedChapter === null) showHud();
+    prevSelectedChapter = manga.selectedChapter;
   });
 
   let saveTimer: ReturnType<typeof setTimeout> | undefined;

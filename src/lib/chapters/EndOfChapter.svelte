@@ -13,20 +13,20 @@
 
 <div class="flex min-h-full w-full flex-col items-center justify-center gap-6 py-24">
   <p class="text-lg opacity-50">End of {manga.selectedChapter}</p>
-  <div class="flex items-center gap-4">
+  <div class="flex flex-col items-center gap-3">
+    {#if nextChapter}
+      <Button size="lg" variant="primary" onclick={() => svc.goToNextChapter()}>
+        {nextChapter}
+        <ChevronRight size={16} />
+      </Button>
+    {:else}
+      <span class="px-6 py-3 text-sm opacity-30">No next chapter</span>
+    {/if}
     {#if onback}
       <Button size="lg" onclick={onback}>
         <ArrowLeft size={16} />
         Back
       </Button>
-    {/if}
-    {#if nextChapter}
-      <Button size="lg" variant="primary" onclick={() => svc.goToNextChapter()}>
-        Next: {nextChapter}
-        <ChevronRight size={16} />
-      </Button>
-    {:else}
-      <span class="px-6 py-3 text-sm opacity-30">No next chapter</span>
     {/if}
   </div>
 </div>
