@@ -14,7 +14,7 @@
   import { invoke } from '@tauri-apps/api/core';
   import { isLocalServer } from '$lib/utils/constants';
   import { pushState } from '$app/navigation';
-  import { CircleQuestionMark } from 'lucide-svelte';
+  import { CircleQuestionMark, Settings } from 'lucide-svelte';
   import ToastStack from '$lib/ui/ToastStack.svelte';
   import { showError } from '$lib/ui/toast.svelte';
 
@@ -224,13 +224,13 @@
           <LibraryBrowser />
           <NativeLibraryBrowser />
         </div>
-        <a href="/settings" class="text-xs tracking-widest opacity-20 hover:opacity-60">SETTINGS</a>
+        <a href="/settings" class="flex items-center gap-1.5 text-xs tracking-widest opacity-20 hover:opacity-60"><Settings size={12} />SETTINGS</a>
       {:else if isLocalServer}
         <div class="w-full max-w-lg space-y-8">
           <OfflineBrowser />
           <LibraryBrowser />
         </div>
-        <a href="/settings" class="text-xs tracking-widest opacity-20 hover:opacity-60">SETTINGS</a>
+        <a href="/settings" class="flex items-center gap-1.5 text-xs tracking-widest opacity-20 hover:opacity-60"><Settings size={12} />SETTINGS</a>
       {:else}
         <div class="w-full max-w-lg space-y-10">
           <OfflineBrowser />

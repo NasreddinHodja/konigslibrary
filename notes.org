@@ -66,4 +66,4 @@ It doesn't make sense
 * DONE fix manga cover image being cropped
 we want fixed dimension still so we have to contain the whole image inside our defined dimensions
 
-* TODO "SETTINGS" button in home should have the gear icon
+* STRT "SETTINGS" button in home should have the gear icon
