@@ -1,8 +1,9 @@
 <script lang="ts">
   import { ArrowLeft, Search, X, BookOpen } from 'lucide-svelte';
   import { getReaderContext } from '$lib/context';
-  import { searchManga } from '$lib/api/mangadex';
-  import type { MangaMeta } from '$lib/api/mangadex';
+  import { searchManga, searchMangaMultiple } from '$lib/api/anilist';
+  import type { MangaMeta } from '$lib/api/anilist';
+  import { fetchLatestChapter } from '$lib/api/mangadex';
 
   const svc = getReaderContext();
   const { state: manga } = svc;
@@ -15,6 +16,50 @@
   let metaError = $state(false);
   let search = $state('');
 
+  let pickerOpen = $state(false);
+  let pickerQuery = $state('');
+  let pickerLoading = $state(false);
+  let pickerResults: MangaMeta[] = $state([]);
+  let pickerError = $state(false);
+
+  async function runPickerSearch() {
+    if (!pickerQuery.trim()) return;
+    pickerLoading = true;
+    pickerError = false;
+    pickerResults = [];
+    try {
+      pickerResults = await searchMangaMultiple(pickerQuery.trim(), 6);
+      if (!pickerResults.length) pickerError = true;
+    } catch {
+      pickerError = true;
+    } finally {
+      pickerLoading = false;
+    }
+  }
+
+  function selectFromPicker(result: MangaMeta) {
+    meta = result;
+    metaError = false;
+    pickerOpen = false;
+    pickerQuery = '';
+    pickerResults = [];
+  }
+
+  function openPicker() {
+    pickerOpen = true;
+    pickerQuery = mangaName;
+    pickerResults = [];
+    pickerError = false;
+  }
+
+  $effect(() => {
+    if (!pickerOpen) return;
+    const query = pickerQuery.trim();
+    if (!query) { pickerResults = []; return; }
+    const t = setTimeout(() => runPickerSearch(), 350);
+    return () => clearTimeout(t);
+  });
+
   const filteredChapters = $derived(
     search.trim()
       ? chapters.filter((c) => c.name.toLowerCase().includes(search.toLowerCase()))
@@ -26,9 +71,15 @@
     meta = null;
     metaError = false;
     searchManga(mangaName)
-      .then((result) => {
+      .then(async (result) => {
+        if (!result) { metaError = true; return; }
         meta = result;
-        if (!result) metaError = true;
+        if (result.status === 'ongoing' && result.mangadexId) {
+          const latest = await fetchLatestChapter(result.mangadexId);
+          if (latest && meta) {
+            meta = { ...meta, latestChapter: latest.chapter, latestChapterDate: latest.publishAt };
+          }
+        }
       })
       .catch(() => {
         metaError = true;
@@ -166,6 +217,83 @@
     {/if}
     </div>
   </div>
+
+  <!-- Not this manga? -->
+  {#if meta || metaError}
+    {#if !pickerOpen}
+      <button
+        class="mt-4 cursor-pointer text-xs opacity-30 hover:opacity-70 underline self-start"
+        onclick={openPicker}
+      >
+        Not this manga?
+      </button>
+    {:else}
+      <div class="mt-4 border border-white/15 p-4">
+        <div class="mb-3 flex items-center justify-between">
+          <span class="text-xs font-bold tracking-widest opacity-50">SEARCH ANILIST</span>
+          <button
+            class="cursor-pointer opacity-30 hover:opacity-80"
+            onclick={() => (pickerOpen = false)}
+          >
+            <X size={12} />
+          </button>
+        </div>
+        <div class="flex items-center gap-2 border border-white/15 px-3 py-1.5">
+          <Search size={12} class="shrink-0 opacity-30" />
+          <input
+            bind:value={pickerQuery}
+            placeholder="Search title…"
+            class="flex-1 bg-transparent text-sm outline-none placeholder:opacity-30"
+          />
+          {#if pickerLoading}
+            <span class="text-xs opacity-30">…</span>
+          {:else if pickerQuery}
+            <button
+              class="cursor-pointer opacity-30 hover:opacity-80"
+              onclick={() => { pickerQuery = ''; pickerResults = []; pickerError = false; }}
+            >
+              <X size={12} />
+            </button>
+          {/if}
+        </div>
+
+        {#if pickerError}
+          <p class="mt-3 text-xs opacity-40">No results found.</p>
+        {:else if pickerResults.length}
+          <ul class="mt-3 flex flex-col gap-0 border border-white/10">
+            {#each pickerResults as result}
+              <li class="border-b border-white/10 last:border-b-0">
+                <button
+                  class="flex w-full cursor-pointer items-center gap-3 px-3 py-2.5 text-left hover:bg-white/5"
+                  onclick={() => selectFromPicker(result)}
+                >
+                  {#if result.coverUrl}
+                    <img
+                      src={result.coverUrl}
+                      alt={result.title}
+                      class="h-12 w-9 shrink-0 object-cover opacity-80"
+                    />
+                  {:else}
+                    <div class="flex h-12 w-9 shrink-0 items-center justify-center border border-white/10">
+                      <BookOpen size={14} class="opacity-20" />
+                    </div>
+                  {/if}
+                  <div class="min-w-0 flex-1">
+                    <p class="truncate text-sm font-bold">{result.title}</p>
+                    <div class="mt-0.5 flex items-center gap-2 text-xs opacity-40">
+                      {#if result.year}<span>{result.year}</span>{/if}
+                      {#if result.status}<span>{result.status.toUpperCase()}</span>{/if}
+                      {#if result.authors.length}<span class="truncate">{result.authors[0]}</span>{/if}
+                    </div>
+                  </div>
+                </button>
+              </li>
+            {/each}
+          </ul>
+        {/if}
+      </div>
+    {/if}
+  {/if}
 
   <!-- Divider -->
   <div class="mt-6 border-t border-white/10"></div>
