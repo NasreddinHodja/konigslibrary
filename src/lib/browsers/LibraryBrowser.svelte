@@ -8,7 +8,6 @@
   import { isNative } from '$lib/utils/platform';
   import { Download, Check } from 'lucide-svelte';
   import { showError } from '$lib/ui/toast.svelte';
-  import Loader from '$lib/ui/Loader.svelte';
   import ConfirmDialog from '$lib/ui/ConfirmDialog.svelte';
 
   const { setSource, events } = getReaderContext();
@@ -103,7 +102,16 @@
 {/if}
 
 {#if loading}
-  <Loader />
+  <div class="w-full min-w-0">
+    <div class="skeleton mb-2 h-3.5 w-14"></div>
+    <div class="border-2">
+      {#each [180, 140, 210, 160] as w}
+        <div class="flex items-center border-b border-white/10 px-4 py-3 last:border-b-0">
+          <div class="skeleton h-5" style="width: {w}px"></div>
+        </div>
+      {/each}
+    </div>
+  </div>
 {:else if error}
   <p class="text-xs opacity-40">{error}</p>
 {:else if entries.length > 0}

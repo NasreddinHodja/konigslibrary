@@ -44,7 +44,7 @@ async function gql<T>(query: string, variables: Record<string, unknown>): Promis
     const res = await fetch(ENDPOINT, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify({ query, variables }),
+      body: JSON.stringify({ query, variables })
     });
     if (!res.ok) return null;
     const json = await res.json();
@@ -65,7 +65,9 @@ function mapStatus(s: string): MangaMeta['status'] {
 
 function parseManga(m: Record<string, unknown>): MangaMeta {
   const title = m.title as Record<string, string>;
-  const staff = m.staff as { edges: Array<{ node: { name: { full: string } }; role: string }> } | null;
+  const staff = m.staff as {
+    edges: Array<{ node: { name: { full: string } }; role: string }>;
+  } | null;
   const links = (m.externalLinks as Array<{ site: string; url: string }>) ?? [];
 
   const mangadexUrl = links.find((l) => l.site === 'MangaDex')?.url ?? null;
@@ -73,10 +75,8 @@ function parseManga(m: Record<string, unknown>): MangaMeta {
 
   const authors = [
     ...new Set(
-      (staff?.edges ?? [])
-        .filter((e) => /story|art/i.test(e.role))
-        .map((e) => e.node.name.full)
-    ),
+      (staff?.edges ?? []).filter((e) => /story|art/i.test(e.role)).map((e) => e.node.name.full)
+    )
   ];
 
   const genres = (m.genres as string[]) ?? [];
@@ -94,7 +94,7 @@ function parseManga(m: Record<string, unknown>): MangaMeta {
     authors,
     coverUrl: cover?.extraLarge ?? cover?.large ?? null,
     latestChapter: null,
-    latestChapterDate: null,
+    latestChapterDate: null
   };
 }
 
@@ -107,7 +107,7 @@ export async function searchManga(query: string): Promise<MangaMeta | null> {
 export async function searchMangaMultiple(query: string, limit = 6): Promise<MangaMeta[]> {
   const data = await gql<{ Page: { media: Record<string, unknown>[] } }>(QUERY_MANY, {
     search: query,
-    perPage: limit,
+    perPage: limit
   });
   return (data?.Page?.media ?? []).map(parseManga);
 }

@@ -16,9 +16,10 @@
 
   const mangaName = $derived(svc.provider?.mangaName ?? '');
   const chapters = $derived(svc.chapters);
-  const totalPages = $derived(chapters.find((c) => c.name === manga.selectedChapter)?.pageCount ?? 0);
+  const totalPages = $derived(
+    chapters.find((c) => c.name === manga.selectedChapter)?.pageCount ?? 0
+  );
   const progress = $derived(totalPages > 0 ? ((manga.currentPage + 1) / totalPages) * 100 : 0);
-
 </script>
 
 <!-- Top bar -->
@@ -46,46 +47,47 @@
   <span class="shrink-0 text-xs tabular-nums opacity-40">
     {manga.currentPage + 1} / {totalPages}
   </span>
-
 </div>
 
 <!-- Bottom controls island -->
 <div
-    class="fixed bottom-4 left-1/2 z-40 w-full max-w-xs -translate-x-1/2 border border-white/10 px-4 transition-transform duration-200 ease-out
-      {visible ? 'pointer-events-auto translate-y-0' : 'pointer-events-none translate-y-[calc(100%+1rem)]'}"
-    style="background: rgba(0,0,0,0.92); padding-top: 1rem; padding-bottom: calc(1rem + var(--safe-bottom, 0px));"
-  >
-    <div class="w-full space-y-3">
-      {#if manga.scrollMode}
-        <div class="flex items-center justify-between">
-          <span class="text-xs font-bold tracking-widest opacity-30">ZOOM</span>
-          <div class="flex items-center gap-3">
-            <button class="cursor-pointer p-1 opacity-40 hover:opacity-100" onclick={zoomOut}>
-              <Minus size={14} />
-            </button>
-            <span class="w-10 text-center text-sm tabular-nums">{Math.round(manga.zoom * 100)}%</span>
-            <button class="cursor-pointer p-1 opacity-40 hover:opacity-100" onclick={zoomIn}>
-              <Plus size={14} />
-            </button>
-          </div>
+  class="fixed bottom-4 left-1/2 z-40 w-full max-w-xs -translate-x-1/2 border border-white/10 px-4 transition-transform duration-200 ease-out
+      {visible
+    ? 'pointer-events-auto translate-y-0'
+    : 'pointer-events-none translate-y-[calc(100%+1rem)]'}"
+  style="background: rgba(0,0,0,0.92); padding-top: 1rem; padding-bottom: calc(1rem + var(--safe-bottom, 0px));"
+>
+  <div class="w-full space-y-3">
+    {#if manga.scrollMode}
+      <div class="flex items-center justify-between">
+        <span class="text-xs font-bold tracking-widest opacity-30">ZOOM</span>
+        <div class="flex items-center gap-3">
+          <button class="cursor-pointer p-1 opacity-40 hover:opacity-100" onclick={zoomOut}>
+            <Minus size={14} />
+          </button>
+          <span class="w-10 text-center text-sm tabular-nums">{Math.round(manga.zoom * 100)}%</span>
+          <button class="cursor-pointer p-1 opacity-40 hover:opacity-100" onclick={zoomIn}>
+            <Plus size={14} />
+          </button>
         </div>
-      {/if}
+      </div>
+    {/if}
 
-      {#if !manga.scrollMode}
-        <Toggle labelA="LTR" labelB="RTL" active={manga.rtl} onclick={toggleRtl} />
-      {/if}
+    {#if !manga.scrollMode}
+      <Toggle labelA="LTR" labelB="RTL" active={manga.rtl} onclick={toggleRtl} />
+    {/if}
 
-      <Toggle labelA="Turn" labelB="Scroll" active={manga.scrollMode} onclick={toggleScrollMode} />
+    <Toggle labelA="Turn" labelB="Scroll" active={manga.scrollMode} onclick={toggleScrollMode} />
 
-      <a
-        href="/settings"
-        class="flex items-center justify-center gap-1.5 pt-1 text-xs tracking-widest opacity-20 hover:opacity-60"
-      >
-        <Settings size={12} />
-        SETTINGS
-      </a>
-    </div>
+    <a
+      href="/settings"
+      class="flex items-center justify-center gap-1.5 pt-1 text-xs tracking-widest opacity-20 hover:opacity-60"
+    >
+      <Settings size={12} />
+      SETTINGS
+    </a>
   </div>
+</div>
 
 <!-- Bottom progress line -->
 <div class="pointer-events-none fixed inset-x-0 z-40" style="bottom: var(--safe-bottom, 0px)">

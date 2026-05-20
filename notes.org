@@ -10,15 +10,17 @@ After the rework of the reader, its too mobile oriented. i would like to ultimat
 
 But, for now: can the bottom bar become a bottom island? it feels too wierd it streching over the whole length of the screen
 
-* TODO File picker
+* DONE File picker
 The file picker isnt working. not on mobile. not on desktop.
 
-* TODO i want real skeleton loader components
+* DONE i want real skeleton loader components
 Industry level.
 IN EACH SINGLE UI THING THAT LOAD (in tha manga details page)
 Be careful of the sizes. i dont want any layout poping from the loadings
 
-* TODO back button on mobile
++ manga details page: there is still layout shift on mobile because of the number of tags. maybe fix the position of the "not this manga?" button to leave space?
+
+* DONE back button on mobile
 i want it to work. right now i just throws me out of the app
 
 * TODO all of the data that is api fetched should be omissable
@@ -41,3 +43,19 @@ First time opening the reader causes a tutorial overlay showing the gestures/cli
 
 * TODO Current manga on hover should also change style
 like, the other ones when we hover they become a little lighter. i want also a hover reaction for the current chapter. for some reason it doesnt have any
+
+* TODO fix graddle
+[Incubating] Problems report is available at: file:///home/nasreddin/Prog/konigslibrary/src-tauri/gen/android/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.14.3/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+Performing Streamed Install
+
+* TODO Dont show "Drop here" on mobile
+It doesn't make sense
+
+* TODO fix manga cover image being cropped
+we want fixed dimension still so we have to contain the whole image inside our defined dimensions

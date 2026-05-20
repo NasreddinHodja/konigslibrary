@@ -20,7 +20,7 @@ export function createReaderServices(): ReaderServices {
     shouldScroll: false,
     zoom: 1,
     scrollMode: browser ? localStorage.getItem(LS_SCROLL_MODE) !== 'false' : true,
-    rtl: browser ? localStorage.getItem(LS_RTL) === 'true' : false,
+    rtl: browser ? localStorage.getItem(LS_RTL) === 'true' : false
   });
 
   const commands = createDefaultRegistry();

@@ -216,7 +216,7 @@
       <h2 class="text-lg font-bold opacity-80">Server</h2>
       <h3 class="text-sm font-bold opacity-60">Manga directory</h3>
       {#if loadingDir}
-        <p class="text-sm opacity-40">Loading...</p>
+        <div class="skeleton h-10 w-full border-2 border-transparent"></div>
       {:else}
         <input
           type="text"

@@ -55,7 +55,10 @@
   $effect(() => {
     if (!pickerOpen) return;
     const query = pickerQuery.trim();
-    if (!query) { pickerResults = []; return; }
+    if (!query) {
+      pickerResults = [];
+      return;
+    }
     const t = setTimeout(() => runPickerSearch(), 350);
     return () => clearTimeout(t);
   });
@@ -72,7 +75,10 @@
     metaError = false;
     searchManga(mangaName)
       .then(async (result) => {
-        if (!result) { metaError = true; return; }
+        if (!result) {
+          metaError = true;
+          return;
+        }
         meta = result;
         if (result.status === 'ongoing' && result.mangadexId) {
           const latest = await fetchLatestChapter(result.mangadexId);
@@ -137,97 +143,97 @@
           alt={meta?.title ?? mangaName}
           class="absolute inset-0 h-full w-full object-cover"
         />
-      {:else}
+      {:else if meta || metaError}
         <div class="flex h-full w-full items-center justify-center">
           <BookOpen size={32} class="opacity-10" />
         </div>
+      {:else}
+        <div class="skeleton absolute inset-0"></div>
       {/if}
     </div>
 
     <!-- Info -->
-    <div class="flex min-w-0 flex-1 flex-col">
+    <div class="flex min-w-0 flex-1 flex-col min-h-[270px] sm:min-h-56">
       <h1 class="text-xl leading-tight font-bold">
         {meta?.title || mangaName}
       </h1>
-      {#if meta?.title && meta.title !== mangaName}
-        <p class="mt-0.5 text-xs opacity-30">{mangaName}</p>
-      {/if}
+      <p class="mt-0.5 text-xs opacity-30">{mangaName}</p>
 
       <div class="mt-3 flex min-h-[5rem] flex-col gap-3">
-      {#if meta}
-        <div class="flex flex-wrap items-center gap-3">
-          {#if meta.status}
-            <span
-              class="border px-2 py-0.5 text-xs font-bold tracking-widest
+        {#if meta}
+          <div class="flex flex-wrap items-center gap-3">
+            {#if meta.status}
+              <span
+                class="border px-2 py-0.5 text-xs font-bold tracking-widest
                 {meta.status === 'ongoing'
-                ? 'border-green-500/50 text-green-400'
-                : 'border-white/20 opacity-50'}"
-            >
-              {STATUS_LABEL[meta.status] ?? meta.status.toUpperCase()}
-            </span>
-          {/if}
-          {#if meta.year}
-            <span class="text-xs opacity-40">{meta.year}</span>
-          {/if}
-          {#if meta.authors.length}
-            <span class="text-xs opacity-40">{meta.authors.join(', ')}</span>
-          {/if}
-        </div>
+                  ? 'border-green-500/50 text-green-400'
+                  : 'border-white/20 opacity-50'}"
+              >
+                {STATUS_LABEL[meta.status] ?? meta.status.toUpperCase()}
+              </span>
+            {/if}
+            {#if meta.year}
+              <span class="text-xs opacity-40">{meta.year}</span>
+            {/if}
+            {#if meta.authors.length}
+              <span class="text-xs opacity-40">{meta.authors.join(', ')}</span>
+            {/if}
+          </div>
 
-        {#if meta.tags.length}
+          {#if meta.tags.length}
+            <div class="flex flex-wrap gap-1.5">
+              {#each meta.tags.slice(0, 6) as tag}
+                <span class="border border-white/15 px-2 py-0.5 text-xs opacity-50">{tag}</span>
+              {/each}
+            </div>
+          {/if}
+
+          {#if meta.status === 'ongoing' && meta.latestChapter}
+            <div class="self-start border border-white/10 px-3 py-2 text-xs">
+              <span class="opacity-40">Latest on MangaDex: </span>
+              <span class="">Ch. {meta.latestChapter}</span>
+              {#if meta.latestChapterDate}
+                <span class="opacity-30"> · {formatDate(meta.latestChapterDate)}</span>
+              {/if}
+            </div>
+          {/if}
+        {:else if !metaError}
+          <div class="flex flex-wrap items-center gap-3">
+            <div class="skeleton h-[22px] w-20"></div>
+            <div class="skeleton h-[22px] w-10"></div>
+            <div class="skeleton h-[22px] w-52"></div>
+          </div>
           <div class="flex flex-wrap gap-1.5">
-            {#each meta.tags.slice(0, 12) as tag}
-              <span class="border border-white/15 px-2 py-0.5 text-xs opacity-50">{tag}</span>
+            {#each [64, 72, 56, 90, 200, 180] as w}
+              <div class="skeleton h-[22px]" style="width: {w}px"></div>
             {/each}
           </div>
         {/if}
+      </div>
 
-        {#if meta.status === 'ongoing' && meta.latestChapter}
-          <div class="self-start border border-white/10 px-3 py-2 text-xs">
-            <span class="opacity-40">Latest on MangaDex: </span>
-            <span class="">Ch. {meta.latestChapter}</span>
-            {#if meta.latestChapterDate}
-              <span class="opacity-30"> · {formatDate(meta.latestChapterDate)}</span>
-            {/if}
-          </div>
-        {/if}
-      {:else if !metaError}
-        <div class="flex gap-3">
-          <div class="h-5 w-20 animate-pulse bg-white/10"></div>
-          <div class="h-5 w-10 animate-pulse bg-white/10"></div>
-          <div class="h-5 w-32 animate-pulse bg-white/10"></div>
-        </div>
-        <div class="flex flex-wrap gap-1.5">
-          {#each [60, 44, 72, 56, 48] as w}
-            <div class="h-5 animate-pulse bg-white/10" style="width: {w}px"></div>
-          {/each}
+      {#if savedProgress}
+        <div class="mt-auto pt-4">
+          <button
+            class="cursor-pointer border-1 border-white px-4 py-2 text-sm hover:bg-white hover:text-black"
+            onclick={resume}
+          >
+            RESUME: {savedProgress.chapter}, p.{savedProgress.page + 1}
+          </button>
         </div>
       {/if}
-    </div>
-
-    {#if savedProgress}
-      <div class="mt-6">
-        <button
-          class="cursor-pointer border-1 border-white px-4 py-2 text-sm hover:bg-white hover:text-black"
-          onclick={resume}
-        >
-          RESUME: {savedProgress.chapter}, p.{savedProgress.page + 1}
-        </button>
-      </div>
-    {/if}
     </div>
   </div>
 
   <!-- Not this manga? -->
-  {#if meta || metaError}
-    {#if !pickerOpen}
-      <button
-        class="mt-4 cursor-pointer text-xs opacity-30 hover:opacity-70 underline self-start"
-        onclick={openPicker}
-      >
-        Not this manga?
-      </button>
-    {:else}
+  {#if !pickerOpen}
+    <button
+      class="mt-4 cursor-pointer self-start text-xs underline opacity-30 hover:opacity-70
+        {meta || metaError ? '' : 'invisible pointer-events-none'}"
+      onclick={openPicker}
+    >
+      Not this manga?
+    </button>
+  {:else if meta || metaError}
       <div class="mt-4 border border-white/15 p-4">
         <div class="mb-3 flex items-center justify-between">
           <span class="text-xs font-bold tracking-widest opacity-50">SEARCH ANILIST</span>
@@ -250,7 +256,11 @@
           {:else if pickerQuery}
             <button
               class="cursor-pointer opacity-30 hover:opacity-80"
-              onclick={() => { pickerQuery = ''; pickerResults = []; pickerError = false; }}
+              onclick={() => {
+                pickerQuery = '';
+                pickerResults = [];
+                pickerError = false;
+              }}
             >
               <X size={12} />
             </button>
@@ -274,7 +284,9 @@
                       class="h-12 w-9 shrink-0 object-cover opacity-80"
                     />
                   {:else}
-                    <div class="flex h-12 w-9 shrink-0 items-center justify-center border border-white/10">
+                    <div
+                      class="flex h-12 w-9 shrink-0 items-center justify-center border border-white/10"
+                    >
                       <BookOpen size={14} class="opacity-20" />
                     </div>
                   {/if}
@@ -283,7 +295,8 @@
                     <div class="mt-0.5 flex items-center gap-2 text-xs opacity-40">
                       {#if result.year}<span>{result.year}</span>{/if}
                       {#if result.status}<span>{result.status.toUpperCase()}</span>{/if}
-                      {#if result.authors.length}<span class="truncate">{result.authors[0]}</span>{/if}
+                      {#if result.authors.length}<span class="truncate">{result.authors[0]}</span
+                        >{/if}
                     </div>
                   </div>
                 </button>
@@ -292,7 +305,6 @@
           </ul>
         {/if}
       </div>
-    {/if}
   {/if}
 
   <!-- Divider -->

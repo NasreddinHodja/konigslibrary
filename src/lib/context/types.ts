@@ -12,7 +12,6 @@ export type MangaState = {
   zoom: number;
   scrollMode: boolean;
   rtl: boolean;
-
 };
 
 export type ReaderServices = {

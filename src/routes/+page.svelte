@@ -79,7 +79,9 @@
 
   $effect(() => {
     if (!native) return;
-    invoke('plugin:immersive|setImmersive', { hidden: manga.selectedChapter !== null }).catch(() => {});
+    invoke('plugin:immersive|setImmersive', { hidden: manga.selectedChapter !== null }).catch(
+      () => {}
+    );
   });
 
   $effect(() => {

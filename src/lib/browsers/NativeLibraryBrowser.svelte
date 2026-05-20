@@ -9,7 +9,6 @@
   import { getReaderContext } from '$lib/context';
   import { ZipUploadProvider, NativeFilesystemProvider } from '$lib/sources';
   import { RefreshCw } from 'lucide-svelte';
-  import Loader from '$lib/ui/Loader.svelte';
 
   const { setSource } = getReaderContext();
 
@@ -64,7 +63,13 @@
       No path set - <a href="/settings" class="underline">configure in Settings</a>
     </p>
   {:else if loading}
-    <Loader />
+    <div class="border-2">
+      {#each [170, 200, 145, 185] as w}
+        <div class="flex items-center border-b border-white/10 px-4 py-3 last:border-b-0">
+          <div class="skeleton h-5" style="width: {w}px"></div>
+        </div>
+      {/each}
+    </div>
   {:else if error}
     <p class="text-sm opacity-40">{error}</p>
   {:else if entries.length > 0}
