@@ -1,0 +1,22 @@
+#+title: Notes
+
+* desktop reader
+After the rework of the reader, its too mobile oriented. i would like to ultimately have 2 separate readers.
+
+But, for now: can the bottom bar become a bottom island? it feels too wierd it streching over the whole length of the screen
+
+* File picker
+The file picker isnt working. not on mobile. not on desktop.
+
+* layou shift
+There is layout shift/popping because of the downloading image of the cover of the manga in the manga info page
+
+* manga cover not vertically aligned on mobile
+
+* remove the whole reader chapter list
+There is no more need for the chapter list in the reader
+
+* i want real skeleton loader components
+Industry level.
+IN EACH SINGLE UI THING THAT LOAD (in tha manga details page)
+Be careful of the sizes. i dont want any layout poping from the loadings

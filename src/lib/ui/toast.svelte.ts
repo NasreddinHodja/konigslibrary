@@ -7,9 +7,11 @@ export type Toast = {
   total: number;
   phase: 'fetching' | 'packaging' | 'deleting' | 'done' | 'error';
   cancel?: () => void;
+  errorMessage?: string;
 };
 
 const DISMISS_DELAY = 3000;
+const ERROR_DISMISS_DELAY = 15000;
 
 let toasts: Toast[] = $state([]);
 const dismissTimers = new SvelteMap<string, ReturnType<typeof setTimeout>>();
@@ -27,11 +29,12 @@ export function updateToast(id: string, updates: Partial<Toast>): void {
 
   if (updates.phase === 'done' || updates.phase === 'error') {
     clearTimeout(dismissTimers.get(id));
+    const delay = updates.phase === 'error' ? ERROR_DISMISS_DELAY : DISMISS_DELAY;
     dismissTimers.set(
       id,
       setTimeout(() => {
         removeToast(id);
-      }, DISMISS_DELAY)
+      }, delay)
     );
   }
 }

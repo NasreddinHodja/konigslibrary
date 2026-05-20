@@ -10,7 +10,7 @@ import {
   nextChapter,
   prevChapter
 } from './navigation';
-import { toggleSidebar, closeSidebar, back, showHelp } from './ui';
+import { back, showHelp } from './ui';
 import { toggleMode, toggleRtlCmd, zoomInCmd, zoomOutCmd } from './settings';
 
 export function createDefaultRegistry(): CommandRegistry {
@@ -21,8 +21,6 @@ export function createDefaultRegistry(): CommandRegistry {
   registry.register(prevPageRTL);
   registry.register(nextChapter);
   registry.register(prevChapter);
-  registry.register(toggleSidebar);
-  registry.register(closeSidebar);
   registry.register(back);
   registry.register(showHelp);
   registry.register(toggleMode);

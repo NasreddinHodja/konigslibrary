@@ -21,7 +21,6 @@ export function createReaderServices(): ReaderServices {
     zoom: 1,
     scrollMode: browser ? localStorage.getItem(LS_SCROLL_MODE) !== 'false' : true,
     rtl: browser ? localStorage.getItem(LS_RTL) === 'true' : false,
-    sidebarOpen: true
   });
 
   const commands = createDefaultRegistry();
@@ -65,14 +64,7 @@ export function createReaderServices(): ReaderServices {
 
     events.emit('source:loaded', { kind: provider.kind, mangaName: provider.mangaName });
 
-    const saved = getProgress();
-    if (saved && _chapters.find((c) => c.name === saved.chapter)) {
-      state.selectedChapter = saved.chapter;
-      state.currentPage = saved.page;
-      state.shouldScroll = true;
-    } else if (_chapters.length > 0) {
-      state.selectedChapter = _chapters[0].name;
-    }
+    state.selectedChapter = null;
   }
 
   function clearManga() {
@@ -135,6 +127,10 @@ export function createReaderServices(): ReaderServices {
     state.zoom = Math.max(0.5, Math.round((state.zoom - 0.1) * 100) / 100);
   }
 
+  function getSavedProgress() {
+    return getProgress();
+  }
+
   function saveProgress() {
     const name = _provider?.mangaName;
     if (!browser || !name || state.selectedChapter === null) return;
@@ -177,6 +173,7 @@ export function createReaderServices(): ReaderServices {
     zoomIn,
     zoomOut,
     saveProgress,
+    getSavedProgress,
     getChapterUrls,
     getProvider
   };

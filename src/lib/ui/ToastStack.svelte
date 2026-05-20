@@ -38,7 +38,7 @@
           {:else if toast.phase === 'done'}
             <span class="text-xs opacity-50">Done</span>
           {:else if toast.phase === 'error'}
-            <span class="text-xs opacity-50">Failed</span>
+            <span class="text-xs opacity-50 break-all">{toast.errorMessage ?? 'Failed'}</span>
           {/if}
         </div>
 

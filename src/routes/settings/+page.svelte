@@ -227,7 +227,7 @@
         <div class="flex items-center gap-3">
           <Button size="md" onclick={saveDir}>Save</Button>
           {#if saved}
-            <span class="text-sm opacity-60">Saved — reload to see library</span>
+            <span class="text-sm opacity-60">Saved - reload to see library</span>
           {/if}
           {#if error}
             <span class="text-sm text-red-400">{error}</span>

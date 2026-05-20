@@ -93,7 +93,7 @@ export function saveManga(
   run().catch((err) => {
     if (cancelled || err.name === 'AbortError') return;
     events?.emit('download:error', { slug, error: err.message });
-    updateToast(id, { phase: 'error', cancel: undefined });
+    updateToast(id, { phase: 'error', cancel: undefined, errorMessage: err.message });
   });
 
   return { cancel };
@@ -154,7 +154,7 @@ export function saveChapter(
   run().catch((err) => {
     if (cancelled || err.name === 'AbortError') return;
     events?.emit('download:error', { slug, error: err.message });
-    updateToast(id, { phase: 'error', cancel: undefined });
+    updateToast(id, { phase: 'error', cancel: undefined, errorMessage: err.message });
   });
 
   return { cancel };

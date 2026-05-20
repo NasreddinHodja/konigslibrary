@@ -1,3 +1,5 @@
+mod immersive;
+
 use serde::Serialize;
 
 #[derive(Serialize)]
@@ -29,12 +31,6 @@ fn list_dir(path: String) -> Result<Vec<DirEntry>, String> {
   Ok(results)
 }
 
-#[tauri::command]
-#[allow(unused_variables)]
-fn set_immersive(_app: tauri::AppHandle, _hidden: bool) -> Result<(), String> {
-  // run_mobile_plugin removed in Tauri 2.10 — needs updated mobile plugin API
-  Ok(())
-}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -42,6 +38,7 @@ pub fn run() {
   std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1");
 
   tauri::Builder::default()
+    .plugin(immersive::init())
     .plugin(tauri_plugin_dialog::init())
     .setup(|app| {
       if cfg!(debug_assertions) {
@@ -53,7 +50,7 @@ pub fn run() {
       }
       Ok(())
     })
-    .invoke_handler(tauri::generate_handler![home_dir, list_dir, set_immersive])
+    .invoke_handler(tauri::generate_handler![home_dir, list_dir])
     .run(tauri::generate_context!())
     .expect("error while running tauri application");
 }

@@ -3,14 +3,14 @@ import type { Command } from './types';
 export const toggleMode: Command = {
   id: 'toggleMode',
   execute(ctx) {
-    if (ctx.services.state.sidebarOpen) ctx.services.toggleScrollMode();
+    ctx.services.toggleScrollMode();
   }
 };
 
 export const toggleRtlCmd: Command = {
   id: 'toggleRtl',
   execute(ctx) {
-    if (ctx.services.state.sidebarOpen) ctx.services.toggleRtl();
+    ctx.services.toggleRtl();
   }
 };
 

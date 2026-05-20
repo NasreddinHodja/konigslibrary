@@ -3,10 +3,8 @@
   import { resolveKey } from '$lib/keyboard/keybindings.svelte';
   import type { ViewerCommands } from '$lib/commands';
   import { createReaderServices, setReaderContext } from '$lib/context';
-  import Sidebar from '$lib/ui/Sidebar.svelte';
   import ReaderHud from '$lib/ui/ReaderHud.svelte';
-  import Button from '$lib/ui/Button.svelte';
-  import EmptyState from '$lib/ui/EmptyState.svelte';
+  import MangaDetail from '$lib/ui/MangaDetail.svelte';
   import UploadButton from '$lib/browsers/UploadButton.svelte';
   import LibraryBrowser from '$lib/browsers/LibraryBrowser.svelte';
   import NativeLibraryBrowser from '$lib/browsers/NativeLibraryBrowser.svelte';
@@ -79,23 +77,9 @@
 
   const isMobile = typeof window !== 'undefined' && 'ontouchstart' in window;
 
-  function enterFullscreen() {
-    if (native) return;
-    if (isMobile && !document.fullscreenElement) {
-      document.documentElement.requestFullscreen().catch(() => {});
-    }
-  }
-
-  $effect(() => {
-    if (native) return;
-    if (manga.selectedChapter === null && document.fullscreenElement) {
-      document.exitFullscreen().catch(() => {});
-    }
-  });
-
   $effect(() => {
     if (!native) return;
-    invoke('set_immersive', { hidden: chapters.length > 0 }).catch(() => {});
+    invoke('plugin:immersive|setImmersive', { hidden: manga.selectedChapter !== null }).catch(() => {});
   });
 
   $effect(() => {
@@ -134,8 +118,8 @@
       if (helpOpen) {
         helpOpen = false;
         pushState('', { kl: 'reader' });
-      } else if (isMobile && manga.sidebarOpen) {
-        manga.sidebarOpen = false;
+      } else if (manga.selectedChapter !== null) {
+        manga.selectedChapter = null;
         pushState('', { kl: 'reader' });
       } else {
         svc.clearManga();
@@ -167,7 +151,7 @@
     }
 
     if (helpOpen) {
-      if (action === 'closeSidebar') {
+      if (action === 'close') {
         event.preventDefault();
         helpOpen = false;
       }
@@ -280,41 +264,20 @@
       {/if}
     </div>
   </div>
+{:else if manga.selectedChapter === null}
+  <MangaDetail />
 {:else}
-  <div class="flex h-dvh select-none" onclick={enterFullscreen} role="presentation">
-    <Sidebar />
-
-    {#if manga.selectedChapter !== null && activeViewer}
+  <div class="flex h-dvh select-none" role="presentation">
+    {#if activeViewer}
       {@const Viewer = activeViewer.component}
       <Viewer bind:commands={viewerCommands} ontap={toggleHud} />
-    {:else if manga.selectedChapter === null}
-      <EmptyState>
-        <Button
-          size="lg"
-          variant="primary"
-          onclick={() => {
-            manga.sidebarOpen = true;
-            showHud();
-          }}
-        >
-          Select a chapter
-        </Button>
-      </EmptyState>
     {/if}
 
     <ReaderHud
       visible={hudVisible}
-      mangaName={svc.provider?.mangaName ?? ''}
-      chapterName={manga.selectedChapter}
-      currentPage={manga.currentPage}
-      totalPages={svc.chapters.find((c) => c.name === manga.selectedChapter)?.pageCount ?? 0}
       onback={() => {
         hideHud();
-        svc.clearManga();
-      }}
-      onmenu={() => {
-        hideHud();
-        manga.sidebarOpen = true;
+        manga.selectedChapter = null;
       }}
     />
   </div>

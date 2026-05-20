@@ -21,6 +21,6 @@ export const windowTitlePlugin: Plugin = {
 
   onSourceLoaded(mangaName: string) {
     if (!isNative()) return;
-    setTitle(`${mangaName} — ${DEFAULT_TITLE}`);
+    setTitle(`${mangaName} - ${DEFAULT_TITLE}`);
   }
 };

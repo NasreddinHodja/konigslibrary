@@ -31,7 +31,7 @@
     }
 
     if (!('showOpenFilePicker' in window)) {
-      showError('File picker not supported — try dragging your file here instead');
+      showError('File picker not supported - try dragging your file here instead');
       return;
     }
     try {

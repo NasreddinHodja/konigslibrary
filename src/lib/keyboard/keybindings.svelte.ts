@@ -7,8 +7,7 @@ export type Action =
   | 'prevPageRTL'
   | 'nextChapter'
   | 'prevChapter'
-  | 'toggleSidebar'
-  | 'closeSidebar'
+  | 'close'
   | 'back'
   | 'showHelp'
   | 'toggleMode'
@@ -44,8 +43,7 @@ export const DEFAULT_BINDINGS: KeyBinding[] = [
   { action: 'nextChapter', keys: ['n', ']'], label: 'Next chapter', category: 'Navigation' },
   { action: 'prevChapter', keys: ['p', '['], label: 'Previous chapter', category: 'Navigation' },
   { action: 'holdZoom', keys: ['z'], label: 'Hold to zoom', category: 'Navigation' },
-  { action: 'toggleSidebar', keys: ['s'], label: 'Toggle sidebar', category: 'UI' },
-  { action: 'closeSidebar', keys: ['Escape'], label: 'Close sidebar / help', category: 'UI' },
+  { action: 'close', keys: ['Escape'], label: 'Close overlay', category: 'UI' },
   { action: 'back', keys: ['b'], label: 'Back to library', category: 'UI' },
   { action: 'showHelp', keys: ['?'], label: 'Toggle shortcut help', category: 'UI' },
   { action: 'toggleMode', keys: ['m'], label: 'Toggle scroll/turn mode', category: 'Settings' },

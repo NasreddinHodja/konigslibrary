@@ -61,7 +61,7 @@
 
   {#if !mangaDir}
     <p class="text-sm opacity-40">
-      No path set — <a href="/settings" class="underline">configure in Settings</a>
+      No path set - <a href="/settings" class="underline">configure in Settings</a>
     </p>
   {:else if loading}
     <Loader />

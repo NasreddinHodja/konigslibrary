@@ -12,7 +12,7 @@ export type MangaState = {
   zoom: number;
   scrollMode: boolean;
   rtl: boolean;
-  sidebarOpen: boolean;
+
 };
 
 export type ReaderServices = {
@@ -34,6 +34,7 @@ export type ReaderServices = {
   zoomIn(): void;
   zoomOut(): void;
   saveProgress(): void;
+  getSavedProgress(): { chapter: string; page: number } | null;
   getChapterUrls(name: string): Promise<PageResult>;
   getProvider(): SourceProvider | null;
 };
