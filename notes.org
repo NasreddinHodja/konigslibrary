@@ -1,5 +1,11 @@
 #+title: Notes
 
+* TODO can we have automatic updates on android?
+or, at least, a have a check for new versions (updates of the apk when a new deploy of the website happens, that where im hosting the apk). and a button to download/install it?
+
+* DONE Fix: download fails on mobile if screen locks :mobile:
+if i minimize the app there is no problem though. only when i lock the screen.
+
 * DONE page turn really turns pages lol
 Visually, like media/gallery apps.
 Also, on mobile the swiping to pass pages should work and be very responsive (i want it to feel like the page is following my finger turning it.). and remember to update the tutorial overlays
@@ -10,12 +16,6 @@ in settings, i want to be able to input the server url, press enter, and get tak
 * DONE the back button in settings should have the same layout/style/position as the one in manga details
 
 * DONE new prints for the readme
-
-* TODO Fix: download fails on mobile if screen locks :mobile:
-if i minimize the app there is no problem though. only when i lock the screen.
-
-* TODO can we have automatic updates on android?
-or, at least, a have a check for new versions (updates of the apk when a new deploy of the website happens, that where im hosting the apk). and a button to download/install it?
 
 * DONE reduce size of upload manga button in mobile
 

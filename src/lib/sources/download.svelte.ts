@@ -60,34 +60,42 @@ export function saveManga(
   addToast({ id, label: name, current: 0, total: totalPages, phase: 'fetching', cancel });
 
   const run = async () => {
-    const isZipManga = /\.(zip|cbz)$/i.test(decodeURIComponent(slug));
-    let fetched = 0;
+    type NativeBridge = { acquireWakeLock(): void; releaseWakeLock(): void };
+    const bridge = (window as unknown as { __kl?: NativeBridge }).__kl;
+    bridge?.acquireWakeLock();
 
-    const allPages = chapters.flatMap((chapter) =>
-      chapter.pages.map((page) => ({ chapter, page }))
-    );
+    try {
+      const isZipManga = /\.(zip|cbz)$/i.test(decodeURIComponent(slug));
+      let fetched = 0;
 
-    await downloadPool(
-      allPages,
-      async ({ chapter, page }) => {
-        const url = buildPageUrl(slug, chapter, page, isZipManga);
-        const res = await fetch(url, { signal: controller.signal });
-        if (!res.ok) throw new Error(`Failed to fetch ${url}: ${res.status}`);
-        const blob = await res.blob();
+      const allPages = chapters.flatMap((chapter) =>
+        chapter.pages.map((page) => ({ chapter, page }))
+      );
 
-        const filename = page.split('/').pop() || page;
-        await saveOfflinePage(slug, chapter.name, filename, blob);
+      await downloadPool(
+        allPages,
+        async ({ chapter, page }) => {
+          const url = buildPageUrl(slug, chapter, page, isZipManga);
+          const res = await fetch(url, { signal: controller.signal });
+          if (!res.ok) throw new Error(`Failed to fetch ${url}: ${res.status}`);
+          const blob = await res.blob();
 
-        fetched++;
-        updateToast(id, { current: fetched });
-      },
-      CONCURRENT_DOWNLOADS,
-      controller.signal
-    );
+          const filename = page.split('/').pop() || page;
+          await saveOfflinePage(slug, chapter.name, filename, blob);
 
-    await saveOfflineMangaMeta(slug, name, chapters);
-    events?.emit('download:complete', { slug });
-    updateToast(id, { phase: 'done', cancel: undefined });
+          fetched++;
+          updateToast(id, { current: fetched });
+        },
+        CONCURRENT_DOWNLOADS,
+        controller.signal
+      );
+
+      await saveOfflineMangaMeta(slug, name, chapters);
+      events?.emit('download:complete', { slug });
+      updateToast(id, { phase: 'done', cancel: undefined });
+    } finally {
+      bridge?.releaseWakeLock();
+    }
   };
 
   run().catch((err) => {
@@ -125,30 +133,38 @@ export function saveChapter(
   });
 
   const run = async () => {
-    const isZipManga = /\.(zip|cbz)$/i.test(decodeURIComponent(slug));
-    let fetched = 0;
+    type NativeBridge = { acquireWakeLock(): void; releaseWakeLock(): void };
+    const bridge = (window as unknown as { __kl?: NativeBridge }).__kl;
+    bridge?.acquireWakeLock();
 
-    await downloadPool(
-      chapter.pages,
-      async (page) => {
-        const url = buildPageUrl(slug, chapter, page, isZipManga);
-        const res = await fetch(url, { signal: controller.signal });
-        if (!res.ok) throw new Error(`Failed to fetch ${url}: ${res.status}`);
-        const blob = await res.blob();
+    try {
+      const isZipManga = /\.(zip|cbz)$/i.test(decodeURIComponent(slug));
+      let fetched = 0;
 
-        const filename = page.split('/').pop() || page;
-        await saveOfflinePage(slug, chapter.name, filename, blob);
+      await downloadPool(
+        chapter.pages,
+        async (page) => {
+          const url = buildPageUrl(slug, chapter, page, isZipManga);
+          const res = await fetch(url, { signal: controller.signal });
+          if (!res.ok) throw new Error(`Failed to fetch ${url}: ${res.status}`);
+          const blob = await res.blob();
 
-        fetched++;
-        updateToast(id, { current: fetched });
-      },
-      CONCURRENT_DOWNLOADS,
-      controller.signal
-    );
+          const filename = page.split('/').pop() || page;
+          await saveOfflinePage(slug, chapter.name, filename, blob);
 
-    await saveOfflineMangaMeta(slug, mangaName, [chapter]);
-    events?.emit('download:complete', { slug, chapterName: chapter.name });
-    updateToast(id, { phase: 'done', cancel: undefined });
+          fetched++;
+          updateToast(id, { current: fetched });
+        },
+        CONCURRENT_DOWNLOADS,
+        controller.signal
+      );
+
+      await saveOfflineMangaMeta(slug, mangaName, [chapter]);
+      events?.emit('download:complete', { slug, chapterName: chapter.name });
+      updateToast(id, { phase: 'done', cancel: undefined });
+    } finally {
+      bridge?.releaseWakeLock();
+    }
   };
 
   run().catch((err) => {
