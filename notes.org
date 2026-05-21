@@ -5,12 +5,20 @@ Visually, like media/gallery apps.
 Also, on mobile the swiping to pass pages should work and be very responsive (i want it to feel like the page is following my finger turning it.). and remember to update the tutorial overlays
 
 * TODO Go back home after setting server url
-in settings, i want to be able to input the server url, press enter, and get taken to home automatically
+in settings, i want to be able to input the server url, press enter, and get taken to home automatically if the connection succeeds. show error if not
 
-* TODO navigation on mobile :mobile:
+* TODO new prints for the readme
+
+* DONE navigation on mobile :mobile:
 i want it to work. right now, when i swipe for "back" it just throws me out of the app
 
-* TODO fix graddle :mobile:
+* TODO Fix: download fails on mobile if screen locks :mobile:
+if i minimize the app there is no problem though. only when i lock the screen.
+
+* TODO can we have automatic updates on android?
+or, at least, a have a check for new versions (updates of the apk when a new deploy of the website happens, that where im hosting the apk). and a button to download/install it?
+
+* DONE fix graddle :mobile:
 when runnig "dev:mobile":
 
 [Incubating] Problems report is available at: file:///home/nasreddin/Prog/konigslibrary/src-tauri/gen/android/build/reports/problems/problems-report.html
@@ -21,9 +29,6 @@ You can use '--warning-mode all' to show the individual deprecation warnings and
 
 For more on this, please refer to https://docs.gradle.org/8.14.3/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
 Performing Streamed Install
-
-* TODO can we have automatic updates on android?
-or, at least, a have a check for new versions (updates of the apk when a new deploy of the website happens, that where im hosting the apk). and a button to download/install it?
 
 * DONE there is still layout shift
 the loader assumes there is just one line of tags. i want it to be 2

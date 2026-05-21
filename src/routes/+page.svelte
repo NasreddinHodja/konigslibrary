@@ -13,7 +13,6 @@
   import OfflineBrowser from '$lib/browsers/OfflineBrowser.svelte';
   import KeyboardHelp from '$lib/keyboard/KeyboardHelp.svelte';
   import { isNative } from '$lib/utils/platform';
-  import { invoke } from '@tauri-apps/api/core';
   import { isLocalServer } from '$lib/utils/constants';
   import { pushState } from '$app/navigation';
   import { CircleQuestionMark, Settings } from 'lucide-svelte';
@@ -103,9 +102,8 @@
 
   $effect(() => {
     if (!native) return;
-    invoke('plugin:immersive|setImmersive', { hidden: manga.selectedChapter !== null }).catch(
-      () => {}
-    );
+    const hidden = manga.selectedChapter !== null && !hudVisible;
+    (window as unknown as { __kl?: { setImmersive(h: boolean): void } }).__kl?.setImmersive(hidden);
   });
 
   $effect(() => {
@@ -154,6 +152,28 @@
 
     window.addEventListener('popstate', onPopState);
     return () => window.removeEventListener('popstate', onPopState);
+  });
+
+  $effect(() => {
+    if (!native) return;
+    const onNativeBack = (e: Event) => {
+      if (helpOpen) {
+        helpOpen = false;
+        e.preventDefault();
+        return;
+      }
+      if (manga.selectedChapter !== null) {
+        manga.selectedChapter = null;
+        e.preventDefault();
+        return;
+      }
+      if (chapters.length > 0) {
+        svc.clearManga();
+        e.preventDefault();
+      }
+    };
+    window.addEventListener('nativeback', onNativeBack);
+    return () => window.removeEventListener('nativeback', onNativeBack);
   });
 
   const handleKey = (event: KeyboardEvent) => {
