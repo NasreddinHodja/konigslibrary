@@ -34,6 +34,9 @@ src-tauri/gen/android/
 # APK signing metadata
 *.idsig
 
+# Local update manifest — never commit test versions
+static/download/update.json
+
 # Test files
 static/*.zip
 static/*.cbz
@@ -41,3 +44,6 @@ static/*.cbz
 # claude
 .claude/
 CLAUDE.md
+
+# notes
+notes.org

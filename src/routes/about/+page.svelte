@@ -13,8 +13,7 @@
   <section class="space-y-3">
     <h2 class="text-lg font-bold opacity-80">Browser only</h2>
     <p class="text-sm leading-relaxed opacity-70">
-      Upload a ZIP or CBZ file and read it directly in your browser. No install needed, nothing
-      leaves your device.
+      Upload a ZIP or CBZ file and read it directly in your browser.
     </p>
   </section>
 
@@ -35,7 +34,7 @@
     <h2 class="text-lg font-bold opacity-80">Desktop app</h2>
     <p class="text-sm leading-relaxed opacity-70">
       The desktop app (built with Tauri) can read manga directly from a local folder. Point it at
-      your manga directory and browse your library without uploading anything.
+      your manga directory and browse your library.
     </p>
   </section>
 
@@ -59,7 +58,7 @@
           class="border-b border-white/40 hover:border-white/80">Windows</a
         >
       </li>
-      <li>Run the script &mdash; it handles Node.js, building, and starting the server</li>
+      <li>Run it. It handles Node.js, building, and starting the server</li>
       <li>Open the local URL in your browser and set your manga directory in Settings</li>
     </ol>
   </section>

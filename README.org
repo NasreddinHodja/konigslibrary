@@ -7,22 +7,21 @@
 #+html: <a href="https://www.typescriptlang.org"><img src="https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white"></a>
 #+html: <a href="https://v2.tauri.app"><img src="https://img.shields.io/badge/Tauri-2-FFC131?logo=tauri&logoColor=white"></a>
 
-A manga/comic reader that runs entirely in the browser. Upload a ZIP/CBZ and start reading - all parsing, decompression, and image extraction happen client-side using the Web Compression API. No server, no uploads, nothing leaves your machine. Also ships as a native desktop/mobile app via Tauri and a self-hosted local server for LAN access.
+Manga reader that opens ZIP and CBZ archives. Runs in the browser, as a desktop/mobile app (Tauri), or as a self-hosted server for LAN access. No accounts or cloud services.
 
 #+html: <p align="center"><img src=".github/readme/home-mobile.png" alt="Mobile home" width="260">&nbsp;&nbsp;<img src=".github/readme/sidebar-mobile.png" alt="Mobile manga detail" width="260">&nbsp;&nbsp;<img src=".github/readme/reader-mobile.png" alt="Mobile reader" width="260"></p>
 
 * Features
 
-- *Two reading modes* - vertical scroll with IntersectionObserver page tracking, or page-turn with left/right click zones and image preloading
-- *RTL support* - right-to-left reading with reversed navigation
-- *Hold-to-zoom* - press =z= in page-turn mode to zoom to cursor position
-- *Progress saving* - chapter and page position persisted to localStorage, auto-resumes on return
-- *Offline downloads* - download manga or individual chapters to IndexedDB for offline reading
-- *Customizable keybindings* - rebind every shortcut from the Settings page
-- *Plugin system* - extensible viewer and plugin architecture with a runner/registry pattern
-- *Desktop & mobile app* - native Tauri 2 app (Rust shell) that reads from a local directory with file dialog support
-- *Self-hosted server* - adapter-node build that serves manga from a directory to any device on your network
-- *Zero dependencies for ZIP* - custom ZIP/CBZ parser (with ZIP64 support) built on the Web Compression API, no libraries
+- Vertical scroll mode and page-turn mode
+- RTL reading support
+- Hold =z= to zoom to cursor in page-turn mode
+- Chapter and page progress saved to localStorage
+- Offline downloads via IndexedDB
+- Rebindable keyboard shortcuts
+- Native Tauri 2 desktop app with file dialog
+- Self-hosted server mode (adapter-node) for LAN access
+- Custom ZIP/CBZ parser with ZIP64 support, no third-party ZIP library
 
 * Architecture
 
@@ -45,8 +44,6 @@ src/lib/
 └── zip/             # Custom ZIP/CBZ parser (ZIP64, Web Compression API)
 #+end_src
 
-State management uses a =createReaderServices()= factory that wires together a Svelte 5 =$state= object with the command registry, event bus, viewer registry, and plugin runner. No stores, no context API - one reactive service object owns all reader state and logic.
-
 * Tech Stack
 
 | Layer       | Technology                                     |
@@ -59,15 +56,15 @@ State management uses a =createReaderServices()= factory that wires together a S
 | Icons       | Lucide Svelte                                   |
 | Quality     | ESLint 9, Prettier, Vitest, svelte-check         |
 
-* Quick Start
+* Usage
 
-** Online (no install)
+** Browser
 
 Visit the deployed site and drop a ZIP or CBZ file.
 
-** Local Server (one-click)
+** Self-hosted server
 
-Download and run the starter script - it handles Node.js installation, building, and serving:
+Download and run the starter script:
 
 *** Linux / macOS
 
@@ -79,20 +76,11 @@ chmod +x konigslibrary.sh
 
 *** Windows
 
-Download =konigslibrary.bat= from the repo's =static/download/= directory and double-click it.
+Download =konigslibrary.bat= from =static/download/= and run it.
 
-*** What happens
+The script installs Node.js 22 if needed, builds the app, and starts a server on =http://localhost:3000=. LAN addresses are printed so other devices can connect.
 
-1. Downloads Node.js 22 (if not already installed)
-2. Downloads the source, installs dependencies, builds with =adapter-node=
-3. Starts the server on =http://localhost:3000=
-4. Auto-opens your browser
-
-The server prints LAN addresses so other devices on your network can connect.
-
-** Local Server (manual)
-
-If you already have Node.js >= 22 and pnpm:
+*** Manual (Node.js 22+ required)
 
 #+begin_src sh
 pnpm install
@@ -100,13 +88,13 @@ pnpm build:local
 pnpm serve
 #+end_src
 
-Set =MANGA_DIR= to point at your manga directory:
+Set =MANGA_DIR= to your manga directory:
 
 #+begin_src sh
 MANGA_DIR=~/Manga pnpm serve
 #+end_src
 
-Or configure it through the Settings panel in the web UI (saved to =konigslibrary.json=).
+Or configure it through Settings in the UI (saved to =konigslibrary.json=).
 
 ** Desktop App (Tauri)
 
@@ -114,8 +102,6 @@ Or configure it through the Settings panel in the web UI (saved to =konigslibrar
 pnpm tauri:local          # dev mode
 pnpm tauri build          # release build
 #+end_src
-
-The desktop app reads manga directly from a local folder. Use the settings gear to pick your manga directory (or use the file dialog).
 
 ** Android
 
@@ -132,7 +118,7 @@ A signed APK is available at =static/download/konigslibrary.apk=.
 
 * Library Structure
 
-Chapter detection is based on *directory structure*, not naming conventions. Folder names can be anything (=ch01=, =volume_1=, =foo=) - the parser doesn't pattern-match on names.
+Chapter detection is based on directory structure, not naming conventions.
 
 ** Local server / Tauri (directories)
 
@@ -153,8 +139,8 @@ MANGA_DIR/
 #+end_src
 
 - Each top-level entry in =MANGA_DIR= is one manga (directory or ZIP/CBZ)
-- If a manga directory has *subdirectories*, each subdirectory is a chapter
-- If it has *only images* at the root, it's treated as a single chapter
+- If a manga directory has subdirectories, each subdirectory is a chapter
+- If it has only images at the root, it's treated as a single chapter
 - Hidden files/folders (starting with =.=) are ignored
 
 ** ZIP/CBZ files (uploaded or on server)
@@ -171,11 +157,11 @@ manga.cbz
         └── 01.png
 #+end_src
 
-If the ZIP has no subdirectories (all images at the root), it's a single chapter.
+If the ZIP has no subdirectories, it's treated as a single chapter.
 
 ** Sorting
 
-Chapters are sorted *lexicographically* by name. This means =ch10= sorts before =ch2=. To get correct numeric ordering, zero-pad your folder names:
+Chapters sort lexicographically. Zero-pad folder names to get correct numeric order:
 
 | Wrong           | Right            |
 |-----------------+------------------|

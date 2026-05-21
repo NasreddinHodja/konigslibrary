@@ -133,7 +133,7 @@
       'dragging=',
       dragging
     );
-    if (showEndScreen || zoomHeld) return;
+    if (zoomHeld) return;
     // If a slide animation is in progress, commit it immediately and start fresh.
     if (animTimer) {
       clearTimeout(animTimer);
@@ -263,125 +263,136 @@
   );
 </script>
 
-<div
-  bind:this={containerEl}
-  class="relative flex h-full flex-1 items-center justify-center overflow-hidden bg-black select-none"
-  style="padding-bottom: calc(var(--safe-bottom) - var(--safe-top))"
-  onmousemove={handleMouseMove}
-  ontouchstart={onTouchStart}
-  ontouchmove={onTouchMove}
-  ontouchend={onTouchEnd}
-  role="region"
-  aria-label="Page {manga.currentPage + 1} of {chapter.pageUrls.length}"
->
-  {#if chapter.loading}
-    <Loader />
-  {:else if chapter.error}
-    <p class="py-8 text-center text-sm opacity-60">Failed to load chapter: {chapter.error}</p>
-  {:else if showEndScreen}
+{#if showEndScreen}
+  <div
+    class="flex h-full flex-1 items-center justify-center bg-black"
+    role="region"
+    aria-label="End of chapter"
+    ontouchstart={onTouchStart}
+    ontouchmove={onTouchMove}
+    ontouchend={onTouchEnd}
+  >
     <EndOfChapter onback={() => (showEndScreen = false)} />
-  {:else}
-    <!-- Prev panel -->
-    <div
-      class="absolute inset-0 flex items-center justify-center"
-      style:transform="translateX(calc(-100% + {offset}px))"
-      style:transition={transStyle}
-      aria-hidden="true"
-    >
-      {#if prevUrl}
-        <img src={prevUrl} alt="Previous page" class="max-h-full max-w-full object-contain" />
-      {/if}
-    </div>
-
-    <!-- Current panel -->
-    <div
-      class="absolute inset-0 flex items-center justify-center"
-      style:transform="translateX({offset}px)"
-      style:transition={transStyle}
-    >
+  </div>
+{:else}
+  <div
+    bind:this={containerEl}
+    class="relative flex h-full flex-1 items-center justify-center overflow-hidden bg-black select-none"
+    style="padding-bottom: calc(var(--safe-bottom) - var(--safe-top))"
+    onmousemove={handleMouseMove}
+    ontouchstart={onTouchStart}
+    ontouchmove={onTouchMove}
+    ontouchend={onTouchEnd}
+    role="region"
+    aria-label="Page {manga.currentPage + 1} of {chapter.pageUrls.length}"
+  >
+    {#if chapter.loading}
+      <Loader />
+    {:else if chapter.error}
+      <p class="py-8 text-center text-sm opacity-60">Failed to load chapter: {chapter.error}</p>
+    {:else}
+      <!-- Prev panel -->
       <div
-        bind:this={pageEl}
-        class="flex h-full w-full items-center justify-center"
-        style:transform={zoomHeld ? `scale(${PAGE_TURN_ZOOM})` : undefined}
-        style:transform-origin="{originX}% {originY}%"
-        style:transition={zoomHeld ? 'none' : 'transform 0.15s ease-out'}
+        class="absolute inset-0 flex items-center justify-center"
+        style:transform="translateX(calc(-100% + {offset}px))"
+        style:transition={transStyle}
+        aria-hidden="true"
       >
-        {#if currentUrl}
-          <img
-            src={currentUrl}
-            alt="Page {manga.currentPage + 1} of {chapter.pageUrls.length}"
-            class="max-h-full max-w-full object-contain"
-            onerror={(e) => {
-              const img = e.currentTarget as HTMLImageElement;
-              img.style.display = 'none';
-              const p = document.createElement('p');
-              p.className = 'py-8 text-sm opacity-40';
-              p.textContent = 'Failed to load page';
-              img.insertAdjacentElement('afterend', p);
-            }}
-          />
+        {#if prevUrl}
+          <img src={prevUrl} alt="Previous page" class="max-h-full max-w-full object-contain" />
         {/if}
       </div>
-    </div>
 
-    <!-- Next panel -->
+      <!-- Current panel -->
+      <div
+        class="absolute inset-0 flex items-center justify-center"
+        style:transform="translateX({offset}px)"
+        style:transition={transStyle}
+      >
+        <div
+          bind:this={pageEl}
+          class="flex h-full w-full items-center justify-center"
+          style:transform={zoomHeld ? `scale(${PAGE_TURN_ZOOM})` : undefined}
+          style:transform-origin="{originX}% {originY}%"
+          style:transition={zoomHeld ? 'none' : 'transform 0.15s ease-out'}
+        >
+          {#if currentUrl}
+            <img
+              src={currentUrl}
+              alt="Page {manga.currentPage + 1} of {chapter.pageUrls.length}"
+              class="max-h-full max-w-full object-contain"
+              onerror={(e) => {
+                const img = e.currentTarget as HTMLImageElement;
+                img.style.display = 'none';
+                const p = document.createElement('p');
+                p.className = 'py-8 text-sm opacity-40';
+                p.textContent = 'Failed to load page';
+                img.insertAdjacentElement('afterend', p);
+              }}
+            />
+          {/if}
+        </div>
+      </div>
+
+      <!-- Next panel -->
+      <div
+        class="absolute inset-0 flex items-center justify-center"
+        style:transform="translateX(calc(100% + {offset}px))"
+        style:transition={transStyle}
+        aria-hidden="true"
+      >
+        {#if nextUrl}
+          <img src={nextUrl} alt="Next page" class="max-h-full max-w-full object-contain" />
+        {/if}
+      </div>
+    {/if}
+
+    <!-- Click zones: onpointerup with mouse guard so touch never triggers these -->
     <div
-      class="absolute inset-0 flex items-center justify-center"
-      style:transform="translateX(calc(100% + {offset}px))"
-      style:transition={transStyle}
-      aria-hidden="true"
-    >
-      {#if nextUrl}
-        <img src={nextUrl} alt="Next page" class="max-h-full max-w-full object-contain" />
-      {/if}
-    </div>
-  {/if}
+      role="button"
+      tabindex="0"
+      class="absolute inset-y-0 left-0 z-10 w-[40%]"
+      class:cursor-zoom-in={zoomHeld}
+      class:cursor-w-resize={!zoomHeld}
+      aria-label="Previous page"
+      onpointerup={(e) => {
+        if (e.pointerType !== 'mouse') return;
+        handleClickLeft();
+      }}
+      onkeydown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') handleClickLeft();
+      }}
+    ></div>
 
-  <!-- Click zones: onpointerup with mouse guard so touch never triggers these -->
-  <div
-    role="button"
-    tabindex="0"
-    class="absolute inset-y-0 left-0 z-10 w-[40%]"
-    class:cursor-zoom-in={zoomHeld}
-    class:cursor-w-resize={!zoomHeld}
-    aria-label="Previous page"
-    onpointerup={(e) => {
-      if (e.pointerType !== 'mouse') return;
-      handleClickLeft();
-    }}
-    onkeydown={(e) => {
-      if (e.key === 'Enter' || e.key === ' ') handleClickLeft();
-    }}
-  ></div>
+    <div
+      role="button"
+      tabindex="0"
+      class="absolute inset-y-0 left-[40%] z-10 w-[20%]"
+      class:cursor-zoom-in={zoomHeld}
+      aria-label="Toggle menu"
+      onpointerup={(e) => {
+        if (e.pointerType !== 'mouse') return;
+        handleClickCenter();
+      }}
+      onkeydown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') handleClickCenter();
+      }}
+    ></div>
 
-  <div
-    role="button"
-    tabindex="0"
-    class="absolute inset-y-0 left-[40%] z-10 w-[20%]"
-    class:cursor-zoom-in={zoomHeld}
-    aria-label="Toggle menu"
-    onpointerup={(e) => {
-      if (e.pointerType !== 'mouse') return;
-      handleClickCenter();
-    }}
-    onkeydown={(e) => {
-      if (e.key === 'Enter' || e.key === ' ') handleClickCenter();
-    }}
-  ></div>
-
-  <div
-    role="button"
-    tabindex="0"
-    class="absolute inset-y-0 right-0 z-10 w-[40%]"
-    class:cursor-zoom-in={zoomHeld}
-    class:cursor-e-resize={!zoomHeld}
-    aria-label="Next page"
-    onpointerup={(e) => {
-      if (e.pointerType !== 'mouse') return;
-      handleClickRight();
-    }}
-    onkeydown={(e) => {
-      if (e.key === 'Enter' || e.key === ' ') handleClickRight();
-    }}
-  ></div>
-</div>
+    <div
+      role="button"
+      tabindex="0"
+      class="absolute inset-y-0 right-0 z-10 w-[40%]"
+      class:cursor-zoom-in={zoomHeld}
+      class:cursor-e-resize={!zoomHeld}
+      aria-label="Next page"
+      onpointerup={(e) => {
+        if (e.pointerType !== 'mouse') return;
+        handleClickRight();
+      }}
+      onkeydown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') handleClickRight();
+      }}
+    ></div>
+  </div>
+{/if}

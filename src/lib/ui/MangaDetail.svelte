@@ -268,17 +268,19 @@
 
               {#if meta.authors.length}
                 <div class="flex flex-col gap-1 sm:hidden">
-                  <div class="flex items-center gap-1.5">
-                    <span bind:this={authorsEl} class="min-w-0 truncate text-xs opacity-40"
-                      >{meta.authors.join(', ')}</span
-                    >
-                    {#if !authorsExpanded && authorsTruncated}
-                      <button
-                        class="shrink-0 cursor-pointer border border-white/15 px-2 py-0.5 text-xs opacity-60 hover:opacity-100"
-                        onclick={() => (authorsExpanded = true)}>more</button
+                  {#if !authorsExpanded}
+                    <div class="flex items-center gap-1.5">
+                      <span bind:this={authorsEl} class="min-w-0 truncate text-xs opacity-40"
+                        >{meta.authors.join(', ')}</span
                       >
-                    {/if}
-                  </div>
+                      {#if authorsTruncated}
+                        <button
+                          class="shrink-0 cursor-pointer border border-white/15 px-2 py-0.5 text-xs opacity-60 hover:opacity-100"
+                          onclick={() => (authorsExpanded = true)}>more</button
+                        >
+                      {/if}
+                    </div>
+                  {/if}
                   {#if authorsExpanded}
                     <div
                       class="overflow-hidden text-xs opacity-40"
