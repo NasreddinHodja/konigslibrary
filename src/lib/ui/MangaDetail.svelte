@@ -1,6 +1,6 @@
 <script lang="ts">
   import { tick } from 'svelte';
-  import { fade, fly, slide } from 'svelte/transition';
+  import { fade, slide } from 'svelte/transition';
   import { ANIM_DURATION, ANIM_EASE } from '$lib/utils/constants';
   import { ArrowLeft, Search, X, BookOpen } from 'lucide-svelte';
   import Skeleton from '$lib/ui/Skeleton.svelte';
@@ -30,7 +30,10 @@
   let tagsCollapsedH = 0;
 
   async function expandTags() {
-    if (!tagsEl) { tagsExpanded = true; return; }
+    if (!tagsEl) {
+      tagsExpanded = true;
+      return;
+    }
     tagsCollapsedH = tagsEl.scrollHeight;
     tagsEl.style.height = tagsCollapsedH + 'px';
     tagsEl.style.overflow = 'hidden';
@@ -41,20 +44,27 @@
       if (!tagsEl) return;
       tagsEl.style.transition = `height ${ANIM_DURATION}ms ease-out`;
       tagsEl.style.height = to + 'px';
-      setTimeout(() => { if (tagsEl) resetTagsStyle(tagsEl); }, ANIM_DURATION + 20);
+      setTimeout(() => {
+        if (tagsEl) resetTagsStyle(tagsEl);
+      }, ANIM_DURATION + 20);
     });
   }
 
   function collapseTags() {
-    if (!tagsEl) { tagsExpanded = false; return; }
+    if (!tagsEl) {
+      tagsExpanded = false;
+      return;
+    }
     tagsEl.style.height = tagsEl.scrollHeight + 'px';
     tagsEl.style.overflow = 'hidden';
-    tagsEl.offsetHeight; // force reflow so the browser registers the starting height
+    void tagsEl.offsetHeight; // force reflow so the browser registers the starting height
     tagsEl.style.transition = `height ${ANIM_DURATION}ms ease-out`;
     tagsEl.style.height = tagsCollapsedH + 'px';
     setTimeout(() => {
       tagsExpanded = false;
-      tick().then(() => { if (tagsEl) resetTagsStyle(tagsEl); });
+      tick().then(() => {
+        if (tagsEl) resetTagsStyle(tagsEl);
+      });
     }, ANIM_DURATION + 20);
   }
 
@@ -259,16 +269,13 @@
               {#if meta.authors.length}
                 <div class="flex flex-col gap-1 sm:hidden">
                   <div class="flex items-center gap-1.5">
-                    <span
-                      bind:this={authorsEl}
-                      class="min-w-0 truncate text-xs opacity-40"
+                    <span bind:this={authorsEl} class="min-w-0 truncate text-xs opacity-40"
                       >{meta.authors.join(', ')}</span
                     >
                     {#if !authorsExpanded && authorsTruncated}
                       <button
                         class="shrink-0 cursor-pointer border border-white/15 px-2 py-0.5 text-xs opacity-60 hover:opacity-100"
-                        onclick={() => (authorsExpanded = true)}
-                        >more</button
+                        onclick={() => (authorsExpanded = true)}>more</button
                       >
                     {/if}
                   </div>
@@ -280,8 +287,7 @@
                       {meta.authors.join(', ')}
                       <button
                         class="cursor-pointer border border-white/15 px-2 py-0.5 text-xs opacity-60 hover:opacity-100"
-                        onclick={() => (authorsExpanded = false)}
-                        >less</button
+                        onclick={() => (authorsExpanded = false)}>less</button
                       >
                     </div>
                   {/if}
@@ -290,22 +296,24 @@
 
               {#if meta.tags.length}
                 <div class="flex flex-wrap gap-1.5" bind:this={tagsEl}>
-                  {#each meta.tags.slice(0, TAGS_COLLAPSED) as tag}
+                  {#each meta.tags.slice(0, TAGS_COLLAPSED) as tag (tag)}
                     <span class="border border-white/30 px-2 py-0.5 text-xs opacity-50">{tag}</span>
                   {/each}
                   {#if tagsExpanded}
-                    {#each meta.tags.slice(TAGS_COLLAPSED, 6) as tag}
-                      <span class="border border-white/30 px-2 py-0.5 text-xs opacity-50">{tag}</span>
+                    {#each meta.tags.slice(TAGS_COLLAPSED, 6) as tag (tag)}
+                      <span class="border border-white/30 px-2 py-0.5 text-xs opacity-50"
+                        >{tag}</span
+                      >
                     {/each}
                     <button
                       class="cursor-pointer border border-white/15 px-2 py-0.5 text-xs opacity-60 hover:opacity-100"
-                      onclick={collapseTags}
-                    >less</button>
+                      onclick={collapseTags}>less</button
+                    >
                   {:else if meta.tags.length > TAGS_COLLAPSED}
                     <button
                       class="cursor-pointer border border-white/15 px-2 py-0.5 text-xs opacity-60 hover:opacity-100"
-                      onclick={expandTags}
-                    >more</button>
+                      onclick={expandTags}>more</button
+                    >
                   {/if}
                 </div>
               {/if}
@@ -329,7 +337,7 @@
               </div>
               <Skeleton class="h-4 w-40 sm:hidden" />
               <div class="flex flex-wrap gap-1.5">
-                {#each [60, 52, 56, 48] as w}
+                {#each [60, 52, 56, 48] as w (w)}
                   <Skeleton class="h-[22px]" style="width: {w}px" />
                 {/each}
               </div>
@@ -412,13 +420,15 @@
         <p
           class="mt-3 overflow-hidden text-xs opacity-40"
           transition:slide={{ duration: ANIM_DURATION, easing: ANIM_EASE }}
-        >No results found.</p>
+        >
+          No results found.
+        </p>
       {:else if pickerResults.length}
         <ul
           class="mt-3 flex flex-col gap-0 overflow-hidden border border-white/10"
           transition:slide={{ duration: ANIM_DURATION, easing: ANIM_EASE }}
         >
-          {#each pickerResults as result}
+          {#each pickerResults as result (result.id)}
             <li class="border-b border-white/10 last:border-b-0">
               <button
                 class="flex w-full cursor-pointer items-center gap-3 px-3 py-2.5 text-left hover:bg-white/5"
@@ -482,7 +492,9 @@
       <p
         class="py-8 text-center text-xs opacity-30"
         in:fade={{ duration: ANIM_DURATION, easing: ANIM_EASE }}
-      >No chapters match "{search}"</p>
+      >
+        No chapters match "{search}"
+      </p>
     {:else}
       <ul>
         {#each filteredChapters as chapter (chapter.name)}

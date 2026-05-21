@@ -106,7 +106,7 @@
   <div class="w-full min-w-0">
     <Skeleton class="mb-2 h-3.5 w-14" />
     <div class="border-2">
-      {#each [180, 140, 210, 160] as w}
+      {#each [180, 140, 210, 160] as w (w)}
         <div class="flex items-center border-b border-white/10 px-4 py-3 last:border-b-0">
           <Skeleton class="h-5" style="width: {w}px" />
         </div>

@@ -35,9 +35,7 @@
 
       <div class="flex w-[20%] flex-col items-center justify-between py-12">
         <div class="pointer-events-none text-center">
-          <div
-            class="mx-auto mb-3 flex h-8 w-8 items-center justify-center border border-white/30"
-          >
+          <div class="mx-auto mb-3 flex h-8 w-8 items-center justify-center border border-white/30">
             <div class="h-1.5 w-1.5 rounded-full bg-white/60"></div>
           </div>
           <div class="text-xs font-bold tracking-widest opacity-50">HUD</div>

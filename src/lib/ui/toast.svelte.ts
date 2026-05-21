@@ -55,3 +55,14 @@ export function showError(message: string): void {
     }, DISMISS_DELAY)
   );
 }
+
+export function showSuccess(message: string): void {
+  const id = `success-${Date.now()}`;
+  addToast({ id, label: message, current: 0, total: 0, phase: 'done' });
+  dismissTimers.set(
+    id,
+    setTimeout(() => {
+      removeToast(id);
+    }, DISMISS_DELAY)
+  );
+}

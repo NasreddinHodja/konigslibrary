@@ -79,7 +79,10 @@
     {/if}
 
     {#if !manga.scrollMode}
-      <div transition:slide={{ duration: ANIM_DURATION, easing: ANIM_EASE }} class="overflow-hidden">
+      <div
+        transition:slide={{ duration: ANIM_DURATION, easing: ANIM_EASE }}
+        class="overflow-hidden"
+      >
         <Toggle labelA="LTR" labelB="RTL" active={manga.rtl} onclick={toggleRtl} />
       </div>
     {/if}

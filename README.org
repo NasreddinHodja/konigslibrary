@@ -1,5 +1,5 @@
 #+TITLE: konigslibrary
-#+DESCRIPTION: Client-side manga reader — Svelte 5, Tauri, custom ZIP parser
+#+DESCRIPTION: Client-side manga reader - Svelte 5, Tauri, custom ZIP parser
 
 #+html: <a href="https://svelte.dev"><img src="https://img.shields.io/badge/Svelte-5-FF3E00?logo=svelte&logoColor=white"></a>
 #+html: <a href="https://svelte.dev/docs/kit"><img src="https://img.shields.io/badge/SvelteKit-2-FF3E00?logo=svelte&logoColor=white"></a>
@@ -9,8 +9,7 @@
 
 A manga/comic reader that runs entirely in the browser. Upload a ZIP/CBZ and start reading - all parsing, decompression, and image extraction happen client-side using the Web Compression API. No server, no uploads, nothing leaves your machine. Also ships as a native desktop/mobile app via Tauri and a self-hosted local server for LAN access.
 
-#+html: <p align="center"><img src=".github/readme/reader-desktop.png" alt="Reader with sidebar" width="700"></p>
-#+html: <p align="center"><img src=".github/readme/sidebar-mobile.jpeg" alt="Mobile sidebar" width="280">&nbsp;&nbsp;<img src=".github/readme/home-mobile.jpeg" alt="Mobile library" width="280"></p>
+#+html: <p align="center"><img src=".github/readme/home-mobile.png" alt="Mobile home" width="260">&nbsp;&nbsp;<img src=".github/readme/sidebar-mobile.png" alt="Mobile manga detail" width="260">&nbsp;&nbsp;<img src=".github/readme/reader-mobile.png" alt="Mobile reader" width="260"></p>
 
 * Features
 
@@ -46,7 +45,7 @@ src/lib/
 └── zip/             # Custom ZIP/CBZ parser (ZIP64, Web Compression API)
 #+end_src
 
-State management uses a =createReaderServices()= factory that wires together a Svelte 5 =$state= object with the command registry, event bus, viewer registry, and plugin runner. No stores, no context API — one reactive service object owns all reader state and logic.
+State management uses a =createReaderServices()= factory that wires together a Svelte 5 =$state= object with the command registry, event bus, viewer registry, and plugin runner. No stores, no context API - one reactive service object owns all reader state and logic.
 
 * Tech Stack
 
@@ -107,7 +106,7 @@ Set =MANGA_DIR= to point at your manga directory:
 MANGA_DIR=~/Manga pnpm serve
 #+end_src
 
-Or configure it through the Settings panel in the web UI — saved to =konigslibrary.json=.
+Or configure it through the Settings panel in the web UI (saved to =konigslibrary.json=).
 
 ** Desktop App (Tauri)
 
@@ -133,24 +132,24 @@ A signed APK is available at =static/download/konigslibrary.apk=.
 
 * Library Structure
 
-Chapter detection is based on *directory structure*, not naming conventions. Folder names can be anything — =ch01=, =volume_1=, =foo= — the parser doesn't pattern-match on names.
+Chapter detection is based on *directory structure*, not naming conventions. Folder names can be anything (=ch01=, =volume_1=, =foo=) - the parser doesn't pattern-match on names.
 
 ** Local server / Tauri (directories)
 
 #+begin_src
 MANGA_DIR/
-├── One Piece/              ← manga (has subfolders → multi-chapter)
-│   ├── ch01/               ← chapter — any folder name works
+├── One Piece/              # manga, subfolders are chapters
+│   ├── ch01/               # chapter, any folder name works
 │   │   ├── 001.jpg
 │   │   └── 002.jpg
 │   ├── ch02/
 │   │   └── 001.jpg
-│   └── extras/             ← also a chapter (every subfolder counts)
+│   └── extras/             # also a chapter (every subfolder counts)
 │       └── cover.png
-├── Berserk/                ← manga (images only → single chapter)
+├── Berserk/                # manga, images only = single chapter
 │   ├── page01.png
 │   └── page02.png
-└── Naruto.cbz              ← manga (ZIP — chapters from internal folders)
+└── Naruto.cbz              # manga, ZIP with chapters from internal folders
 #+end_src
 
 - Each top-level entry in =MANGA_DIR= is one manga (directory or ZIP/CBZ)
@@ -164,8 +163,8 @@ The parser finds the longest common directory prefix shared by all images, then 
 
 #+begin_src
 manga.cbz
-└── manga/                  ← common root (auto-detected, stripped)
-    ├── chapter_01/         ← chapter
+└── manga/                  # common root (auto-detected, stripped)
+    ├── chapter_01/         # chapter
     │   ├── 01.png
     │   └── 02.png
     └── chapter_02/

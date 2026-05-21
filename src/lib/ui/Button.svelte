@@ -5,12 +5,14 @@
     size = 'md',
     as = 'button',
     variant = 'default',
+    disabled = false,
     onclick,
     children
   }: {
     size?: 'lg' | 'md' | 'icon';
     as?: 'button' | 'span';
     variant?: 'default' | 'primary' | 'ghost';
+    disabled?: boolean;
     onclick?: () => void;
     children: Snippet;
   } = $props();
@@ -48,8 +50,11 @@
   </span>
 {:else}
   <button
-    class="inline-flex cursor-pointer items-center gap-2 {variantClass} {sizeClass}"
+    class="inline-flex items-center gap-2 {variantClass} {sizeClass} {disabled
+      ? 'cursor-not-allowed opacity-40'
+      : 'cursor-pointer'}"
     {onclick}
+    {disabled}
   >
     {@render children()}
   </button>

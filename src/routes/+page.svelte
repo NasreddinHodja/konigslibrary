@@ -98,8 +98,6 @@
     }
   };
 
-  const isMobile = typeof window !== 'undefined' && 'ontouchstart' in window;
-
   $effect(() => {
     if (!native) return;
     const hidden = manga.selectedChapter !== null && !hudVisible;
@@ -270,13 +268,21 @@
           <LibraryBrowser />
           <NativeLibraryBrowser />
         </div>
-        <a href="/settings" class="flex items-center gap-1.5 text-xs tracking-widest opacity-20 hover:opacity-60"><Settings size={12} />SETTINGS</a>
+        <a
+          href="/settings"
+          class="flex items-center gap-1.5 text-xs tracking-widest opacity-20 hover:opacity-60"
+          ><Settings size={12} />SETTINGS</a
+        >
       {:else if isLocalServer}
         <div class="w-full max-w-lg space-y-8">
           <OfflineBrowser />
           <LibraryBrowser />
         </div>
-        <a href="/settings" class="flex items-center gap-1.5 text-xs tracking-widest opacity-20 hover:opacity-60"><Settings size={12} />SETTINGS</a>
+        <a
+          href="/settings"
+          class="flex items-center gap-1.5 text-xs tracking-widest opacity-20 hover:opacity-60"
+          ><Settings size={12} />SETTINGS</a
+        >
       {:else}
         <div class="w-full max-w-lg space-y-10">
           <OfflineBrowser />

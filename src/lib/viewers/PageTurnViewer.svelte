@@ -36,9 +36,7 @@
   const prevUrl = $derived(manga.currentPage > 0 ? chapter.pageUrls[manga.currentPage - 1] : null);
   const currentUrl = $derived(chapter.pageUrls[manga.currentPage] ?? null);
   const nextUrl = $derived(
-    manga.currentPage < chapter.pageUrls.length - 1
-      ? chapter.pageUrls[manga.currentPage + 1]
-      : null
+    manga.currentPage < chapter.pageUrls.length - 1 ? chapter.pageUrls[manga.currentPage + 1] : null
   );
 
   // Slide animation
@@ -127,7 +125,14 @@
   let maxDrag = 0;
 
   const onTouchStart = (e: TouchEvent) => {
-    console.log('[turn] touchStart x=', e.touches[0].clientX, 'animTimer?', !!animTimer, 'dragging=', dragging);
+    console.log(
+      '[turn] touchStart x=',
+      e.touches[0].clientX,
+      'animTimer?',
+      !!animTimer,
+      'dragging=',
+      dragging
+    );
     if (showEndScreen || zoomHeld) return;
     // If a slide animation is in progress, commit it immediately and start fresh.
     if (animTimer) {
@@ -254,9 +259,7 @@
   };
 
   const transStyle = $derived(
-    noTrans || dragging
-      ? 'none'
-      : `transform ${ANIM_MS}ms cubic-bezier(0.25, 0.46, 0.45, 0.94)`
+    noTrans || dragging ? 'none' : `transform ${ANIM_MS}ms cubic-bezier(0.25, 0.46, 0.45, 0.94)`
   );
 </script>
 
@@ -298,7 +301,7 @@
     >
       <div
         bind:this={pageEl}
-        class="h-full w-full flex items-center justify-center"
+        class="flex h-full w-full items-center justify-center"
         style:transform={zoomHeld ? `scale(${PAGE_TURN_ZOOM})` : undefined}
         style:transform-origin="{originX}% {originY}%"
         style:transition={zoomHeld ? 'none' : 'transform 0.15s ease-out'}
@@ -342,8 +345,13 @@
     class:cursor-zoom-in={zoomHeld}
     class:cursor-w-resize={!zoomHeld}
     aria-label="Previous page"
-    onpointerup={(e) => { if (e.pointerType !== 'mouse') return; handleClickLeft(); }}
-    onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleClickLeft(); }}
+    onpointerup={(e) => {
+      if (e.pointerType !== 'mouse') return;
+      handleClickLeft();
+    }}
+    onkeydown={(e) => {
+      if (e.key === 'Enter' || e.key === ' ') handleClickLeft();
+    }}
   ></div>
 
   <div
@@ -352,8 +360,13 @@
     class="absolute inset-y-0 left-[40%] z-10 w-[20%]"
     class:cursor-zoom-in={zoomHeld}
     aria-label="Toggle menu"
-    onpointerup={(e) => { if (e.pointerType !== 'mouse') return; handleClickCenter(); }}
-    onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleClickCenter(); }}
+    onpointerup={(e) => {
+      if (e.pointerType !== 'mouse') return;
+      handleClickCenter();
+    }}
+    onkeydown={(e) => {
+      if (e.key === 'Enter' || e.key === ' ') handleClickCenter();
+    }}
   ></div>
 
   <div
@@ -363,7 +376,12 @@
     class:cursor-zoom-in={zoomHeld}
     class:cursor-e-resize={!zoomHeld}
     aria-label="Next page"
-    onpointerup={(e) => { if (e.pointerType !== 'mouse') return; handleClickRight(); }}
-    onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleClickRight(); }}
+    onpointerup={(e) => {
+      if (e.pointerType !== 'mouse') return;
+      handleClickRight();
+    }}
+    onkeydown={(e) => {
+      if (e.key === 'Enter' || e.key === ' ') handleClickRight();
+    }}
   ></div>
 </div>

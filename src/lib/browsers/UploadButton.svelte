@@ -38,7 +38,11 @@
 
     if ('showOpenFilePicker' in window) {
       try {
-        const [handle] = await window.showOpenFilePicker({
+        const [handle] = await (
+          window as unknown as {
+            showOpenFilePicker: (opts: object) => Promise<FileSystemFileHandle[]>;
+          }
+        ).showOpenFilePicker({
           types: [{ description: 'ZIP / CBZ', accept: { 'application/zip': ['.zip', '.cbz'] } }],
           multiple: false
         });
@@ -77,7 +81,7 @@
 <button
   type="button"
   onclick={handleClick}
-  class="group flex w-full max-w-lg cursor-pointer flex-col items-center justify-center gap-3 border-2 px-8 py-16 text-center transition-colors duration-150
+  class="group flex w-full max-w-lg cursor-pointer flex-col items-center justify-center gap-3 border-2 px-8 py-4 text-center transition-colors duration-150 md:py-16
     {isDragOver ? 'border-white bg-white/5' : 'border-white/30 hover:border-white/70'}"
 >
   <span class="block text-xl font-bold tracking-wider">SELECT MANGA FILE</span>

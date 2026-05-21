@@ -65,7 +65,7 @@
     </p>
   {:else if loading}
     <div class="border-2">
-      {#each [170, 200, 145, 185] as w}
+      {#each [170, 200, 145, 185] as w (w)}
         <div class="flex items-center border-b border-white/10 px-4 py-3 last:border-b-0">
           <Skeleton class="h-5" style="width: {w}px" />
         </div>

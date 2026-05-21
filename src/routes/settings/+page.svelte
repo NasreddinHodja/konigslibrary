@@ -12,6 +12,8 @@
   } from '$lib/keyboard/keybindings.svelte';
   import { apiUrl, isLocalServer, getServerUrl, setServerUrl } from '$lib/utils/constants';
   import { isNative } from '$lib/utils/platform';
+  import { goto } from '$app/navigation';
+  import { showSuccess } from '$lib/ui/toast.svelte';
   import { getMangaDir, setMangaDir } from '$lib/sources/native-library';
   import { FolderOpen } from 'lucide-svelte';
   import Skeleton from '$lib/ui/Skeleton.svelte';
@@ -82,10 +84,34 @@
   }
 
   let serverUrl = $state(getServerUrl());
+  let connecting = $state(false);
+  let connectError: string | null = $state(null);
 
-  function connectServer() {
-    setServerUrl(serverUrl.trim());
-    window.location.href = '/';
+  async function connectServer() {
+    const url = serverUrl.trim();
+    if (!url) return;
+    connecting = true;
+    connectError = null;
+    try {
+      const res = await fetch(`${url.replace(/\/+$/, '')}/api/library`, {
+        signal: AbortSignal.timeout(5000)
+      });
+      if (!res.ok) throw new Error(`Server responded with ${res.status}`);
+      setServerUrl(url);
+      showSuccess('Connected to server');
+      goto('/');
+    } catch (e) {
+      connectError = e instanceof Error ? e.message : 'Could not reach server';
+    } finally {
+      connecting = false;
+    }
+  }
+
+  function handleServerUrlKey(e: KeyboardEvent) {
+    if (e.key === 'Enter') {
+      (e.currentTarget as HTMLInputElement).blur();
+      connectServer();
+    }
   }
 
   let mangaDir = $state('');
@@ -129,11 +155,19 @@
 
 <svelte:window onkeydown={handleKeyCapture} />
 
-<div class="mx-auto max-w-2xl space-y-10 p-8">
-  <a href="/" class="inline-flex items-center gap-2 text-sm opacity-60 hover:opacity-100">
-    <ArrowLeft size={16} />
-    Back
-  </a>
+<div
+  class="mx-auto max-w-2xl space-y-10 px-8 pb-8"
+  style="padding-top: calc(2rem + var(--safe-top, 0px))"
+>
+  <div class="flex items-center justify-between">
+    <a
+      href="/"
+      class="flex cursor-pointer items-center gap-1.5 text-xs tracking-widest opacity-30 hover:opacity-80"
+    >
+      <ArrowLeft size={12} />
+      HOME
+    </a>
+  </div>
 
   <h1 class="text-2xl font-bold">Settings</h1>
 
@@ -206,9 +240,17 @@
         type="text"
         bind:value={serverUrl}
         placeholder="http://192.168.1.x:3000"
+        onkeydown={handleServerUrlKey}
         class="w-full border-2 bg-black px-3 py-2 text-sm text-white placeholder:opacity-40"
       />
-      <Button size="md" onclick={connectServer}>Connect</Button>
+      <div class="flex items-center gap-3">
+        <Button size="md" onclick={connectServer} disabled={connecting}>
+          {connecting ? 'Connecting…' : 'Connect'}
+        </Button>
+        {#if connectError}
+          <span class="text-sm text-red-400">{connectError}</span>
+        {/if}
+      </div>
     </section>
   {/if}
 
