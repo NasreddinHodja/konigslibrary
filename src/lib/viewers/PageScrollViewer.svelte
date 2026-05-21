@@ -205,7 +205,7 @@
 
 <div
   bind:this={containerEl}
-  class="flex h-full flex-1 flex-col gap-2 overflow-y-auto py-4 select-none"
+  class="flex h-full w-full max-w-[900px] mx-auto flex-col gap-2 overflow-y-auto py-4 select-none"
   role="region"
   aria-label="Manga pages"
   onpointerdown={onPointerDown}

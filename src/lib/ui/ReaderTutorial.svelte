@@ -43,10 +43,19 @@
           <div class="text-xs font-bold tracking-widest opacity-50">HUD</div>
         </div>
 
-        <div
-          class="pointer-events-none border border-dashed border-white/15 px-3 py-1.5 text-center"
-        >
-          <div class="text-xs font-bold tracking-widest opacity-30">CENTER ZONE</div>
+        <div class="pointer-events-none space-y-4 text-center">
+          <div class="border border-dashed border-white/15 px-3 py-1.5">
+            <div class="text-xs font-bold tracking-widest opacity-30">CENTER ZONE</div>
+          </div>
+
+          <div class="opacity-40">
+            <div class="flex items-center justify-center gap-3 text-sm">
+              <span>←</span>
+              <span class="text-xs font-bold tracking-widest">SWIPE</span>
+              <span>→</span>
+            </div>
+            <div class="mt-1 text-xs tracking-widest opacity-70">TO TURN PAGES</div>
+          </div>
         </div>
 
         <div class="invisible h-8"></div>

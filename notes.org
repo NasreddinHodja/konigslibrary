@@ -1,5 +1,30 @@
 #+title: Notes
 
+* DONE page turn really turns pages lol
+Visually, like media/gallery apps.
+Also, on mobile the swiping to pass pages should work and be very responsive (i want it to feel like the page is following my finger turning it.). and remember to update the tutorial overlays
+
+* TODO Go back home after setting server url
+in settings, i want to be able to input the server url, press enter, and get taken to home automatically
+
+* TODO navigation on mobile :mobile:
+i want it to work. right now, when i swipe for "back" it just throws me out of the app
+
+* TODO fix graddle :mobile:
+when runnig "dev:mobile":
+
+[Incubating] Problems report is available at: file:///home/nasreddin/Prog/konigslibrary/src-tauri/gen/android/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.14.3/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+Performing Streamed Install
+
+* TODO can we have automatic updates on android?
+or, at least, a have a check for new versions (updates of the apk when a new deploy of the website happens, that where im hosting the apk). and a button to download/install it?
+
 * DONE there is still layout shift
 the loader assumes there is just one line of tags. i want it to be 2
 
@@ -18,10 +43,6 @@ Example: "Not this manga button" openst a search, causing everything to shift. A
 
 i want EVERYTHING TO HAVE PROPER INDUSTY LEVEL TRANSITIONS AND ANIMATIONS
 
-* TODO page turn really turns pages lol
-Visually, like media/gallery apps.
-Also, on mobile the swiping to pass pages should work and be very responsive (i want it to feel like the page is following my finger turning it.). and remember to update the tutorial overlays
-
 * DONE still slight layout shift when loading manga info
 
 * DONE chapters list header is too wide! :mobile:
@@ -29,21 +50,6 @@ Also, on mobile the swiping to pass pages should work and be very responsive (i 
 * DONE fix big space between tags and resume/not this manga buttons :mobile:
 Because we had to fix it at a certain height, to not allow layout shift from different quantities of tags.
 But the space is too big on mobile...
-
-* TODO navigation on mobile :mobile:
-i want it to work. right now, when i swipe for "back" it just throws me out of the app
-
-* TODO fix graddle :mobile:
-when runnig "dev:mobile":
-
-[Incubating] Problems report is available at: file:///home/nasreddin/Prog/konigslibrary/src-tauri/gen/android/build/reports/problems/problems-report.html
-
-Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
-
-You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
-
-For more on this, please refer to https://docs.gradle.org/8.14.3/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
-Performing Streamed Install
 
 * DONE resume the "not this manga?" feature (manga details)
 friend i got this problem, where, in manga details page, if the title of the manga is ambiguous (there are multiple different manga with that name), then our search fill sometimes find the wrong manga. I want a way for the user to pick the correct manga, searching for matches themselves.
