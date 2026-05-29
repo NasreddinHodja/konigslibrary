@@ -2,8 +2,7 @@
 set -euo pipefail
 
 REPO_URL="https://github.com/NasreddinHodja/konigslibrary"
-NODE_VERSION="22.16.0"
-MIN_NODE=22
+BUN_VERSION="1.2.15"
 
 # ---------- helpers ----------
 die()  { echo "ERROR: $*" >&2; exit 1; }
@@ -14,12 +13,11 @@ need_cmd() {
 }
 
 # ---------- resolve working directory ----------
-# Everything lives next to this script (or in CWD if piped)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
-# ---------- 1. ensure Node >= 22 ----------
-get_node() {
+# ---------- 1. ensure bun ----------
+get_bun() {
   local OS ARCH
   OS="$(uname -s | tr '[:upper:]' '[:lower:]')"
   ARCH="$(uname -m)"
@@ -31,42 +29,40 @@ get_node() {
   esac
 
   case "$ARCH" in
-    x86_64)  ARCH="x64" ;;
-    aarch64|arm64) ARCH="arm64" ;;
-    *)       die "Unsupported architecture: $ARCH" ;;
+    x86_64)       ARCH="x64" ;;
+    aarch64|arm64) ARCH="aarch64" ;;
+    *)             die "Unsupported architecture: $ARCH" ;;
   esac
 
-  local TARBALL="node-v${NODE_VERSION}-${OS}-${ARCH}.tar.xz"
-  local URL="https://nodejs.org/dist/v${NODE_VERSION}/${TARBALL}"
+  local ZIP="bun-${OS}-${ARCH}.zip"
+  local URL="https://github.com/oven-sh/bun/releases/download/bun-v${BUN_VERSION}/${ZIP}"
 
-  info "Downloading Node.js $NODE_VERSION ($OS-$ARCH)..."
+  info "Downloading Bun $BUN_VERSION ($OS-$ARCH)..."
   need_cmd curl
-  curl -fSL --progress-bar "$URL" -o "$TARBALL"
-  mkdir -p node
-  tar xf "$TARBALL" --strip-components=1 -C node
-  rm "$TARBALL"
-  info "Node.js installed to ./node/"
+  curl -fSL --progress-bar "$URL" -o "$ZIP"
+  mkdir -p bun
+  unzip -jo "$ZIP" "*/bun" -d bun
+  chmod +x bun/bun
+  rm "$ZIP"
+  info "Bun installed to ./bun/"
 }
 
-HAS_NODE=0
-if command -v node >/dev/null 2>&1; then
-  NODE_MAJOR="$(node -v | sed 's/v\([0-9]*\).*/\1/')"
-  if [ "$NODE_MAJOR" -ge "$MIN_NODE" ] 2>/dev/null; then
-    HAS_NODE=1
-  fi
+HAS_BUN=0
+if command -v bun >/dev/null 2>&1; then
+  HAS_BUN=1
 fi
 
-if [ -x "./node/bin/node" ]; then
-  export PATH="$SCRIPT_DIR/node/bin:$PATH"
-  HAS_NODE=1
+if [ -x "./bun/bun" ]; then
+  export PATH="$SCRIPT_DIR/bun:$PATH"
+  HAS_BUN=1
 fi
 
-if [ "$HAS_NODE" -eq 0 ]; then
-  get_node
-  export PATH="$SCRIPT_DIR/node/bin:$PATH"
+if [ "$HAS_BUN" -eq 0 ]; then
+  get_bun
+  export PATH="$SCRIPT_DIR/bun:$PATH"
 fi
 
-info "Using $(node -v) at $(command -v node)"
+info "Using $(bun --version) at $(command -v bun)"
 
 # ---------- 2. get the app source + build ----------
 if [ ! -d "build" ]; then
@@ -77,14 +73,14 @@ if [ ! -d "build" ]; then
   rm repo.tar.gz
 
   info "Installing dependencies..."
-  npm install --no-fund --no-audit
+  bun install --frozen-lockfile
 
   info "Building (adapter-node)..."
-  LOCAL_BUILD=1 npm run build
+  LOCAL_BUILD=1 bun run build
 
   info "Build complete."
 fi
 
 # ---------- 3. launch ----------
 info "Starting server..."
-exec node server.js
+exec bun server.js

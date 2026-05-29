@@ -78,20 +78,20 @@ chmod +x konigslibrary.sh
 
 Download =konigslibrary.bat= from =static/download/= and run it.
 
-The script installs Node.js 22 if needed, builds the app, and starts a server on =http://localhost:3000=. LAN addresses are printed so other devices can connect.
+The script installs Bun if needed, builds the app, and starts a server on =http://localhost:3000=. LAN addresses are printed so other devices can connect.
 
-*** Manual (Node.js 22+ required)
+*** Manual (Bun required)
 
 #+begin_src sh
-pnpm install
-pnpm build:local
-pnpm serve
+bun install
+bun run build:local
+bun run serve
 #+end_src
 
 Set =MANGA_DIR= to your manga directory:
 
 #+begin_src sh
-MANGA_DIR=~/Manga pnpm serve
+MANGA_DIR=~/Manga bun run serve
 #+end_src
 
 Or configure it through Settings in the UI (saved to =konigslibrary.json=).
@@ -99,13 +99,13 @@ Or configure it through Settings in the UI (saved to =konigslibrary.json=).
 ** Desktop App (Tauri)
 
 #+begin_src sh
-pnpm tauri:local          # dev mode
-pnpm tauri build          # release build
+bun run tauri:local          # dev mode
+bun tauri build              # release build
 #+end_src
 
 ** Android
 
-A signed APK is available at =static/download/konigslibrary.apk=.
+A signed APK is available on the [[https://github.com/NasreddinHodja/konigslibrary/releases/latest][latest GitHub release]].
 
 ** Environment Variables
 
@@ -173,25 +173,25 @@ JPEG, PNG, GIF, WebP, AVIF, BMP.
 
 * Development
 
-*Prerequisites:* Node.js 22+ (see =.nvmrc=), pnpm
+*Prerequisites:* [[https://bun.sh/][Bun]]
 
 #+begin_src sh
-pnpm install
-pnpm dev
+bun install
+bun dev
 #+end_src
 
-| Command              | Description                          |
-|----------------------+--------------------------------------|
-| =pnpm dev=           | Start dev server                     |
-| =pnpm build=         | Production build (adapter-auto)      |
-| =pnpm build:local=   | Local server build (adapter-node)    |
-| =pnpm serve=         | Start local server                   |
-| =pnpm check=         | Svelte type checking                 |
-| =pnpm lint=          | Prettier + ESLint check              |
-| =pnpm format=        | Auto-format with Prettier            |
-| =pnpm test=          | Run tests (Vitest)                   |
-| =pnpm tauri:local=   | Tauri dev mode                       |
-| =pnpm tauri build=   | Tauri release build                  |
+| Command                    | Description                          |
+|----------------------------+--------------------------------------|
+| =bun dev=                  | Start dev server                     |
+| =bun run build=            | Production build (adapter-auto)      |
+| =bun run build:local=      | Local server build (adapter-node)    |
+| =bun run serve=            | Start local server                   |
+| =bun run check=            | Svelte type checking                 |
+| =bun run lint=             | Prettier + ESLint check              |
+| =bun run format=           | Auto-format with Prettier            |
+| =bun run test=             | Run tests (Vitest)                   |
+| =bun run tauri:local=      | Tauri dev mode                       |
+| =bun tauri build=          | Tauri release build                  |
 
 * Keyboard Shortcuts
 

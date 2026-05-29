@@ -27,7 +27,7 @@
     "build:local": "LOCAL_BUILD=1 vite build",
     "tauri:local": "LOCAL_BUILD=1 bun tauri dev",
     "dev:android": "bun tauri android dev",
-    "build:android": "bun tauri android build --target aarch64 && ~/.local/src/Android/build-tools/36.1.0/apksigner sign --ks src-tauri/konigslibrary.jks --ks-key-alias konigslibrary --out static/download/konigslibrary.apk src-tauri/gen/android/app/build/outputs/apk/universal/release/app-universal-release-unsigned.apk"
+    "build:android": "bun tauri android build --target aarch64 && ~/.local/src/Android/build-tools/36.1.0/apksigner sign --ks src-tauri/konigslibrary.jks --ks-key-alias konigslibrary --out konigslibrary.apk src-tauri/gen/android/app/build/outputs/apk/universal/release/app-universal-release-unsigned.apk"
   },
   "devDependencies": {
     "@eslint/compat": "^2.0.2",

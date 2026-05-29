@@ -64,11 +64,11 @@ jobs:
             --ks-key-alias "${{ secrets.KEY_ALIAS }}" \
             --ks-pass "pass:${{ secrets.STORE_PASSWORD }}" \
             --key-pass "pass:${{ secrets.KEY_PASSWORD }}" \
-            --out "konigslibrary-${{ steps.version.outputs.version }}.apk" \
+            --out "konigslibrary.apk" \
             src-tauri/gen/android/app/build/outputs/apk/universal/release/app-universal-release-unsigned.apk
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: konigslibrary-${{ steps.version.outputs.version }}.apk
+          files: konigslibrary.apk
           generate_release_notes: true

@@ -22,8 +22,7 @@
     <p class="text-sm leading-relaxed opacity-70">
       Download the
       <a
-        href="/download/konigslibrary.apk"
-        download
+        href="https://github.com/NasreddinHodja/konigslibrary/releases/latest/download/konigslibrary.apk"
         class="border-b border-white/40 hover:border-white/80">APK</a
       >, install it, and read manga directly on your phone. Upload ZIPs or point it at a local
       folder.
@@ -58,7 +57,7 @@
           class="border-b border-white/40 hover:border-white/80">Windows</a
         >
       </li>
-      <li>Run it. It handles Node.js, building, and starting the server</li>
+      <li>Run it. It handles Bun, building, and starting the server</li>
       <li>Open the local URL in your browser and set your manga directory in Settings</li>
     </ol>
   </section>

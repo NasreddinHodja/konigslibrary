@@ -2,28 +2,27 @@
 
 * Prerequisites
 
-- [[https://nodejs.org/][Node.js 22]] (see =.nvmrc=)
-- [[https://pnpm.io/][pnpm]]
+- [[https://bun.sh/][Bun]]
 
 * Setup
 
 #+begin_src sh
 git clone https://github.com/NasreddinHodja/konigslibrary.git
 cd konigslibrary
-pnpm install
-pnpm dev
+bun install
+bun dev
 #+end_src
 
 * Available Scripts
 
-| Command       | Description               |
-|---------------+---------------------------|
-| =pnpm dev=    | Start dev server          |
-| =pnpm build=  | Production build          |
-| =pnpm check=  | Svelte type checking      |
-| =pnpm lint=   | Prettier + ESLint check   |
-| =pnpm format= | Auto-format with Prettier |
-| =pnpm test=   | Run tests                 |
+| Command            | Description               |
+|--------------------+---------------------------|
+| =bun dev=          | Start dev server          |
+| =bun run build=    | Production build          |
+| =bun run check=    | Svelte type checking      |
+| =bun run lint=     | Prettier + ESLint check   |
+| =bun run format=   | Auto-format with Prettier |
+| =bun run test=     | Run tests                 |
 
 * Code Style
 
@@ -32,8 +31,8 @@ This project uses Prettier and ESLint for consistent formatting. Configuration l
 Before submitting code, run:
 
 #+begin_src sh
-pnpm format
-pnpm lint
+bun run format
+bun run lint
 #+end_src
 
 * Pull Request Workflow

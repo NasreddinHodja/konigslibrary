@@ -17,6 +17,6 @@ Closes #
 ## Checklist
 
 - [ ] I have tested my changes locally
-- [ ] `pnpm lint` passes
-- [ ] `pnpm check` passes
+- [ ] `bun run lint` passes
+- [ ] `bun run check` passes
 - [ ] No breaking changes introduced
