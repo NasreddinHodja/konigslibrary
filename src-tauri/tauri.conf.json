@@ -7,7 +7,7 @@
     "frontendDist": "../build",
     "devUrl": "http://localhost:5173",
     "beforeDevCommand": "bun dev",
-    "beforeBuildCommand": "TAURI_BUILD=1 bun run build && rm -rf build/download"
+    "beforeBuildCommand": "TAURI_BUILD=1 bun run build"
   },
   "app": {
     "windows": [

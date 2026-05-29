@@ -18,6 +18,7 @@
   import { CircleQuestionMark, Settings } from 'lucide-svelte';
   import ToastStack from '$lib/ui/ToastStack.svelte';
   import ReaderTutorial from '$lib/ui/ReaderTutorial.svelte';
+  import UpdateBanner from '$lib/ui/UpdateBanner.svelte';
   import { showError } from '$lib/ui/toast.svelte';
 
   const svc = createReaderServices();
@@ -232,6 +233,7 @@
   }}
 />
 
+<UpdateBanner />
 <ToastStack />
 
 {#if helpOpen}
