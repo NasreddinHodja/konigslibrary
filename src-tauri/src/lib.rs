@@ -1,4 +1,6 @@
+mod download;
 mod immersive;
+mod offline;
 
 use serde::Serialize;
 
@@ -38,6 +40,7 @@ pub fn run() {
   std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1");
 
   tauri::Builder::default()
+    .manage(download::DownloadState(Default::default()))
     .plugin(immersive::init())
     .plugin(tauri_plugin_dialog::init())
     .setup(|app| {
@@ -50,7 +53,16 @@ pub fn run() {
       }
       Ok(())
     })
-    .invoke_handler(tauri::generate_handler![home_dir, list_dir])
+    .invoke_handler(tauri::generate_handler![
+      home_dir,
+      list_dir,
+      download::download_chapter,
+      download::cancel_download,
+      offline::list_offline_manga,
+      offline::get_offline_manga,
+      offline::get_chapter_page_paths,
+      offline::delete_offline_manga,
+    ])
     .run(tauri::generate_context!())
     .expect("error while running tauri application");
 }

@@ -28,9 +28,6 @@ vite.config.ts.timestamp-*
 # Keystore
 *.jks
 
-# Tauri
-src-tauri/gen/android/
-
 # APK signing metadata
 *.idsig
 

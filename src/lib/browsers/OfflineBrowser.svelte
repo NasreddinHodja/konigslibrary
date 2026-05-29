@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { listOfflineManga, deleteOfflineManga } from '$lib/sources/offline-db';
+  import { invoke } from '@tauri-apps/api/core';
   import { getReaderContext } from '$lib/context';
-  import { OfflineDbProvider } from '$lib/sources';
+  import { OfflineFsProvider } from '$lib/sources';
   import { addToast, updateToast } from '$lib/ui/toast.svelte';
   import { Trash2 } from 'lucide-svelte';
   import ConfirmDialog from '$lib/ui/ConfirmDialog.svelte';
@@ -12,7 +12,7 @@
   let pendingDelete: { slug: string; name: string } | null = $state(null);
 
   function refreshEntries() {
-    listOfflineManga().then((list) => {
+    invoke<{ slug: string; name: string }[]>('list_offline_manga').then((list) => {
       entries = list;
     });
   }
@@ -31,9 +31,7 @@
     const id = `del-${Date.now()}`;
     addToast({ id, label: name, current: 0, total: 0, phase: 'deleting' });
 
-    await deleteOfflineManga(slug, (current, total) => {
-      updateToast(id, { current, total });
-    });
+    await invoke('delete_offline_manga', { slug });
 
     entries = entries.filter((e) => e.slug !== slug);
     events.emit('download:deleted', { slug });
@@ -58,7 +56,7 @@
         <div class="flex items-center border-b border-white/10 last:border-b-0">
           <button
             class="flex min-w-0 flex-1 cursor-pointer px-4 py-3 text-left text-sm hover:bg-white/10"
-            onclick={() => setSource(new OfflineDbProvider(entry.slug, entry.name))}
+            onclick={() => setSource(new OfflineFsProvider(entry.slug, entry.name))}
           >
             <span class="truncate">{entry.name}</span>
           </button>

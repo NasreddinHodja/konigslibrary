@@ -1,110 +1,33 @@
-import { apiUrl } from '$lib/utils/constants';
+import { invoke, Channel } from '@tauri-apps/api/core';
 import { addToast, updateToast } from '$lib/ui/toast.svelte';
-import { saveOfflinePage, saveOfflineMangaMeta } from './offline-db';
 import type { ServerChapter } from '$lib/utils/types';
 import type { EventBus } from '$lib/events';
-
-const CONCURRENT_DOWNLOADS = 4;
+import { apiUrl } from '$lib/utils/constants';
 
 let nextId = 0;
 
-async function downloadPool<T>(
-  items: T[],
-  fn: (item: T) => Promise<void>,
-  concurrency: number,
-  signal: AbortSignal
-): Promise<void> {
-  let idx = 0;
-  const next = async (): Promise<void> => {
-    while (idx < items.length) {
-      if (signal.aborted) return;
-      const i = idx++;
-      await fn(items[i]);
-    }
-  };
-  await Promise.all(Array.from({ length: Math.min(concurrency, items.length) }, () => next()));
+type NativeBridge = {
+  acquireWakeLock(label: string, total: number): void;
+  updateDownloadProgress(current: number, total: number): void;
+  releaseWakeLock(): void;
+};
+
+function getBridge(): NativeBridge | undefined {
+  return (window as unknown as { __kl?: NativeBridge }).__kl;
 }
 
-function buildPageUrl(
-  slug: string,
-  chapter: ServerChapter,
-  page: string,
-  isZipManga: boolean
-): string {
-  const encodedPage = page
-    .split('/')
-    .map((s) => encodeURIComponent(s))
-    .join('/');
-  if (chapter.slug && !isZipManga) {
-    return apiUrl(`/api/library/${slug}/${chapter.slug}/${encodedPage}`);
-  }
-  return apiUrl(`/api/library/${slug}/${encodedPage}`);
-}
-
-export function saveManga(
-  slug: string,
-  name: string,
-  chapters: ServerChapter[],
-  events?: EventBus
-): { cancel: () => void } {
-  const id = `dl-${nextId++}`;
-  const controller = new AbortController();
-  let cancelled = false;
-
-  const cancel = () => {
-    cancelled = true;
-    controller.abort();
-  };
-
-  const totalPages = chapters.reduce((sum, c) => sum + c.pages.length, 0);
-  addToast({ id, label: name, current: 0, total: totalPages, phase: 'fetching', cancel });
-
-  const run = async () => {
-    type NativeBridge = { acquireWakeLock(): void; releaseWakeLock(): void };
-    const bridge = (window as unknown as { __kl?: NativeBridge }).__kl;
-    bridge?.acquireWakeLock();
-
-    try {
-      const isZipManga = /\.(zip|cbz)$/i.test(decodeURIComponent(slug));
-      let fetched = 0;
-
-      const allPages = chapters.flatMap((chapter) =>
-        chapter.pages.map((page) => ({ chapter, page }))
-      );
-
-      await downloadPool(
-        allPages,
-        async ({ chapter, page }) => {
-          const url = buildPageUrl(slug, chapter, page, isZipManga);
-          const res = await fetch(url, { signal: controller.signal });
-          if (!res.ok) throw new Error(`Failed to fetch ${url}: ${res.status}`);
-          const blob = await res.blob();
-
-          const filename = page.split('/').pop() || page;
-          await saveOfflinePage(slug, chapter.name, filename, blob);
-
-          fetched++;
-          updateToast(id, { current: fetched });
-        },
-        CONCURRENT_DOWNLOADS,
-        controller.signal
-      );
-
-      await saveOfflineMangaMeta(slug, name, chapters);
-      events?.emit('download:complete', { slug });
-      updateToast(id, { phase: 'done', cancel: undefined });
-    } finally {
-      bridge?.releaseWakeLock();
+function buildPageUrls(slug: string, chapter: ServerChapter): string[] {
+  const isZipManga = /\.(zip|cbz)$/i.test(decodeURIComponent(slug));
+  return chapter.pages.map((page) => {
+    const encodedPage = page
+      .split('/')
+      .map((s) => encodeURIComponent(s))
+      .join('/');
+    if (chapter.slug && !isZipManga) {
+      return apiUrl(`/api/library/${slug}/${chapter.slug}/${encodedPage}`);
     }
-  };
-
-  run().catch((err) => {
-    if (cancelled || err.name === 'AbortError') return;
-    events?.emit('download:error', { slug, error: err.message });
-    updateToast(id, { phase: 'error', cancel: undefined, errorMessage: err.message });
+    return apiUrl(`/api/library/${slug}/${encodedPage}`);
   });
-
-  return { cancel };
 }
 
 export function saveChapter(
@@ -114,12 +37,12 @@ export function saveChapter(
   events?: EventBus
 ): { cancel: () => void } {
   const id = `dl-${nextId++}`;
-  const controller = new AbortController();
   let cancelled = false;
 
   const cancel = () => {
     cancelled = true;
-    controller.abort();
+    invoke('cancel_download', { id });
+    getBridge()?.releaseWakeLock();
   };
 
   const total = chapter.pages.length;
@@ -131,47 +54,102 @@ export function saveChapter(
     phase: 'fetching',
     cancel
   });
+  getBridge()?.acquireWakeLock(`${mangaName} — ${chapter.name}`, total);
 
-  const run = async () => {
-    type NativeBridge = { acquireWakeLock(): void; releaseWakeLock(): void };
-    const bridge = (window as unknown as { __kl?: NativeBridge }).__kl;
-    bridge?.acquireWakeLock();
+  const channel = new Channel<{ current: number; total: number }>();
+  channel.onmessage = ({ current }) => {
+    updateToast(id, { current });
+    getBridge()?.updateDownloadProgress(current, total);
+  };
 
-    try {
-      const isZipManga = /\.(zip|cbz)$/i.test(decodeURIComponent(slug));
-      let fetched = 0;
-
-      await downloadPool(
-        chapter.pages,
-        async (page) => {
-          const url = buildPageUrl(slug, chapter, page, isZipManga);
-          const res = await fetch(url, { signal: controller.signal });
-          if (!res.ok) throw new Error(`Failed to fetch ${url}: ${res.status}`);
-          const blob = await res.blob();
-
-          const filename = page.split('/').pop() || page;
-          await saveOfflinePage(slug, chapter.name, filename, blob);
-
-          fetched++;
-          updateToast(id, { current: fetched });
-        },
-        CONCURRENT_DOWNLOADS,
-        controller.signal
-      );
-
-      await saveOfflineMangaMeta(slug, mangaName, [chapter]);
+  invoke('download_chapter', {
+    id,
+    slug,
+    mangaName,
+    chapter,
+    pageUrls: buildPageUrls(slug, chapter),
+    channel
+  })
+    .then(() => {
+      if (cancelled) return;
       events?.emit('download:complete', { slug, chapterName: chapter.name });
       updateToast(id, { phase: 'done', cancel: undefined });
-    } finally {
-      bridge?.releaseWakeLock();
+    })
+    .catch((err: unknown) => {
+      if (cancelled) return;
+      const message = String(err);
+      events?.emit('download:error', { slug, error: message });
+      updateToast(id, { phase: 'error', cancel: undefined, errorMessage: message });
+    })
+    .finally(() => {
+      getBridge()?.releaseWakeLock();
+    });
+
+  return { cancel };
+}
+
+export function saveManga(
+  slug: string,
+  name: string,
+  chapters: ServerChapter[],
+  events?: EventBus
+): { cancel: () => void } {
+  const id = `dl-${nextId++}`;
+  let cancelled = false;
+  let currentChapterId = '';
+
+  const cancel = () => {
+    cancelled = true;
+    if (currentChapterId) invoke('cancel_download', { id: currentChapterId });
+    getBridge()?.releaseWakeLock();
+  };
+
+  const totalPages = chapters.reduce((sum, c) => sum + c.pages.length, 0);
+  addToast({ id, label: name, current: 0, total: totalPages, phase: 'fetching', cancel });
+
+  getBridge()?.acquireWakeLock(name, totalPages);
+
+  const run = async () => {
+    let fetched = 0;
+
+    for (const chapter of chapters) {
+      if (cancelled) break;
+
+      const chapterId = `${id}-${chapter.name}`;
+      currentChapterId = chapterId;
+
+      const channel = new Channel<{ current: number; total: number }>();
+      channel.onmessage = () => {
+        updateToast(id, { current: ++fetched });
+        getBridge()?.updateDownloadProgress(fetched, totalPages);
+      };
+
+      await invoke('download_chapter', {
+        id: chapterId,
+        slug,
+        mangaName: name,
+        chapter,
+        pageUrls: buildPageUrls(slug, chapter),
+        channel
+      });
+    }
+
+    if (!cancelled) {
+      events?.emit('download:complete', { slug });
+      updateToast(id, { phase: 'done', cancel: undefined });
     }
   };
 
-  run().catch((err) => {
-    if (cancelled || err.name === 'AbortError') return;
-    events?.emit('download:error', { slug, error: err.message });
-    updateToast(id, { phase: 'error', cancel: undefined, errorMessage: err.message });
-  });
+  run()
+    .catch((err: unknown) => {
+      if (cancelled) return;
+      const message = String(err);
+      events?.emit('download:error', { slug, error: message });
+      updateToast(id, { phase: 'error', cancel: undefined, errorMessage: message });
+    })
+    .finally(() => {
+      getBridge()?.releaseWakeLock();
+    });
 
   return { cancel };
 }
