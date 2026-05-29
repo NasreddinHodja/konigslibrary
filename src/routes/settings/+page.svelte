@@ -183,13 +183,13 @@
           <h3 class="mb-2 text-sm font-bold opacity-60">{category}</h3>
           <div class="space-y-1">
             {#each items as binding (binding.action)}
-              <div class="flex items-center justify-between border-b border-white/10 py-2">
+              <div class="flex items-center justify-between border-b border-fg/10 py-2">
                 <span class="text-sm opacity-80">{binding.label}</span>
                 <button
                   class="flex min-w-[5rem] cursor-pointer justify-center gap-1 border px-2 py-1 {listening ===
                   binding.action
-                    ? 'border-white'
-                    : 'border-white/20 hover:border-white/50'}"
+                    ? 'border-fg'
+                    : 'border-fg/20 hover:border-fg/50'}"
                   onclick={() => startListening(binding.action)}
                 >
                   {#if listening === binding.action}
@@ -220,7 +220,7 @@
           type="text"
           bind:value={deviceDir}
           placeholder="/home/user/Manga"
-          class="flex-1 border-2 bg-black px-3 py-2 text-sm text-white placeholder:opacity-40"
+          class="flex-1 border-2 bg-bg px-3 py-2 text-sm text-fg placeholder:opacity-40"
         />
         <button
           class="border-2 px-3 opacity-60 hover:opacity-100"
@@ -241,14 +241,14 @@
         bind:value={serverUrl}
         placeholder="http://192.168.1.x:3000"
         onkeydown={handleServerUrlKey}
-        class="w-full border-2 bg-black px-3 py-2 text-sm text-white placeholder:opacity-40"
+        class="w-full border-2 bg-bg px-3 py-2 text-sm text-fg placeholder:opacity-40"
       />
       <div class="flex items-center gap-3">
         <Button size="md" onclick={connectServer} disabled={connecting}>
           {connecting ? 'Connecting…' : 'Connect'}
         </Button>
         {#if connectError}
-          <span class="text-sm text-red-400">{connectError}</span>
+          <span class="text-sm text-error">{connectError}</span>
         {/if}
       </div>
     </section>
@@ -265,7 +265,7 @@
           type="text"
           bind:value={mangaDir}
           placeholder="/path/to/manga"
-          class="w-full border-2 bg-black px-3 py-2 text-sm text-white placeholder:opacity-40"
+          class="w-full border-2 bg-bg px-3 py-2 text-sm text-fg placeholder:opacity-40"
         />
         <div class="flex items-center gap-3">
           <Button size="md" onclick={saveDir}>Save</Button>
@@ -273,7 +273,7 @@
             <span class="text-sm opacity-60">Saved - reload to see library</span>
           {/if}
           {#if error}
-            <span class="text-sm text-red-400">{error}</span>
+            <span class="text-sm text-error">{error}</span>
           {/if}
         </div>
       {/if}

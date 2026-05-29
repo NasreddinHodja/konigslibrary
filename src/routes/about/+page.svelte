@@ -23,7 +23,7 @@
       Download the
       <a
         href="https://github.com/NasreddinHodja/konigslibrary/releases/latest/download/konigslibrary.apk"
-        class="border-b border-white/40 hover:border-white/80">APK</a
+        class="border-b border-fg/40 hover:border-fg/80">APK</a
       >, install it, and read manga directly on your phone. Upload ZIPs or point it at a local
       folder.
     </p>
@@ -48,13 +48,13 @@
         <a
           href="/download/konigslibrary.sh"
           download
-          class="border-b border-white/40 hover:border-white/80">Linux / Mac</a
+          class="border-b border-fg/40 hover:border-fg/80">Linux / Mac</a
         >
         or
         <a
           href="/download/konigslibrary.bat"
           download
-          class="border-b border-white/40 hover:border-white/80">Windows</a
+          class="border-b border-fg/40 hover:border-fg/80">Windows</a
         >
       </li>
       <li>Run it. It handles Bun, building, and starting the server</li>

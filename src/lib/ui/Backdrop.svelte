@@ -6,7 +6,7 @@
 </script>
 
 <button
-  class="fixed inset-0 z-40 bg-black"
+  class="fixed inset-0 z-40 bg-bg"
   style="opacity: {opacity}"
   aria-label="Close"
   {onclick}

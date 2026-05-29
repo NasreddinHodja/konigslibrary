@@ -210,7 +210,7 @@
       <h1 class="text-xl leading-tight font-bold">{mangaName}</h1>
       {#if savedProgress}
         <button
-          class="cursor-pointer self-start border-1 border-white px-4 py-2 text-sm hover:bg-white hover:text-black"
+          class="cursor-pointer self-start border-1 border-fg px-4 py-2 text-sm hover:bg-fg hover:text-bg"
           onclick={resume}
         >
           RESUME: {savedProgress.chapter}, p.{savedProgress.page + 1}
@@ -252,8 +252,8 @@
                   <span
                     class="border px-2 py-0.5 text-xs font-bold tracking-widest
                     {meta.status === 'ongoing'
-                      ? 'border-green-500/50 text-green-400'
-                      : 'border-white/20 opacity-50'}"
+                      ? 'border-success/50 text-success'
+                      : 'border-fg/20 opacity-50'}"
                   >
                     {STATUS_LABEL[meta.status] ?? meta.status.toUpperCase()}
                   </span>
@@ -275,7 +275,7 @@
                       >
                       {#if authorsTruncated}
                         <button
-                          class="shrink-0 cursor-pointer border border-white/15 px-2 py-0.5 text-xs opacity-60 hover:opacity-100"
+                          class="shrink-0 cursor-pointer border border-fg/15 px-2 py-0.5 text-xs opacity-60 hover:opacity-100"
                           onclick={() => (authorsExpanded = true)}>more</button
                         >
                       {/if}
@@ -288,7 +288,7 @@
                     >
                       {meta.authors.join(', ')}
                       <button
-                        class="cursor-pointer border border-white/15 px-2 py-0.5 text-xs opacity-60 hover:opacity-100"
+                        class="cursor-pointer border border-fg/15 px-2 py-0.5 text-xs opacity-60 hover:opacity-100"
                         onclick={() => (authorsExpanded = false)}>less</button
                       >
                     </div>
@@ -299,21 +299,19 @@
               {#if meta.tags.length}
                 <div class="flex flex-wrap gap-1.5" bind:this={tagsEl}>
                   {#each meta.tags.slice(0, TAGS_COLLAPSED) as tag (tag)}
-                    <span class="border border-white/30 px-2 py-0.5 text-xs opacity-50">{tag}</span>
+                    <span class="border border-fg/30 px-2 py-0.5 text-xs opacity-50">{tag}</span>
                   {/each}
                   {#if tagsExpanded}
                     {#each meta.tags.slice(TAGS_COLLAPSED, 6) as tag (tag)}
-                      <span class="border border-white/30 px-2 py-0.5 text-xs opacity-50"
-                        >{tag}</span
-                      >
+                      <span class="border border-fg/30 px-2 py-0.5 text-xs opacity-50">{tag}</span>
                     {/each}
                     <button
-                      class="cursor-pointer border border-white/15 px-2 py-0.5 text-xs opacity-60 hover:opacity-100"
+                      class="cursor-pointer border border-fg/15 px-2 py-0.5 text-xs opacity-60 hover:opacity-100"
                       onclick={collapseTags}>less</button
                     >
                   {:else if meta.tags.length > TAGS_COLLAPSED}
                     <button
-                      class="cursor-pointer border border-white/15 px-2 py-0.5 text-xs opacity-60 hover:opacity-100"
+                      class="cursor-pointer border border-fg/15 px-2 py-0.5 text-xs opacity-60 hover:opacity-100"
                       onclick={expandTags}>more</button
                     >
                   {/if}
@@ -321,7 +319,7 @@
               {/if}
 
               {#if meta.status === 'ongoing' && meta.latestChapter}
-                <div class="self-start border border-white/10 px-3 py-2 text-xs">
+                <div class="self-start border border-fg/10 px-3 py-2 text-xs">
                   <span class="opacity-40">Latest on MangaDex: </span>
                   <span class="">Ch. {meta.latestChapter}</span>
                   {#if meta.latestChapterDate}
@@ -351,7 +349,7 @@
         <div class="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 sm:mt-auto sm:pt-3">
           {#if savedProgress}
             <button
-              class="cursor-pointer border-1 border-white px-4 py-2 text-sm hover:bg-white hover:text-black"
+              class="cursor-pointer border-1 border-fg px-4 py-2 text-sm hover:bg-fg hover:text-bg"
               onclick={resume}
               in:fade={{ duration: ANIM_DURATION, easing: ANIM_EASE }}
             >
@@ -376,7 +374,7 @@
   <!-- Picker panel (outside fixed section) -->
   {#if pickerOpen && meta}
     <div
-      class="mt-4 overflow-hidden border border-white/15 p-4"
+      class="mt-4 overflow-hidden border border-fg/15 p-4"
       transition:slide={{ duration: ANIM_DURATION, easing: ANIM_EASE }}
     >
       <div class="mb-3 flex items-center justify-between">
@@ -388,7 +386,7 @@
           <X size={12} />
         </button>
       </div>
-      <div class="flex items-center gap-2 border border-white/15 px-3 py-1.5">
+      <div class="flex items-center gap-2 border border-fg/15 px-3 py-1.5">
         <Search size={12} class="shrink-0 opacity-30" />
         <input
           bind:value={pickerQuery}
@@ -427,13 +425,13 @@
         </p>
       {:else if pickerResults.length}
         <ul
-          class="mt-3 flex flex-col gap-0 overflow-hidden border border-white/10"
+          class="mt-3 flex flex-col gap-0 overflow-hidden border border-fg/10"
           transition:slide={{ duration: ANIM_DURATION, easing: ANIM_EASE }}
         >
           {#each pickerResults as result (result.id)}
-            <li class="border-b border-white/10 last:border-b-0">
+            <li class="border-b border-fg/10 last:border-b-0">
               <button
-                class="flex w-full cursor-pointer items-center gap-3 px-3 py-2.5 text-left hover:bg-white/5"
+                class="flex w-full cursor-pointer items-center gap-3 px-3 py-2.5 text-left hover:bg-fg/5"
                 onclick={() => selectFromPicker(result)}
               >
                 {#if result.coverUrl}
@@ -444,7 +442,7 @@
                   />
                 {:else}
                   <div
-                    class="flex h-12 w-9 shrink-0 items-center justify-center border border-white/10"
+                    class="flex h-12 w-9 shrink-0 items-center justify-center border border-fg/10"
                   >
                     <BookOpen size={14} class="opacity-20" />
                   </div>
@@ -467,7 +465,7 @@
   {/if}
 
   <!-- Divider -->
-  <div class="mt-6 border-t border-white/10"></div>
+  <div class="mt-6 border-t border-fg/10"></div>
 
   <!-- Chapter list -->
   <div class="mt-4">
@@ -475,7 +473,7 @@
       <span class="shrink-0 text-xs font-bold tracking-widest opacity-30">
         CHAPTERS ({chapters.length})
       </span>
-      <div class="flex min-w-0 flex-1 items-center gap-2 border border-white/15 px-3 py-1.5">
+      <div class="flex min-w-0 flex-1 items-center gap-2 border border-fg/15 px-3 py-1.5">
         <Search size={12} class="shrink-0 opacity-30" />
         <input
           bind:value={search}
@@ -501,10 +499,10 @@
       <ul>
         {#each filteredChapters as chapter (chapter.name)}
           {@const isResume = savedProgress?.chapter === chapter.name}
-          <li class="border-b border-white/10 last:border-b-0">
+          <li class="border-b border-fg/10 last:border-b-0">
             <button
               class="flex w-full cursor-pointer items-center justify-between px-2 py-3 text-left
-                {isResume ? 'text-white hover:bg-white/5' : 'hover:bg-white/5'}"
+                {isResume ? 'text-fg hover:bg-fg/5' : 'hover:bg-fg/5'}"
               onclick={() => readChapter(chapter.name)}
             >
               <span class="truncate text-sm {isResume ? 'font-bold' : 'opacity-70'}"

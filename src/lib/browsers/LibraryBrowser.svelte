@@ -107,7 +107,7 @@
     <Skeleton class="mb-2 h-3.5 w-14" />
     <div class="border-2">
       {#each [180, 140, 210, 160] as w (w)}
-        <div class="flex items-center border-b border-white/10 px-4 py-3 last:border-b-0">
+        <div class="flex items-center border-b border-fg/10 px-4 py-3 last:border-b-0">
           <Skeleton class="h-5" style="width: {w}px" />
         </div>
       {/each}
@@ -120,9 +120,9 @@
     <p class="mb-2 text-xs font-bold tracking-widest opacity-30">LIBRARY</p>
     <div class="border-2">
       {#each entries as entry (entry.slug)}
-        <div class="flex items-center border-b border-white/10 last:border-b-0">
+        <div class="flex items-center border-b border-fg/10 last:border-b-0">
           <button
-            class="flex min-w-0 flex-1 cursor-pointer px-4 py-3 text-left text-sm hover:bg-white/10"
+            class="flex min-w-0 flex-1 cursor-pointer px-4 py-3 text-left text-sm hover:bg-fg/10"
             onclick={() => open(entry)}
           >
             <span class="truncate">{entry.name}</span>

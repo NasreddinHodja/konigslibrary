@@ -26,9 +26,9 @@
 
 <!-- Top bar -->
 <div
-  class="fixed inset-x-0 top-0 z-40 flex items-center gap-4 border-b border-white/10 px-4 transition-transform duration-200 ease-out
+  class="fixed inset-x-0 top-0 z-40 flex items-center gap-4 border-b border-fg/10 bg-bg/92 px-4 transition-transform duration-200 ease-out
     {visible ? 'pointer-events-auto translate-y-0' : 'pointer-events-none -translate-y-full'}"
-  style="background: rgba(0,0,0,0.92); padding-top: calc(0.75rem + var(--safe-top)); padding-bottom: 0.75rem;"
+  style="padding-top: calc(0.75rem + var(--safe-top)); padding-bottom: 0.75rem;"
 >
   <button
     class="shrink-0 cursor-pointer p-1 opacity-50 hover:opacity-100"
@@ -53,11 +53,11 @@
 
 <!-- Bottom controls island -->
 <div
-  class="fixed bottom-4 left-1/2 z-40 w-full max-w-xs -translate-x-1/2 border border-white/10 px-4 transition-transform duration-200 ease-out
+  class="fixed bottom-4 left-1/2 z-40 w-full max-w-xs -translate-x-1/2 border border-fg/10 bg-bg/92 px-4 transition-transform duration-200 ease-out
       {visible
     ? 'pointer-events-auto translate-y-0'
     : 'pointer-events-none translate-y-[calc(100%+1rem)]'}"
-  style="background: rgba(0,0,0,0.92); padding-top: 1rem; padding-bottom: calc(1rem + var(--safe-bottom, 0px));"
+  style="padding-top: 1rem; padding-bottom: calc(1rem + var(--safe-bottom, 0px));"
 >
   <div class="w-full space-y-3">
     {#if manga.scrollMode}
@@ -101,9 +101,9 @@
 
 <!-- Bottom progress line -->
 <div class="pointer-events-none fixed inset-x-0 z-40" style="bottom: var(--safe-bottom, 0px)">
-  <div class="h-px bg-white/10">
+  <div class="h-px bg-fg/10">
     <div
-      class="h-full bg-white transition-[width,opacity] duration-300 ease-out"
+      class="h-full bg-fg transition-[width,opacity] duration-300 ease-out"
       style="width: {progress}%; opacity: {visible ? 0.65 : 0.18}"
     ></div>
   </div>

@@ -287,7 +287,7 @@
         <div class="w-full max-w-lg space-y-10">
           <OfflineBrowser />
 
-          <div class="border-t border-white/10 pt-8">
+          <div class="border-t border-fg/10 pt-8">
             <p class="mb-1 text-xs font-bold tracking-widest opacity-30">RUN LOCALLY</p>
             <p class="mb-5 text-sm opacity-40">
               Serve manga from your PC to any device on your network.
@@ -296,20 +296,20 @@
               <a
                 href="/download/konigslibrary.sh"
                 download
-                class="border-2 border-white/30 px-4 py-2 text-sm hover:border-white hover:bg-white/10"
+                class="border-2 border-fg/30 px-4 py-2 text-sm hover:border-fg hover:bg-fg/10"
               >
                 Linux / Mac
               </a>
               <a
                 href="/download/konigslibrary.bat"
                 download
-                class="border-2 border-white/30 px-4 py-2 text-sm hover:border-white hover:bg-white/10"
+                class="border-2 border-fg/30 px-4 py-2 text-sm hover:border-fg hover:bg-fg/10"
               >
                 Windows
               </a>
               <a
                 href="https://github.com/NasreddinHodja/konigslibrary/releases/latest/download/konigslibrary.apk"
-                class="border-2 border-white/30 px-4 py-2 text-sm hover:border-white hover:bg-white/10"
+                class="border-2 border-fg/30 px-4 py-2 text-sm hover:border-fg hover:bg-fg/10"
               >
                 Android
               </a>

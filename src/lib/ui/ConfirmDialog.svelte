@@ -19,7 +19,7 @@
 <Backdrop onclick={oncancel} />
 <div class="pointer-events-none fixed inset-0 z-50 flex items-center justify-center p-4">
   <div
-    class="pointer-events-auto w-full max-w-sm border-2 bg-black px-6 py-5"
+    class="pointer-events-auto w-full max-w-sm border-2 bg-bg px-6 py-5"
     in:fly={{ y: 10, duration: ANIM_DURATION, easing: ANIM_EASE }}
     out:fade={{ duration: Math.round(ANIM_DURATION * 0.5), easing: ANIM_EASE }}
   >
@@ -32,7 +32,7 @@
         Cancel
       </button>
       <button
-        class="cursor-pointer border-2 bg-white px-4 py-2 text-sm text-black hover:bg-white/80"
+        class="cursor-pointer border-2 bg-fg px-4 py-2 text-sm text-bg hover:bg-fg/80"
         onclick={onconfirm}
       >
         {confirmLabel}

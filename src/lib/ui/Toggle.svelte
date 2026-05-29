@@ -22,19 +22,15 @@
   aria-label="{labelA} / {labelB}"
 >
   <button
-    class="flex-1 py-2 text-center {!active
-      ? 'bg-white text-black'
-      : 'cursor-pointer hover:bg-white/10'}"
+    class="flex-1 py-2 text-center {!active ? 'bg-fg text-bg' : 'cursor-pointer hover:bg-fg/10'}"
     onclick={active ? onclick : undefined}
     disabled={!active}
   >
     {labelA}
   </button>
-  <div class="w-px bg-white/20"></div>
+  <div class="w-px bg-fg/20"></div>
   <button
-    class="flex-1 py-2 text-center {active
-      ? 'bg-white text-black'
-      : 'cursor-pointer hover:bg-white/10'}"
+    class="flex-1 py-2 text-center {active ? 'bg-fg text-bg' : 'cursor-pointer hover:bg-fg/10'}"
     onclick={!active ? onclick : undefined}
     disabled={active}
   >

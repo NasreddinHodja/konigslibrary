@@ -280,7 +280,7 @@
 
 {#if showEndScreen}
   <div
-    class="flex h-full flex-1 items-center justify-center bg-black"
+    class="flex h-full flex-1 items-center justify-center bg-bg"
     role="region"
     aria-label="End of chapter"
     ontouchstart={onTouchStart}
@@ -292,7 +292,7 @@
 {:else}
   <div
     bind:this={containerEl}
-    class="relative flex h-full flex-1 items-center justify-center overflow-hidden bg-black select-none"
+    class="relative flex h-full flex-1 items-center justify-center overflow-hidden bg-bg select-none"
     style="padding-bottom: calc(var(--safe-bottom) - var(--safe-top))"
     onmousemove={handleMouseMove}
     ontouchstart={onTouchStart}

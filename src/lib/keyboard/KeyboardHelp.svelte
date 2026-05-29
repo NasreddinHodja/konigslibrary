@@ -59,7 +59,7 @@
   aria-modal="true"
 >
   <div
-    class="max-h-[calc(100vh-2rem)] w-full max-w-lg overflow-y-auto border-2 bg-black p-6 shadow-xl"
+    class="max-h-[calc(100vh-2rem)] w-full max-w-lg overflow-y-auto border-2 bg-bg p-6 shadow-xl"
     in:fly={{ y: 16, duration: ANIM_DURATION, easing: ANIM_EASE }}
     out:fade={{ duration: Math.round(ANIM_DURATION * 0.5), easing: ANIM_EASE }}
   >
@@ -80,7 +80,7 @@
               <div class="flex gap-1">
                 {#each binding.keys as key (key)}
                   <kbd
-                    class="min-w-[1.75rem] border border-white/20 px-1.5 py-0.5 text-center text-xs"
+                    class="min-w-[1.75rem] border border-fg/20 px-1.5 py-0.5 text-center text-xs"
                   >
                     {formatKey(key)}
                   </kbd>

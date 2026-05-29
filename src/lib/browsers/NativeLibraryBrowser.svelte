@@ -66,7 +66,7 @@
   {:else if loading}
     <div class="border-2">
       {#each [170, 200, 145, 185] as w (w)}
-        <div class="flex items-center border-b border-white/10 px-4 py-3 last:border-b-0">
+        <div class="flex items-center border-b border-fg/10 px-4 py-3 last:border-b-0">
           <Skeleton class="h-5" style="width: {w}px" />
         </div>
       {/each}
@@ -77,7 +77,7 @@
     <div class="border-2">
       {#each entries as entry (entry.path)}
         <button
-          class="flex w-full cursor-pointer items-center border-b border-white/10 px-4 py-3 text-left text-sm last:border-b-0 hover:bg-white/10"
+          class="flex w-full cursor-pointer items-center border-b border-fg/10 px-4 py-3 text-left text-sm last:border-b-0 hover:bg-fg/10"
           onclick={() => openEntry(entry)}
         >
           <span class="truncate">{entry.name}</span>

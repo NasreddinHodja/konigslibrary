@@ -19,9 +19,9 @@
 
   const variantClass = $derived(
     {
-      default: 'border-2 hover:bg-white/10',
-      primary: 'bg-white text-black hover:bg-white/90',
-      ghost: 'hover:bg-white/10'
+      default: 'border-2 hover:bg-fg/10',
+      primary: 'bg-fg text-bg hover:bg-fg/90',
+      ghost: 'hover:bg-fg/10'
     }[variant]
   );
 

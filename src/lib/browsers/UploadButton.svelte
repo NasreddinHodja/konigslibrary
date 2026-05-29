@@ -82,7 +82,7 @@
   type="button"
   onclick={handleClick}
   class="group flex w-full max-w-lg cursor-pointer flex-col items-center justify-center gap-3 border-2 px-8 py-4 text-center transition-colors duration-150 md:py-16
-    {isDragOver ? 'border-white bg-white/5' : 'border-white/30 hover:border-white/70'}"
+    {isDragOver ? 'border-fg bg-fg/5' : 'border-fg/30 hover:border-fg/70'}"
 >
   <span class="block text-xl font-bold tracking-wider">SELECT MANGA FILE</span>
   <span class="block text-xs tracking-widest opacity-30">.ZIP · .CBZ</span>

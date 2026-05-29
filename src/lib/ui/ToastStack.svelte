@@ -14,14 +14,14 @@
   >
     {#each toasts as toast (toast.id)}
       <div
-        class="flex min-w-72 items-start gap-3 border-2 bg-black px-4 py-3 shadow-lg"
+        class="flex min-w-72 items-start gap-3 border-2 bg-bg px-4 py-3 shadow-lg"
         transition:fly={{ x: 100, duration: ANIM_DURATION }}
       >
         <div class="mt-0.5 shrink-0">
           {#if toast.phase === 'done'}
-            <Check size={14} class="text-green-400" />
+            <Check size={14} class="text-success" />
           {:else if toast.phase === 'error'}
-            <AlertTriangle size={14} class="text-red-400" />
+            <AlertTriangle size={14} class="text-error" />
           {/if}
         </div>
 
@@ -44,7 +44,7 @@
 
         {#if toast.cancel}
           <button
-            class="mt-1 shrink-0 cursor-pointer border border-white/20 px-2 py-0.5 text-xs opacity-50 hover:opacity-100"
+            class="mt-1 shrink-0 cursor-pointer border border-fg/20 px-2 py-0.5 text-xs opacity-50 hover:opacity-100"
             onclick={() => {
               toast.cancel?.();
               removeToast(toast.id);
