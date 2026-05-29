@@ -25,8 +25,8 @@ jobs:
 
       - name: Install Android NDK and build-tools
         run: |
-          yes | sdkmanager --licenses > /dev/null 2>&1 || true
-          sdkmanager "ndk;28.2.13676358" "build-tools;36.1.0" "platforms;android-36"
+          yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --licenses > /dev/null 2>&1 || true
+          $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager "ndk;28.2.13676358" "build-tools;36.1.0" "platforms;android-36"
 
       - name: Set up Rust with Android target
         uses: dtolnay/rust-toolchain@stable
