@@ -1,6 +1,6 @@
 import type { Chapter } from '$lib/utils/types';
 import type { ZipEntry } from '$lib/zip';
-import { indexZip, extractEntry } from '$lib/zip';
+import { indexZipWorker, extractEntryWorker } from '$lib/zip/worker-client';
 import { detectDepth, groupByChapter } from '$lib/chapters';
 import type { SourceProvider, PageResult } from './types';
 
@@ -19,7 +19,7 @@ export class ZipUploadProvider implements SourceProvider {
   }
 
   async loadChapters(): Promise<Chapter[]> {
-    const entries = await indexZip(this.file);
+    const entries = await indexZipWorker(this.file);
     const imageEntries = entries.filter((e) => IMAGE_EXT.test(e.name));
 
     const { depth, commonRoot } = detectDepth(imageEntries.map((e) => e.name));
@@ -39,7 +39,7 @@ export class ZipUploadProvider implements SourceProvider {
     const entries = this.zipEntries.get(chapterName);
     if (!entries) return { urls: [], revoke: true };
 
-    const blobs = await Promise.all(entries.map((e) => extractEntry(this.file, e)));
+    const blobs = await Promise.all(entries.map((e) => extractEntryWorker(this.file, e)));
     const urls = blobs.map((b) => URL.createObjectURL(b));
     return { urls, revoke: true };
   }

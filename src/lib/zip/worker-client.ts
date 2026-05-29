@@ -1,0 +1,53 @@
+import type { ZipEntry } from './index';
+
+type Resolver = { resolve: (v: unknown) => void; reject: (e: Error) => void };
+type WorkerResponse =
+  | { id: number; entries: ZipEntry[] }
+  | { id: number; buffer: ArrayBuffer }
+  | { id: number; error: string };
+
+let worker: Worker | null = null;
+let nextId = 0;
+const pending = new Map<number, Resolver>();
+
+function getWorker(): Worker {
+  if (!worker) {
+    worker = new Worker(new URL('./worker.ts', import.meta.url), { type: 'module' });
+    worker.onmessage = (e: MessageEvent<WorkerResponse>) => {
+      const p = pending.get(e.data.id);
+      if (!p) return;
+      pending.delete(e.data.id);
+      if ('error' in e.data) {
+        p.reject(new Error(e.data.error));
+      } else if ('entries' in e.data) {
+        p.resolve(e.data.entries);
+      } else {
+        p.resolve(e.data.buffer);
+      }
+    };
+    worker.onerror = (e) => {
+      for (const p of pending.values()) p.reject(new Error(e.message));
+      pending.clear();
+      worker = null;
+    };
+  }
+  return worker;
+}
+
+function call<T>(msg: object, transfer?: Transferable[]): Promise<T> {
+  const id = nextId++;
+  return new Promise<T>((resolve, reject) => {
+    pending.set(id, { resolve: resolve as (v: unknown) => void, reject });
+    const w = getWorker();
+    w.postMessage({ id, ...msg }, transfer ?? []);
+  });
+}
+
+export function indexZipWorker(file: File): Promise<ZipEntry[]> {
+  return call<ZipEntry[]>({ type: 'index', file });
+}
+
+export async function extractEntryWorker(file: File, entry: ZipEntry): Promise<Blob> {
+  const buffer = await call<ArrayBuffer>({ type: 'extract', file, entry });
+  return new Blob([buffer]);
+}

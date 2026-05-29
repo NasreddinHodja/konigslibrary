@@ -23,12 +23,13 @@ export class OfflineDbProvider implements SourceProvider {
   async getPageUrls(chapterName: string): Promise<PageResult> {
     const chapter = this.chapters.find((c) => c.name === chapterName);
     if (!chapter) return { urls: [], revoke: true };
-    const urls: string[] = [];
-    for (const page of chapter.pages) {
-      const filename = page.split('/').pop() || page;
-      const blob = await getOfflinePageBlob(this.slug, chapter.name, filename);
-      if (blob) urls.push(URL.createObjectURL(blob));
-    }
+    const blobs = await Promise.all(
+      chapter.pages.map((page) => {
+        const filename = page.split('/').pop() || page;
+        return getOfflinePageBlob(this.slug, chapter.name, filename);
+      })
+    );
+    const urls = blobs.filter((b): b is Blob => b !== null).map((b) => URL.createObjectURL(b));
     return { urls, revoke: true };
   }
 
