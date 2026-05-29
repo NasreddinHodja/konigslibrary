@@ -140,14 +140,6 @@
   let maxDrag = 0;
 
   const onTouchStart = (e: TouchEvent) => {
-    console.log(
-      '[turn] touchStart x=',
-      e.touches[0].clientX,
-      'animTimer?',
-      !!animTimer,
-      'dragging=',
-      dragging
-    );
     if (zoomHeld) return;
     // If a slide animation is in progress, commit it immediately and start fresh.
     if (animTimer) {
@@ -192,14 +184,12 @@
     // Capture before state changes
     const snapOffset = offset;
     const snapW = containerW;
-    console.log('[turn] touchEnd snapOffset=', snapOffset, 'snapW=', snapW, 'maxDrag=', maxDrag);
     dragging = false;
     // Separate "enable transition" (this frame) from "set target offset" (next frame).
     // If both happen in the same flush, the browser applies them atomically and
     // no CSS transition plays.
     requestAnimationFrame(() => {
       const threshold = snapW * 0.22;
-      console.log('[turn] rAF: snapOffset=', snapOffset, 'threshold=', threshold);
       if (snapOffset < -threshold) {
         scheduleCommit(manga.rtl ? 1 : -1);
         offset = -snapW;
