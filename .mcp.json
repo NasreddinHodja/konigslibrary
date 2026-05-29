@@ -2,8 +2,8 @@
   "mcpServers": {
     "svelte": {
       "type": "stdio",
-      "command": "bunx",
-      "args": ["-y", "@sveltejs/mcp"],
+      "command": "/home/nasreddin/.local/share/bun/bin/bun",
+      "args": ["x", "-y", "@sveltejs/mcp"],
       "env": {}
     }
   }

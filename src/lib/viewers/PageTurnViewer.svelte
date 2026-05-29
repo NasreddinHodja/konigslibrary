@@ -40,7 +40,7 @@
   );
 
   // Slide animation
-  const ANIM_MS = 300;
+  const ANIM_MS = 260;
   let offset = $state(0);
   let noTrans = $state(false);
   let dragging = $state(false);
@@ -73,22 +73,14 @@
     }
   };
 
-  // Schedule a page commit after the slide animation completes.
-  // Uses setTimeout instead of transitionend to avoid 3x-firing and
-  // the "transition + transform applied in same flush = no animation" bug.
-  const scheduleCommit = (dir: -1 | 1) => {
-    if (animTimer) clearTimeout(animTimer);
+  const startAnim = (dir: -1 | 1) => {
     pendingDir = dir;
+    offset = dir === -1 ? -getW() : getW();
     animTimer = setTimeout(() => {
       animTimer = null;
       if (pendingDir === 0) return;
       const d = pendingDir;
       pendingDir = 0;
-      // Disable transition NOW (before the rAF) so it's applied to the DOM
-      // before commitNext/commitPrev triggers reactive image updates.
-      // If noTrans is set inside the same rAF as offset=0, Svelte may flush
-      // manga.currentPage++ separately, letting the CSS transition play
-      // backwards from -containerW to 0.
       noTrans = true;
       requestAnimationFrame(() => {
         if (d === -1) commitNext();
@@ -101,13 +93,37 @@
     }, ANIM_MS + 30);
   };
 
+  // Uses setTimeout instead of transitionend to avoid 3x-firing and
+  // the "transition + transform applied in same flush = no animation" bug.
+  const scheduleCommit = (dir: -1 | 1) => {
+    if (animTimer) {
+      // Snap current animation to completion, then start fresh for this click.
+      clearTimeout(animTimer);
+      animTimer = null;
+      const d = pendingDir;
+      pendingDir = 0;
+      noTrans = true;
+      if (d !== 0) {
+        if (d === -1) commitNext();
+        else commitPrev();
+      }
+      offset = 0;
+      // noTrans=false must be painted before offset changes, so two rAFs.
+      requestAnimationFrame(() => {
+        noTrans = false;
+        requestAnimationFrame(() => startAnim(dir));
+      });
+      return;
+    }
+    startAnim(dir);
+  };
+
   const next = () => {
     if (showEndScreen) {
       commitNext();
       return;
     }
     scheduleCommit(-1);
-    offset = -getW();
   };
 
   const prev = () => {
@@ -116,7 +132,6 @@
       return;
     }
     scheduleCommit(1);
-    offset = getW();
   };
 
   // Touch / swipe
@@ -183,7 +198,7 @@
     // If both happen in the same flush, the browser applies them atomically and
     // no CSS transition plays.
     requestAnimationFrame(() => {
-      const threshold = snapW * 0.28;
+      const threshold = snapW * 0.22;
       console.log('[turn] rAF: snapOffset=', snapOffset, 'threshold=', threshold);
       if (snapOffset < -threshold) {
         scheduleCommit(manga.rtl ? 1 : -1);
@@ -259,7 +274,7 @@
   };
 
   const transStyle = $derived(
-    noTrans || dragging ? 'none' : `transform ${ANIM_MS}ms cubic-bezier(0.25, 0.46, 0.45, 0.94)`
+    noTrans || dragging ? 'none' : `transform ${ANIM_MS}ms cubic-bezier(0.4, 0, 0.2, 1)`
   );
 </script>
 
