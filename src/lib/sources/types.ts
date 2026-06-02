@@ -7,5 +7,6 @@ export interface SourceProvider {
   readonly mangaName: string;
   loadChapters(): Promise<Chapter[]>;
   getPageUrls(chapterName: string): Promise<PageResult>;
+  getPageUrl?(chapterName: string, index: number): Promise<string>;
   dispose?(): void;
 }

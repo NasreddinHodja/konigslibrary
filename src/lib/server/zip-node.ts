@@ -1,5 +1,6 @@
 import { open, stat as fsStat, type FileHandle } from 'node:fs/promises';
-import { inflateRawSync } from 'node:zlib';
+import { promisify } from 'node:util';
+import { inflateRaw } from 'node:zlib';
 import {
   type BaseZipEntry,
   EOCD_SIG,
@@ -9,15 +10,26 @@ import {
   parseCentralDirectory
 } from '$lib/zip/parse';
 
+const inflateRawAsync = promisify(inflateRaw);
+
 export type NodeZipEntry = BaseZipEntry;
 
+const ZIP_CACHE_MAX = 50;
 const zipIndexCache = new Map<string, { entries: NodeZipEntry[]; mtimeMs: number }>();
 
 export async function getCachedIndex(filePath: string): Promise<NodeZipEntry[]> {
   const s = await fsStat(filePath);
   const cached = zipIndexCache.get(filePath);
-  if (cached && cached.mtimeMs === s.mtimeMs) return cached.entries;
+  if (cached && cached.mtimeMs === s.mtimeMs) {
+    zipIndexCache.delete(filePath);
+    zipIndexCache.set(filePath, cached);
+    return cached.entries;
+  }
   const entries = await indexZipFile(filePath);
+  zipIndexCache.delete(filePath);
+  if (zipIndexCache.size >= ZIP_CACHE_MAX) {
+    zipIndexCache.delete(zipIndexCache.keys().next().value!);
+  }
   zipIndexCache.set(filePath, { entries, mtimeMs: s.mtimeMs });
   return entries;
 }
@@ -27,6 +39,9 @@ async function readAt(fh: FileHandle, offset: number, length: number): Promise<B
   await fh.read(buf, 0, length, offset);
   return buf;
 }
+
+const MAX_CD_BYTES = 8 * 1024 * 1024;
+const MAX_UNCOMPRESSED_BYTES = 64 * 1024 * 1024;
 
 export async function indexZipFile(filePath: string): Promise<NodeZipEntry[]> {
   const fh = await open(filePath, 'r');
@@ -63,6 +78,8 @@ export async function indexZipFile(filePath: string): Promise<NodeZipEntry[]> {
       }
     }
 
+    if (cdSize > MAX_CD_BYTES) throw new Error(`Central directory size (${cdSize}) exceeds limit`);
+
     const cdBuf = await readAt(fh, cdOffset, cdSize);
     const ab = new Uint8Array(cdBuf).buffer as ArrayBuffer;
     return parseCentralDirectory(ab);
@@ -72,6 +89,12 @@ export async function indexZipFile(filePath: string): Promise<NodeZipEntry[]> {
 }
 
 export async function extractEntryFromFile(filePath: string, entry: NodeZipEntry): Promise<Buffer> {
+  if (entry.uncompressedSize > MAX_UNCOMPRESSED_BYTES) {
+    throw new Error(
+      `Entry "${entry.name}" uncompressed size (${entry.uncompressedSize}) exceeds limit`
+    );
+  }
+
   const fh = await open(filePath, 'r');
   try {
     const lhBuf = await readAt(fh, entry.localHeaderOffset, 30);
@@ -86,7 +109,7 @@ export async function extractEntryFromFile(filePath: string, entry: NodeZipEntry
       return raw;
     }
 
-    return inflateRawSync(raw);
+    return inflateRawAsync(raw);
   } finally {
     await fh.close();
   }

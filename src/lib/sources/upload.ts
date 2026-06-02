@@ -38,9 +38,13 @@ export class ZipUploadProvider implements SourceProvider {
   async getPageUrls(chapterName: string): Promise<PageResult> {
     const entries = this.zipEntries.get(chapterName);
     if (!entries) return { urls: [], revoke: true };
+    return { urls: new Array(entries.length).fill(''), revoke: true };
+  }
 
-    const blobs = await Promise.all(entries.map((e) => extractEntryWorker(this.file, e)));
-    const urls = blobs.map((b) => URL.createObjectURL(b));
-    return { urls, revoke: true };
+  async getPageUrl(chapterName: string, index: number): Promise<string> {
+    const entries = this.zipEntries.get(chapterName);
+    if (!entries?.[index]) throw new Error(`Page ${index} not found in chapter "${chapterName}"`);
+    const blob = await extractEntryWorker(this.file, entries[index]);
+    return URL.createObjectURL(blob);
   }
 }

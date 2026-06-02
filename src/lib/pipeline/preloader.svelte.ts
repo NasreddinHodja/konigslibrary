@@ -1,13 +1,14 @@
 import type { MangaState } from '$lib/context';
 
-const PRELOAD_AHEAD = 5;
-const PRELOAD_BEHIND = 2;
+export const PRELOAD_AHEAD = 5;
+export const PRELOAD_BEHIND = 2;
 
 export function usePreloader(
   state: MangaState,
   getPageUrls: () => string[],
   getLoading: () => boolean,
-  initialDecoded: () => Map<number, HTMLImageElement>
+  initialDecoded: () => Map<number, HTMLImageElement>,
+  ensurePageUrl?: (index: number) => void
 ) {
   // eslint-disable-next-line svelte/prefer-svelte-reactivity
   const cache = new Map<number, HTMLImageElement>();
@@ -28,10 +29,14 @@ export function usePreloader(
 
     for (let i = start; i <= end; i++) {
       if (!cache.has(i)) {
-        const img = new Image();
-        img.src = urls[i];
-        img.decode().catch(() => {});
-        cache.set(i, img);
+        if (urls[i]) {
+          const img = new Image();
+          img.src = urls[i];
+          img.decode().catch(() => {});
+          cache.set(i, img);
+        } else {
+          ensurePageUrl?.(i);
+        }
       }
     }
 

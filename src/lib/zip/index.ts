@@ -44,7 +44,16 @@ export async function indexZip(file: File): Promise<ZipEntry[]> {
   return parseCentralDirectory(cdBuf);
 }
 
+// 64 MiB per entry — enough for any manga page, blocks zip bombs
+const MAX_UNCOMPRESSED_BYTES = 64 * 1024 * 1024;
+
 export async function extractEntry(file: File, entry: ZipEntry): Promise<Blob> {
+  if (entry.uncompressedSize > MAX_UNCOMPRESSED_BYTES) {
+    throw new Error(
+      `Entry "${entry.name}" uncompressed size (${entry.uncompressedSize}) exceeds limit`
+    );
+  }
+
   const lhBuf = await file
     .slice(entry.localHeaderOffset, entry.localHeaderOffset + 30)
     .arrayBuffer();

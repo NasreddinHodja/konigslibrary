@@ -2,12 +2,14 @@ import { SvelteMap } from 'svelte/reactivity';
 import type { ReaderServices } from '$lib/context';
 import type { Middleware, PipelineOutput } from './types';
 import { createPipeline } from './pipeline';
+import { PRELOAD_AHEAD, PRELOAD_BEHIND } from './preloader.svelte';
 
 export type ChapterState = {
   readonly pageUrls: string[];
   readonly loading: boolean;
   readonly error: string | null;
   readonly decoded: Map<number, HTMLImageElement>;
+  readonly ensurePageUrl: ((index: number) => void) | null;
 };
 
 export function useChapter(services: ReaderServices, middlewares: Middleware[] = []): ChapterState {
@@ -16,6 +18,7 @@ export function useChapter(services: ReaderServices, middlewares: Middleware[] =
   let error: string | null = $state(null);
   const emptyMap: SvelteMap<number, HTMLImageElement> = new SvelteMap();
   let decoded: Map<number, HTMLImageElement> = $state.raw(emptyMap);
+  let ensurePageUrl: ((index: number) => void) | null = $state(null);
 
   const pipeline = createPipeline(middlewares);
 
@@ -31,6 +34,7 @@ export function useChapter(services: ReaderServices, middlewares: Middleware[] =
     error = null;
     pageUrls = [];
     decoded = emptyMap;
+    ensurePageUrl = null;
 
     services
       .getChapterUrls(chapter)
@@ -46,9 +50,64 @@ export function useChapter(services: ReaderServices, middlewares: Middleware[] =
 
         if (controller.signal.aborted) return;
 
-        pageUrls = output.urls;
-        decoded = output.decoded;
-        loading = false;
+        const provider = services.provider;
+
+        if (provider?.getPageUrl) {
+          pageUrls = output.urls;
+          decoded = output.decoded;
+
+          const ensure = (index: number) => {
+            if (pageUrls[index] || controller.signal.aborted) return;
+            provider.getPageUrl!(chapter, index)
+              .then((url) => {
+                if (controller.signal.aborted || pageUrls[index]) {
+                  URL.revokeObjectURL(url);
+                } else {
+                  pageUrls[index] = url;
+                }
+              })
+              .catch(() => {});
+          };
+          ensurePageUrl = ensure;
+
+          // Extract priority window before clearing the loader
+          const startPage = services.state.currentPage;
+          const priorityStart = Math.max(0, startPage - PRELOAD_BEHIND);
+          const priorityEnd = Math.min(output.urls.length - 1, startPage + PRELOAD_AHEAD);
+          for (let i = priorityStart; i <= priorityEnd; i++) {
+            if (controller.signal.aborted) return;
+            const url = await provider.getPageUrl(chapter, i);
+            if (controller.signal.aborted) {
+              URL.revokeObjectURL(url);
+              return;
+            }
+            pageUrls[i] = url;
+          }
+
+          loading = false;
+
+          // Background: fill remaining pages sequentially
+          (async () => {
+            for (let i = 0; i < output.urls.length; i++) {
+              if (controller.signal.aborted) break;
+              if (pageUrls[i]) continue;
+              const url = await provider.getPageUrl!(chapter, i);
+              if (controller.signal.aborted) {
+                URL.revokeObjectURL(url);
+                break;
+              }
+              if (!pageUrls[i]) {
+                pageUrls[i] = url;
+              } else {
+                URL.revokeObjectURL(url);
+              }
+            }
+          })().catch(() => {});
+        } else {
+          pageUrls = output.urls;
+          decoded = output.decoded;
+          loading = false;
+        }
       })
       .catch((err) => {
         if (controller.signal.aborted) return;
@@ -74,6 +133,9 @@ export function useChapter(services: ReaderServices, middlewares: Middleware[] =
     },
     get decoded() {
       return decoded;
+    },
+    get ensurePageUrl() {
+      return ensurePageUrl;
     }
   };
 }

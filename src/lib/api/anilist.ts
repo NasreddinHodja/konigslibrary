@@ -1,5 +1,35 @@
 const ENDPOINT = 'https://graphql.anilist.co';
 
+const CACHE_TTL = 7 * 24 * 60 * 60 * 1000;
+const CACHE_PREFIX = 'kl:anilist:';
+
+function cacheKey(query: string) {
+  return `${CACHE_PREFIX}${query.toLowerCase().trim()}`;
+}
+
+function readCache(query: string): MangaMeta | null {
+  try {
+    const raw = localStorage.getItem(cacheKey(query));
+    if (!raw) return null;
+    const { meta, cachedAt } = JSON.parse(raw) as { meta: MangaMeta; cachedAt: number };
+    if (Date.now() - cachedAt > CACHE_TTL) {
+      localStorage.removeItem(cacheKey(query));
+      return null;
+    }
+    return meta;
+  } catch {
+    return null;
+  }
+}
+
+function writeCache(query: string, meta: MangaMeta) {
+  try {
+    localStorage.setItem(cacheKey(query), JSON.stringify({ meta, cachedAt: Date.now() }));
+  } catch {
+    /* localStorage full or unavailable */
+  }
+}
+
 export interface MangaMeta {
   id: string;
   mangadexId: string | null;
@@ -99,9 +129,13 @@ function parseManga(m: Record<string, unknown>): MangaMeta {
 }
 
 export async function searchManga(query: string): Promise<MangaMeta | null> {
+  const cached = readCache(query);
+  if (cached) return cached;
   const data = await gql<{ Media: Record<string, unknown> }>(QUERY_ONE, { search: query });
   if (!data?.Media) return null;
-  return parseManga(data.Media);
+  const meta = parseManga(data.Media);
+  writeCache(query, meta);
+  return meta;
 }
 
 export async function searchMangaMultiple(query: string, limit = 6): Promise<MangaMeta[]> {

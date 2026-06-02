@@ -17,7 +17,8 @@
     manga,
     () => chapter.pageUrls,
     () => chapter.loading,
-    () => chapter.decoded
+    () => chapter.decoded,
+    chapter.ensurePageUrl ?? undefined
   );
 
   let showEndScreen = $state(false);
@@ -31,6 +32,16 @@
     } else {
       showEndScreen = false;
     }
+    if (animTimer) {
+      clearTimeout(animTimer);
+      animTimer = null;
+    }
+    pendingDir = 0;
+    noTrans = true;
+    offset = 0;
+    requestAnimationFrame(() => {
+      noTrans = false;
+    });
   });
 
   const prevUrl = $derived(manga.currentPage > 0 ? chapter.pageUrls[manga.currentPage - 1] : null);
@@ -131,6 +142,7 @@
       commitPrev();
       return;
     }
+    if (manga.currentPage <= 0 && !svc.getPrevChapter()) return;
     scheduleCommit(1);
   };
 

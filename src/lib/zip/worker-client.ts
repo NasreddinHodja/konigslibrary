@@ -34,7 +34,18 @@ function getWorker(): Worker {
   return worker;
 }
 
-function call<T>(msg: object, transfer?: Transferable[]): Promise<T> {
+async function call<T>(msg: object, transfer?: Transferable[]): Promise<T> {
+  try {
+    return await dispatch<T>(msg, transfer);
+  } catch (err) {
+    if (worker === null) {
+      return dispatch<T>(msg, transfer);
+    }
+    throw err;
+  }
+}
+
+function dispatch<T>(msg: object, transfer?: Transferable[]): Promise<T> {
   const id = nextId++;
   return new Promise<T>((resolve, reject) => {
     pending.set(id, { resolve: resolve as (v: unknown) => void, reject });
