@@ -70,6 +70,20 @@
         </button>
       </div>
 
+      <!-- Search bar -->
+      <div class="flex shrink-0 items-center gap-3 border-b border-fg/10 px-4 py-3">
+        <Search size={14} class="shrink-0 opacity-30" />
+        <input
+          bind:this={searchEl}
+          bind:value={query}
+          type="text"
+          inputmode="numeric"
+          placeholder="Page number…"
+          class="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:opacity-30"
+        />
+        <span class="shrink-0 text-xs tabular-nums opacity-30">{totalPages} pages</span>
+      </div>
+
       <!-- Grid -->
       {#if filteredIndices.length === 0}
         <p class="flex-1 py-12 text-center text-sm opacity-30">No pages match</p>
@@ -112,20 +126,6 @@
           {/snippet}
         </VirtualScroll>
       {/if}
-
-      <!-- Search bar -->
-      <div class="flex shrink-0 items-center gap-3 border-t border-fg/10 px-4 py-3">
-        <Search size={14} class="shrink-0 opacity-30" />
-        <input
-          bind:this={searchEl}
-          bind:value={query}
-          type="text"
-          inputmode="numeric"
-          placeholder="Page number…"
-          class="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:opacity-30"
-        />
-        <span class="shrink-0 text-xs tabular-nums opacity-30">{totalPages} pages</span>
-      </div>
     </div>
   </div>
 {/if}
