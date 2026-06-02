@@ -130,19 +130,12 @@
   };
 
   const next = () => {
-    if (showEndScreen) {
-      commitNext();
-      return;
-    }
+    if (showEndScreen && !svc.getNextChapter()) return;
     scheduleCommit(-1);
   };
 
   const prev = () => {
-    if (showEndScreen) {
-      commitPrev();
-      return;
-    }
-    if (manga.currentPage <= 0 && !svc.getPrevChapter()) return;
+    if (!showEndScreen && manga.currentPage <= 0 && !svc.getPrevChapter()) return;
     scheduleCommit(1);
   };
 
@@ -180,8 +173,8 @@
     if (!dragging) return;
     const dx = e.touches[0].clientX - touchStartX;
     maxDrag = Math.max(maxDrag, Math.abs(dx));
-    const noPrev = manga.currentPage <= 0 && !svc.getPrevChapter();
-    const noNext = manga.currentPage >= chapter.pageUrls.length - 1;
+    const noPrev = !showEndScreen && manga.currentPage <= 0 && !svc.getPrevChapter();
+    const noNext = showEndScreen && !svc.getNextChapter();
     const rubberLeft = manga.rtl ? noPrev : noNext;
     const rubberRight = manga.rtl ? noNext : noPrev;
     if ((dx < 0 && rubberLeft) || (dx > 0 && rubberRight)) {
@@ -280,52 +273,51 @@
   );
 </script>
 
-{#if showEndScreen}
-  <div
-    class="flex h-full flex-1 items-center justify-center bg-bg"
-    role="region"
-    aria-label="End of chapter"
-    ontouchstart={onTouchStart}
-    ontouchmove={onTouchMove}
-    ontouchend={onTouchEnd}
-  >
-    <EndOfChapter onback={() => (showEndScreen = false)} />
-  </div>
-{:else}
-  <div
-    bind:this={containerEl}
-    class="relative flex h-full flex-1 items-center justify-center overflow-hidden bg-bg select-none"
-    style="padding-bottom: calc(var(--safe-bottom) - var(--safe-top))"
-    onmousemove={handleMouseMove}
-    ontouchstart={onTouchStart}
-    ontouchmove={onTouchMove}
-    ontouchend={onTouchEnd}
-    role="region"
-    aria-label="Page {manga.currentPage + 1} of {chapter.pageUrls.length}"
-  >
-    {#if chapter.loading}
-      <Loader />
-    {:else if chapter.error}
-      <p class="py-8 text-center text-sm opacity-60">Failed to load chapter: {chapter.error}</p>
-    {:else}
-      <!-- Prev panel -->
-      <div
-        class="absolute inset-0 flex items-center justify-center"
-        style:transform="translateX(calc(-100% + {offset}px))"
-        style:transition={transStyle}
-        aria-hidden="true"
-      >
-        {#if prevUrl}
-          <img src={prevUrl} alt="Previous page" class="max-h-full max-w-full object-contain" />
+<div
+  bind:this={containerEl}
+  class="relative flex h-full flex-1 items-center justify-center overflow-hidden bg-bg select-none"
+  style="padding-bottom: calc(var(--safe-bottom) - var(--safe-top))"
+  onmousemove={handleMouseMove}
+  ontouchstart={onTouchStart}
+  ontouchmove={onTouchMove}
+  ontouchend={onTouchEnd}
+  role="region"
+  aria-label={showEndScreen ? 'End of chapter' : `Page ${manga.currentPage + 1} of ${chapter.pageUrls.length}`}
+>
+  {#if chapter.loading}
+    <Loader />
+  {:else if chapter.error}
+    <p class="py-8 text-center text-sm opacity-60">Failed to load chapter: {chapter.error}</p>
+  {:else}
+    <!-- Prev panel -->
+    <div
+      class="absolute inset-0 flex items-center justify-center"
+      style:transform="translateX(calc(-100% + {offset}px))"
+      style:transition={transStyle}
+      aria-hidden="true"
+    >
+      {#if showEndScreen}
+        {#if chapter.pageUrls[chapter.pageUrls.length - 1]}
+          <img
+            src={chapter.pageUrls[chapter.pageUrls.length - 1]}
+            alt="Last page"
+            class="max-h-full max-w-full object-contain"
+          />
         {/if}
-      </div>
+      {:else if prevUrl}
+        <img src={prevUrl} alt="Previous page" class="max-h-full max-w-full object-contain" />
+      {/if}
+    </div>
 
-      <!-- Current panel -->
-      <div
-        class="absolute inset-0 flex items-center justify-center"
-        style:transform="translateX({offset}px)"
-        style:transition={transStyle}
-      >
+    <!-- Current panel -->
+    <div
+      class="absolute inset-0 flex items-center justify-center"
+      style:transform="translateX({offset}px)"
+      style:transition={transStyle}
+    >
+      {#if showEndScreen}
+        <EndOfChapter onback={() => scheduleCommit(1)} />
+      {:else}
         <div
           bind:this={pageEl}
           class="flex h-full w-full items-center justify-center"
@@ -349,22 +341,26 @@
             />
           {/if}
         </div>
-      </div>
+      {/if}
+    </div>
 
-      <!-- Next panel -->
-      <div
-        class="absolute inset-0 flex items-center justify-center"
-        style:transform="translateX(calc(100% + {offset}px))"
-        style:transition={transStyle}
-        aria-hidden="true"
-      >
-        {#if nextUrl}
-          <img src={nextUrl} alt="Next page" class="max-h-full max-w-full object-contain" />
-        {/if}
-      </div>
-    {/if}
+    <!-- Next panel -->
+    <div
+      class="absolute inset-0 flex items-center justify-center"
+      style:transform="translateX(calc(100% + {offset}px))"
+      style:transition={transStyle}
+      aria-hidden="true"
+    >
+      {#if !showEndScreen && manga.currentPage >= chapter.pageUrls.length - 1}
+        <EndOfChapter onback={() => scheduleCommit(1)} />
+      {:else if nextUrl}
+        <img src={nextUrl} alt="Next page" class="max-h-full max-w-full object-contain" />
+      {/if}
+    </div>
+  {/if}
 
-    <!-- Click zones: onpointerup with mouse guard so touch never triggers these -->
+  <!-- Click zones: hidden on end screen so its buttons remain interactive -->
+  {#if !showEndScreen}
     <div
       role="button"
       tabindex="0"
@@ -411,5 +407,5 @@
         if (e.key === 'Enter' || e.key === ' ') handleClickRight();
       }}
     ></div>
-  </div>
-{/if}
+  {/if}
+</div>
