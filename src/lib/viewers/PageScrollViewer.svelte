@@ -210,7 +210,6 @@
 <div
   bind:this={containerEl}
   class="mx-auto flex h-full w-full max-w-[900px] flex-col gap-2 overflow-y-auto py-4 select-none"
-  style="touch-action: pan-y"
   role="region"
   aria-label="Manga pages"
   onpointerdown={onPointerDown}

@@ -65,6 +65,8 @@ class MainActivity : TauriActivity() {
 
   override fun onWebViewCreate(webView: WebView) {
     webViewRef = webView
+    webView.isVerticalScrollBarEnabled = false
+    webView.isHorizontalScrollBarEnabled = false
     webView.addJavascriptInterface(NativeBridge(), "__kl")
 
     onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
