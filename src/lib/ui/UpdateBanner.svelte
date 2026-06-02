@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { X, Download } from 'lucide-svelte';
+  import { openUrl } from '@tauri-apps/plugin-opener';
   import { checkForUpdate, dismissUpdate, type UpdateInfo } from '$lib/utils/update';
 
   let update = $state<UpdateInfo | null>(null);
@@ -15,7 +16,8 @@
   }
 
   function download() {
-    if (update) window.open(update.downloadUrl, '_blank');
+    if (!update) return;
+    openUrl(update.downloadUrl);
   }
 </script>
 

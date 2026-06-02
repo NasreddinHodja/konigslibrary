@@ -22,6 +22,17 @@ export function useChapter(services: ReaderServices, middlewares: Middleware[] =
 
   const pipeline = createPipeline(middlewares);
 
+  // Clear stale URLs before the DOM paints so the old chapter's page[0]
+  // never flickers in while the new chapter is loading.
+  $effect.pre(() => {
+    services.state.selectedChapter; // eslint-disable-line @typescript-eslint/no-unused-expressions
+    pageUrls = [];
+    loading = true;
+    error = null;
+    decoded = emptyMap;
+    ensurePageUrl = null;
+  });
+
   $effect(() => {
     const chapter = services.state.selectedChapter;
     if (chapter === null) return;
