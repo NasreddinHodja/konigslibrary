@@ -5,6 +5,7 @@
   import { ArrowLeft, Search, X, BookOpen } from 'lucide-svelte';
   import Skeleton from '$lib/ui/Skeleton.svelte';
   import Loader from '$lib/ui/Loader.svelte';
+  import VirtualScroll from '$lib/ui/virtual/VirtualScroll.svelte';
   import { getReaderContext } from '$lib/context';
   import { searchManga, searchMangaMultiple } from '$lib/api/anilist';
   import type { MangaMeta } from '$lib/api/anilist';
@@ -496,28 +497,25 @@
         No chapters match "{search}"
       </p>
     {:else}
-      <ul>
-        {#each filteredChapters as chapter (chapter.name)}
+      <VirtualScroll items={filteredChapters} rowHeight={48} class="max-h-[60vh]">
+        {#snippet item(chapter)}
           {@const isResume = savedProgress?.chapter === chapter.name}
-          <li class="border-b border-fg/10 last:border-b-0">
-            <button
-              class="flex w-full cursor-pointer items-center justify-between px-2 py-3 text-left
-                {isResume ? 'text-fg hover:bg-fg/5' : 'hover:bg-fg/5'}"
-              onclick={() => readChapter(chapter.name)}
+          <button
+            class="flex w-full cursor-pointer items-center justify-between border-b border-fg/10 px-2 py-3 text-left hover:bg-fg/5"
+            onclick={() => readChapter(chapter.name)}
+          >
+            <span class="truncate text-sm {isResume ? 'font-bold' : 'opacity-70'}"
+              >{chapter.name}</span
             >
-              <span class="truncate text-sm {isResume ? 'font-bold' : 'opacity-70'}"
-                >{chapter.name}</span
-              >
-              <div class="ml-4 flex shrink-0 items-center gap-3">
-                {#if isResume}
-                  <span class="text-xs opacity-40">p.{savedProgress.page + 1}</span>
-                {/if}
-                <span class="text-xs opacity-30">{chapter.pageCount}p</span>
-              </div>
-            </button>
-          </li>
-        {/each}
-      </ul>
+            <div class="ml-4 flex shrink-0 items-center gap-3">
+              {#if isResume}
+                <span class="text-xs opacity-40">p.{savedProgress.page + 1}</span>
+              {/if}
+              <span class="text-xs opacity-30">{chapter.pageCount}p</span>
+            </div>
+          </button>
+        {/snippet}
+      </VirtualScroll>
     {/if}
   </div>
 </div>

@@ -1,6 +1,7 @@
 <script lang="ts">
   import { X, Search } from 'lucide-svelte';
   import { getReaderContext } from '$lib/context';
+  import VirtualScroll from '$lib/ui/virtual/VirtualScroll.svelte';
 
   let { visible, onclose }: { visible: boolean; onclose: () => void } = $props();
 
@@ -70,44 +71,47 @@
       </div>
 
       <!-- Grid -->
-      <div
-        class="grid flex-1 gap-2 overflow-y-auto p-3"
-        style="grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); align-content: start"
-      >
-        {#each filteredIndices as i (i)}
-          {@const url = pageUrls[i]}
-          {@const isCurrent = i === manga.currentPage}
-          <button
-            class="group flex cursor-pointer flex-col gap-1"
-            onclick={() => pick(i)}
-            aria-label="Go to page {i + 1}"
-            aria-current={isCurrent ? 'true' : undefined}
-          >
-            <div
-              class="aspect-[2/3] w-full overflow-hidden border-2 transition-colors
-                {isCurrent ? 'border-fg' : 'border-fg/10 group-hover:border-fg/40'}"
+      {#if filteredIndices.length === 0}
+        <p class="flex-1 py-12 text-center text-sm opacity-30">No pages match</p>
+      {:else}
+        <VirtualScroll
+          items={filteredIndices}
+          minItemWidth={100}
+          rowHeight={180}
+          gap={8}
+          class="flex-1 p-3"
+        >
+          {#snippet item(i)}
+            {@const url = pageUrls[i]}
+            {@const isCurrent = i === manga.currentPage}
+            <button
+              class="group flex cursor-pointer flex-col gap-1"
+              onclick={() => pick(i)}
+              aria-label="Go to page {i + 1}"
+              aria-current={isCurrent ? 'true' : undefined}
             >
-              {#if url}
-                <img src={url} alt="Page {i + 1}" class="h-full w-full object-cover object-top" />
-              {:else}
-                <div class="flex h-full w-full items-center justify-center opacity-20">
-                  <span class="text-xs">{i + 1}</span>
-                </div>
-              {/if}
-            </div>
-            <span
-              class="text-center text-xs tabular-nums transition-opacity
-                {isCurrent ? 'opacity-100' : 'opacity-30 group-hover:opacity-60'}"
-            >
-              {i + 1}
-            </span>
-          </button>
-        {/each}
-
-        {#if filteredIndices.length === 0}
-          <p class="col-span-full py-12 text-center text-sm opacity-30">No pages match</p>
-        {/if}
-      </div>
+              <div
+                class="aspect-[2/3] w-full overflow-hidden border-2 transition-colors
+                  {isCurrent ? 'border-fg' : 'border-fg/10 group-hover:border-fg/40'}"
+              >
+                {#if url}
+                  <img src={url} alt="Page {i + 1}" class="h-full w-full object-cover object-top" />
+                {:else}
+                  <div class="flex h-full w-full items-center justify-center opacity-20">
+                    <span class="text-xs">{i + 1}</span>
+                  </div>
+                {/if}
+              </div>
+              <span
+                class="text-center text-xs tabular-nums transition-opacity
+                  {isCurrent ? 'opacity-100' : 'opacity-30 group-hover:opacity-60'}"
+              >
+                {i + 1}
+              </span>
+            </button>
+          {/snippet}
+        </VirtualScroll>
+      {/if}
 
       <!-- Search bar -->
       <div class="flex shrink-0 items-center gap-3 border-t border-fg/10 px-4 py-3">

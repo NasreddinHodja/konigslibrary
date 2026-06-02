@@ -25,12 +25,13 @@
   const progress = $derived(totalPages > 0 ? ((manga.currentPage + 1) / totalPages) * 100 : 0);
 
   let pickerOpen = $state(false);
+  const shown = $derived(visible || pickerOpen);
 </script>
 
 <!-- Top bar -->
 <div
   class="fixed inset-x-0 top-0 z-40 flex items-center gap-4 border-b border-fg/10 bg-bg/92 px-4 transition-transform duration-200 ease-out
-    {visible ? 'pointer-events-auto translate-y-0' : 'pointer-events-none -translate-y-full'}"
+    {shown ? 'pointer-events-auto translate-y-0' : 'pointer-events-none -translate-y-full'}"
   style="padding-top: calc(0.75rem + var(--safe-top)); padding-bottom: 0.75rem;"
 >
   <button
@@ -61,7 +62,7 @@
 <!-- Bottom controls island -->
 <div
   class="fixed bottom-4 left-1/2 z-40 w-full max-w-xs -translate-x-1/2 border border-fg/10 bg-bg/92 px-4 transition-transform duration-200 ease-out
-      {visible
+      {shown
     ? 'pointer-events-auto translate-y-0'
     : 'pointer-events-none translate-y-[calc(100%+1rem)]'}"
   style="padding-top: 1rem; padding-bottom: calc(1rem + var(--safe-bottom, 0px));"
@@ -111,7 +112,7 @@
   <div class="h-px bg-fg/10">
     <div
       class="h-full bg-fg transition-[width,opacity] duration-300 ease-out"
-      style="width: {progress}%; opacity: {visible ? 0.65 : 0.18}"
+      style="width: {progress}%; opacity: {shown ? 0.65 : 0.18}"
     ></div>
   </div>
 </div>
