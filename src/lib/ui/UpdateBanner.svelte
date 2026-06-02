@@ -22,6 +22,7 @@
 {#if update}
   <div
     class="fixed top-0 right-0 left-0 z-50 flex items-center gap-3 border-b-2 border-white bg-black px-4 py-2"
+    style="padding-top: calc(0.5rem + var(--safe-top))"
   >
     <span class="font-mono text-sm text-white">update available: v{update.version}</span>
     <button
