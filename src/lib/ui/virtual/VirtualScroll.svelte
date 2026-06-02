@@ -9,7 +9,7 @@
     gap = 0,
     overscan = 3,
     class: cls = '',
-    item: itemSnippet,
+    item: itemSnippet
   }: {
     items: T[];
     rowHeight?: number;
@@ -53,8 +53,15 @@
     return rows;
   });
 
-  $effect(() => { void items; scrollTop = 0; if (viewport) viewport.scrollTop = 0; });
-  $effect(() => { void cols; measuredRowH = 0; });
+  $effect(() => {
+    void items;
+    scrollTop = 0;
+    if (viewport) viewport.scrollTop = 0;
+  });
+  $effect(() => {
+    void cols;
+    measuredRowH = 0;
+  });
 
   function setupViewport(el: HTMLElement) {
     const ro = new ResizeObserver(([e]) => {
@@ -67,7 +74,9 @@
 
   function observeRowH(el: HTMLElement) {
     if (rowHeight) return {};
-    const ro = new ResizeObserver(([e]) => { if (e.contentRect.height) measuredRowH = e.contentRect.height; });
+    const ro = new ResizeObserver(([e]) => {
+      if (e.contentRect.height) measuredRowH = e.contentRect.height;
+    });
     ro.observe(el);
     return { destroy: () => ro.disconnect() };
   }
@@ -77,7 +86,9 @@
   bind:this={viewport}
   use:setupViewport
   class="relative overflow-y-auto {cls}"
-  onscroll={() => { if (viewport) scrollTop = viewport.scrollTop; }}
+  onscroll={() => {
+    if (viewport) scrollTop = viewport.scrollTop;
+  }}
 >
   <div style="height:{totalH}px; position:relative;">
     {#each visibleRows as { rowIndex, top, indices } (rowIndex)}

@@ -1,7 +1,7 @@
 <script lang="ts">
   import { tick } from 'svelte';
   import { fade, slide } from 'svelte/transition';
-  import { ANIM_DURATION, ANIM_EASE } from '$lib/utils/constants';
+  import { ANIM_DURATION, ANIM_EXIT_DURATION, ANIM_EASE, ANIM_EASE_IN } from '$lib/utils/constants';
   import { ArrowLeft, Search, X, BookOpen } from 'lucide-svelte';
   import Skeleton from '$lib/ui/Skeleton.svelte';
   import Loader from '$lib/ui/Loader.svelte';
@@ -285,7 +285,8 @@
                   {#if authorsExpanded}
                     <div
                       class="overflow-hidden text-xs opacity-40"
-                      transition:slide={{ duration: ANIM_DURATION, easing: ANIM_EASE }}
+                      in:slide={{ duration: ANIM_DURATION, easing: ANIM_EASE }}
+                      out:slide={{ duration: ANIM_EXIT_DURATION, easing: ANIM_EASE_IN }}
                     >
                       {meta.authors.join(', ')}
                       <button
@@ -362,7 +363,8 @@
               class="cursor-pointer text-xs underline opacity-30 hover:opacity-70
                 {meta ? '' : 'pointer-events-none invisible'}"
               onclick={openPicker}
-              transition:fade={{ duration: ANIM_DURATION, easing: ANIM_EASE }}
+              in:fade={{ duration: ANIM_DURATION, easing: ANIM_EASE }}
+              out:fade={{ duration: ANIM_EXIT_DURATION, easing: ANIM_EASE_IN }}
             >
               Not this manga?
             </button>
@@ -376,7 +378,8 @@
   {#if pickerOpen && meta}
     <div
       class="mt-4 overflow-hidden border border-fg/15 p-4"
-      transition:slide={{ duration: ANIM_DURATION, easing: ANIM_EASE }}
+      in:slide={{ duration: ANIM_DURATION, easing: ANIM_EASE }}
+      out:slide={{ duration: ANIM_EXIT_DURATION, easing: ANIM_EASE_IN }}
     >
       <div class="mb-3 flex items-center justify-between">
         <span class="text-xs font-bold tracking-widest opacity-50">SEARCH ANILIST</span>
@@ -413,21 +416,24 @@
       {#if pickerLoading}
         <div
           class="mt-3 overflow-hidden py-6"
-          transition:slide={{ duration: ANIM_DURATION, easing: ANIM_EASE }}
+          in:slide={{ duration: ANIM_DURATION, easing: ANIM_EASE }}
+          out:slide={{ duration: ANIM_EXIT_DURATION, easing: ANIM_EASE_IN }}
         >
           <Loader />
         </div>
       {:else if pickerError}
         <p
           class="mt-3 overflow-hidden text-xs opacity-40"
-          transition:slide={{ duration: ANIM_DURATION, easing: ANIM_EASE }}
+          in:slide={{ duration: ANIM_DURATION, easing: ANIM_EASE }}
+          out:slide={{ duration: ANIM_EXIT_DURATION, easing: ANIM_EASE_IN }}
         >
           No results found.
         </p>
       {:else if pickerResults.length}
         <ul
           class="mt-3 flex flex-col gap-0 overflow-hidden border border-fg/10"
-          transition:slide={{ duration: ANIM_DURATION, easing: ANIM_EASE }}
+          in:slide={{ duration: ANIM_DURATION, easing: ANIM_EASE }}
+          out:slide={{ duration: ANIM_EXIT_DURATION, easing: ANIM_EASE_IN }}
         >
           {#each pickerResults as result (result.id)}
             <li class="border-b border-fg/10 last:border-b-0">

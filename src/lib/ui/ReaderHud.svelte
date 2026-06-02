@@ -1,6 +1,6 @@
 <script lang="ts">
   import { slide } from 'svelte/transition';
-  import { ANIM_DURATION, ANIM_EASE } from '$lib/utils/constants';
+  import { ANIM_DURATION, ANIM_EXIT_DURATION, ANIM_EASE, ANIM_EASE_IN } from '$lib/utils/constants';
   import { ArrowLeft, Minus, Plus, Settings } from 'lucide-svelte';
   import { getReaderContext } from '$lib/context';
   import Toggle from '$lib/ui/Toggle.svelte';
@@ -71,7 +71,8 @@
     {#if manga.scrollMode}
       <div
         class="flex items-center justify-between overflow-hidden"
-        transition:slide={{ duration: ANIM_DURATION, easing: ANIM_EASE }}
+        in:slide={{ duration: ANIM_DURATION, easing: ANIM_EASE }}
+        out:slide={{ duration: ANIM_EXIT_DURATION, easing: ANIM_EASE_IN }}
       >
         <span class="text-xs font-bold tracking-widest opacity-30">ZOOM</span>
         <div class="flex items-center gap-3">
@@ -88,7 +89,8 @@
 
     {#if !manga.scrollMode}
       <div
-        transition:slide={{ duration: ANIM_DURATION, easing: ANIM_EASE }}
+        in:slide={{ duration: ANIM_DURATION, easing: ANIM_EASE }}
+        out:slide={{ duration: ANIM_EXIT_DURATION, easing: ANIM_EASE_IN }}
         class="overflow-hidden"
       >
         <Toggle labelA="LTR" labelB="RTL" active={manga.rtl} onclick={toggleRtl} />

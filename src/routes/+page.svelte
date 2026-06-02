@@ -1,7 +1,7 @@
 <script lang="ts">
   import { fade } from 'svelte/transition';
   import { flushSync } from 'svelte';
-  import { ANIM_DURATION, ANIM_EASE } from '$lib/utils/constants';
+  import { ANIM_DURATION, ANIM_EXIT_DURATION, ANIM_EASE, ANIM_EASE_IN } from '$lib/utils/constants';
   import { ZipUploadProvider } from '$lib/sources';
   import { resolveKey } from '$lib/keyboard/keybindings.svelte';
   import type { ViewerCommands } from '$lib/commands';
@@ -430,8 +430,8 @@
 {#if chapters.length === 0}
   <div
     class="flex min-h-screen flex-col"
-    out:fade={{ duration: Math.round(ANIM_DURATION * 0.5), easing: ANIM_EASE }}
-    in:fade={{ duration: ANIM_DURATION, delay: Math.round(ANIM_DURATION * 0.5), easing: ANIM_EASE }}
+    out:fade={{ duration: ANIM_EXIT_DURATION, easing: ANIM_EASE_IN }}
+    in:fade={{ duration: ANIM_DURATION, delay: ANIM_EXIT_DURATION, easing: ANIM_EASE }}
   >
     {#if !native}
       <a
@@ -510,8 +510,8 @@
   </div>
 {:else if manga.selectedChapter === null}
   <div
-    out:fade={{ duration: Math.round(ANIM_DURATION * 0.5), easing: ANIM_EASE }}
-    in:fade={{ duration: ANIM_DURATION, delay: Math.round(ANIM_DURATION * 0.5), easing: ANIM_EASE }}
+    out:fade={{ duration: ANIM_EXIT_DURATION, easing: ANIM_EASE_IN }}
+    in:fade={{ duration: ANIM_DURATION, delay: ANIM_EXIT_DURATION, easing: ANIM_EASE }}
   >
     <MangaDetail />
   </div>
@@ -520,8 +520,8 @@
     bind:this={readerEl}
     class="flex h-dvh select-none"
     role="presentation"
-    out:fade={{ duration: Math.round(ANIM_DURATION * 0.5), easing: ANIM_EASE }}
-    in:fade={{ duration: ANIM_DURATION, delay: Math.round(ANIM_DURATION * 0.5), easing: ANIM_EASE }}
+    out:fade={{ duration: ANIM_EXIT_DURATION, easing: ANIM_EASE_IN }}
+    in:fade={{ duration: ANIM_DURATION, delay: ANIM_EXIT_DURATION, easing: ANIM_EASE }}
   >
     {#if activeViewer}
       {@const Viewer = activeViewer.component}

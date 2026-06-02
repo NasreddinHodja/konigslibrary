@@ -2,9 +2,11 @@ const reducedMotion =
   typeof globalThis.matchMedia === 'function' &&
   globalThis.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-export const ANIM_DURATION = reducedMotion ? 0 : 150;
+export const ANIM_DURATION = reducedMotion ? 0 : 200;
+export const ANIM_EXIT_DURATION = reducedMotion ? 0 : 150;
 
 export const ANIM_EASE = (t: number) => 1 - Math.pow(1 - t, 3);
+export const ANIM_EASE_IN = (t: number) => t * t * t;
 
 export const LS_SCROLL_MODE = 'kl:scrollMode';
 export const LS_RTL = 'kl:rtl';

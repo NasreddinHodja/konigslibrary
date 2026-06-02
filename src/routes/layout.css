@@ -1,9 +1,10 @@
 @import 'tailwindcss';
 
 @theme {
-  --ease-anim: cubic-bezier(0, 0, 0.58, 1);
-  --ease-snappy: cubic-bezier(0.87, 0, 0.13, 1);
-  --duration-anim: 300ms;
+  --ease-anim: cubic-bezier(0, 0, 0.2, 1);
+  --ease-in-anim: cubic-bezier(0.4, 0, 1, 1);
+  --ease-snappy: cubic-bezier(0.4, 0, 0.2, 1);
+  --duration-anim: 200ms;
   --color-bg: oklch(0% 0 0);
   --color-fg: oklch(100% 0 0);
   --color-success: oklch(72% 0.15 152);
