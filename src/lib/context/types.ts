@@ -12,6 +12,7 @@ export type MangaState = {
   zoom: number;
   scrollMode: boolean;
   rtl: boolean;
+  pageUrls: string[];
 };
 
 export type ReaderServices = {
@@ -32,6 +33,7 @@ export type ReaderServices = {
   toggleRtl(): void;
   zoomIn(): void;
   zoomOut(): void;
+  goToPage(page: number, pageCount: number): void;
   saveProgress(): void;
   getSavedProgress(): { chapter: string; page: number } | null;
   getChapterUrls(name: string): Promise<PageResult>;

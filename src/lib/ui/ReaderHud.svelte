@@ -4,6 +4,7 @@
   import { ArrowLeft, Minus, Plus, Settings } from 'lucide-svelte';
   import { getReaderContext } from '$lib/context';
   import Toggle from '$lib/ui/Toggle.svelte';
+  import PagePicker from '$lib/ui/PagePicker.svelte';
 
   let {
     visible,
@@ -22,6 +23,8 @@
     chapters.find((c) => c.name === manga.selectedChapter)?.pageCount ?? 0
   );
   const progress = $derived(totalPages > 0 ? ((manga.currentPage + 1) / totalPages) * 100 : 0);
+
+  let pickerOpen = $state(false);
 </script>
 
 <!-- Top bar -->
@@ -46,9 +49,13 @@
     {/if}
   </div>
 
-  <span class="shrink-0 text-xs tabular-nums opacity-40">
+  <button
+    class="shrink-0 cursor-pointer text-xs tabular-nums opacity-40 hover:opacity-80"
+    onclick={() => (pickerOpen = true)}
+    title="Jump to page"
+  >
     {manga.currentPage + 1} / {totalPages}
-  </span>
+  </button>
 </div>
 
 <!-- Bottom controls island -->
@@ -108,3 +115,5 @@
     ></div>
   </div>
 </div>
+
+<PagePicker visible={pickerOpen} onclose={() => (pickerOpen = false)} />

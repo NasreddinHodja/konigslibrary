@@ -21,6 +21,10 @@
     chapter.ensurePageUrl ?? undefined
   );
 
+  $effect(() => {
+    manga.pageUrls = chapter.pageUrls;
+  });
+
   let showEndScreen = $state(false);
   let pendingEndScreen = false;
 
@@ -282,7 +286,9 @@
   ontouchmove={onTouchMove}
   ontouchend={onTouchEnd}
   role="region"
-  aria-label={showEndScreen ? 'End of chapter' : `Page ${manga.currentPage + 1} of ${chapter.pageUrls.length}`}
+  aria-label={showEndScreen
+    ? 'End of chapter'
+    : `Page ${manga.currentPage + 1} of ${chapter.pageUrls.length}`}
 >
   {#if chapter.loading}
     <Loader />

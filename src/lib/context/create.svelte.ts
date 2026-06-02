@@ -20,7 +20,8 @@ export function createReaderServices(): ReaderServices {
     shouldScroll: false,
     zoom: 1,
     scrollMode: browser ? localStorage.getItem(LS_SCROLL_MODE) !== 'false' : true,
-    rtl: browser ? localStorage.getItem(LS_RTL) === 'true' : false
+    rtl: browser ? localStorage.getItem(LS_RTL) === 'true' : false,
+    pageUrls: [] as string[]
   });
 
   const commands = createDefaultRegistry();
@@ -72,6 +73,7 @@ export function createReaderServices(): ReaderServices {
     state.selectedChapter = null;
     state.currentPage = 0;
     state.shouldScroll = false;
+    state.pageUrls = [];
     _chapters = [];
     _provider = null;
     events.emit('source:cleared', undefined as void);
@@ -127,6 +129,12 @@ export function createReaderServices(): ReaderServices {
     state.zoom = Math.max(0.5, Math.round((state.zoom - 0.1) * 100) / 100);
   }
 
+  function goToPage(page: number, pageCount: number) {
+    const clamped = Math.max(0, Math.min(pageCount - 1, page));
+    state.currentPage = clamped;
+    state.shouldScroll = true;
+  }
+
   function getSavedProgress() {
     return getProgress();
   }
@@ -172,6 +180,7 @@ export function createReaderServices(): ReaderServices {
     toggleRtl,
     zoomIn,
     zoomOut,
+    goToPage,
     saveProgress,
     getSavedProgress,
     getChapterUrls,

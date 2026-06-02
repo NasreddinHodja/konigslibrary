@@ -14,6 +14,10 @@
 
   const chapter = useChapter(svc);
 
+  $effect(() => {
+    manga.pageUrls = chapter.pageUrls;
+  });
+
   let containerEl: HTMLDivElement | undefined = $state();
   let ratios: number[] = $state([]);
   let visibleSet = new SvelteSet<number>();
