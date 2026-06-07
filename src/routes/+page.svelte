@@ -23,6 +23,7 @@
   import ReaderTutorial from '$lib/ui/ReaderTutorial.svelte';
   import UpdateBanner from '$lib/ui/UpdateBanner.svelte';
   import { showError } from '$lib/ui/toast.svelte';
+  import { readerActive } from '$lib/ui/reader-active.svelte';
 
   const svc = createReaderServices();
   setReaderContext(svc);
@@ -248,6 +249,10 @@
     if (hudVisible) hideHud();
     else showHud();
   }
+
+  $effect(() => {
+    readerActive.value = manga.selectedChapter !== null;
+  });
 
   let prevSelectedChapter = $state<string | null>(null);
   let prevScrollMode = $state(manga.scrollMode);

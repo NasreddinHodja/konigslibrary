@@ -37,12 +37,18 @@
     return (ratios[i] ?? DEFAULT_PAGE_RATIO) * w * manga.zoom;
   }
 
+  function edgePadPx(): number {
+    return containerEl ? containerEl.clientHeight / 3 : 0;
+  }
+
   function scrollOffsetFor(page: number): number {
-    let offset = 0;
+    let offset = edgePadPx();
     for (let i = 0; i < page; i++) {
       offset += pageHeight(i) + GAP;
     }
-    return offset;
+    // Center the target page vertically
+    offset += pageHeight(page) / 2 - (containerEl ? containerEl.clientHeight / 2 : 0);
+    return Math.max(0, offset);
   }
 
   function captureRatio(i: number, e: Event) {
@@ -221,6 +227,7 @@
   {:else if chapter.error}
     <p class="py-8 text-center text-sm opacity-60">Failed to load chapter: {chapter.error}</p>
   {:else}
+    <div aria-hidden="true" style="height: 33dvh; flex-shrink: 0"></div>
     {#each chapter.pageUrls as src, i (src)}
       <div
         bind:this={slotEls[i]}
@@ -247,5 +254,6 @@
         {/if}
       </div>
     {/each}
+    <div aria-hidden="true" style="height: 33dvh; flex-shrink: 0"></div>
   {/if}
 </div>

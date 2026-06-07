@@ -22,7 +22,7 @@
 body {
   @apply bg-bg text-fg antialiased;
   font-family: 'Source Code Pro', monospace;
-  overflow-x: hidden;
+  overflow-x: clip;
 }
 
 * {
