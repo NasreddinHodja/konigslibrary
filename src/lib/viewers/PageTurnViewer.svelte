@@ -322,7 +322,7 @@
       style:transition={transStyle}
     >
       {#if showEndScreen}
-        <EndOfChapter onback={() => scheduleCommit(1)} />
+        <EndOfChapter />
       {:else}
         <div
           bind:this={pageEl}
@@ -358,7 +358,7 @@
       aria-hidden="true"
     >
       {#if !showEndScreen && manga.currentPage >= chapter.pageUrls.length - 1}
-        <EndOfChapter onback={() => scheduleCommit(1)} />
+        <EndOfChapter />
       {:else if nextUrl}
         <img src={nextUrl} alt="Next page" class="max-h-full max-w-full object-contain" />
       {/if}

@@ -1,5 +1,10 @@
 @import 'tailwindcss';
 
+@utility h-chapter-end {
+  height: 20dvh;
+  flex-shrink: 0;
+}
+
 @theme {
   --ease-anim: cubic-bezier(0, 0, 0.2, 1);
   --ease-in-anim: cubic-bezier(0.4, 0, 1, 1);

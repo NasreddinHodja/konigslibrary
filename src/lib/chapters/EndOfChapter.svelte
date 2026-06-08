@@ -1,9 +1,7 @@
 <script lang="ts">
-  import { ArrowLeft, ChevronRight } from 'lucide-svelte';
+  import { ChevronRight } from 'lucide-svelte';
   import { getReaderContext } from '$lib/context';
   import Button from '$lib/ui/Button.svelte';
-
-  let { onback }: { onback?: () => void } = $props();
 
   const svc = getReaderContext();
   const { state: manga } = svc;
@@ -21,12 +19,6 @@
       </Button>
     {:else}
       <span class="px-6 py-3 text-sm opacity-30">No next chapter</span>
-    {/if}
-    {#if onback}
-      <Button size="lg" onclick={onback}>
-        <ArrowLeft size={16} />
-        Back
-      </Button>
     {/if}
   </div>
 </div>

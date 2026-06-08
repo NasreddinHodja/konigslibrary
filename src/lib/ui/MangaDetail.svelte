@@ -136,6 +136,18 @@
   // items to fill the viewport — the formula undershoots by scrollMargin/ROW_H items.
   // Fix: bump overscan by ceil(scrollMargin/ROW_H) so items are always rendered.
   let listEl = $state<HTMLDivElement | undefined>();
+  let chapterSentinelEl = $state<HTMLDivElement | undefined>();
+  let chapterHeaderStuck = $state(false);
+
+  $effect(() => {
+    if (!chapterSentinelEl) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => { chapterHeaderStuck = !entry.isIntersecting; },
+      { threshold: 0 }
+    );
+    observer.observe(chapterSentinelEl);
+    return () => observer.disconnect();
+  });
   let scrollMargin = $state(0);
 
   function updateScrollMargin() {
@@ -252,8 +264,13 @@
   }
 
   function readChapter(name: string) {
+    const progress = svc.getSavedProgress();
     manga.selectedChapter = name;
-    manga.currentPage = 0;
+    if (progress?.chapter === name) {
+      manga.currentPage = progress.page;
+    } else {
+      manga.currentPage = 0;
+    }
   }
 
   function formatDate(iso: string) {
@@ -594,7 +611,6 @@
     </div>
   </div>
 {:else}
-  <!-- Mobile: existing layout unchanged -->
   <div
     class="mx-auto flex min-h-screen w-full max-w-3xl flex-col px-6"
     style="padding-top: calc(1.5rem + var(--safe-top)); padding-bottom: calc(2rem + var(--safe-bottom))"
@@ -881,13 +897,12 @@
       </div>
     {/if}
 
-    <!-- Divider (scrolls away) -->
-    <div class="mt-6 border-t border-fg/10"></div>
+    <div bind:this={chapterSentinelEl}></div>
 
     <!-- Sticky chapters header -->
     <div
-      class="sticky z-10 bg-bg pb-3"
-      style="top: 0; padding-top: calc(var(--safe-top, 0px) + 0.75rem)"
+      class="sticky z-10 mt-8 bg-bg pb-3 {chapterHeaderStuck ? '' : 'border-t border-fg/10'}"
+      style="top: var(--safe-top, 0px); padding-top: {chapterHeaderStuck ? '0.75rem' : '2rem'};"
     >
       <div class="flex items-center gap-4">
         <span class="shrink-0 text-xs font-bold tracking-widest opacity-30">

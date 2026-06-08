@@ -5,6 +5,8 @@
   import { VIRTUAL_BUFFER, DEFAULT_PAGE_RATIO, INTERSECT_THRESHOLD } from '$lib/utils/constants';
   import { SvelteSet } from 'svelte/reactivity';
   import Loader from '$lib/ui/Loader.svelte';
+  import Button from '$lib/ui/Button.svelte';
+  import { ChevronRight } from 'lucide-svelte';
 
   let { commands = $bindable(), ontap }: { commands?: ViewerCommands | null; ontap?: () => void } =
     $props();
@@ -19,6 +21,8 @@
   });
 
   let containerEl: HTMLDivElement | undefined = $state();
+  let containerHeight = $state(0);
+  let containerWidth = $state(0);
   let ratios: number[] = $state([]);
   let visibleSet = new SvelteSet<number>();
 
@@ -32,22 +36,19 @@
   });
 
   function pageHeight(i: number): number {
-    if (!containerEl) return 0;
-    const w = containerEl.clientWidth;
-    return (ratios[i] ?? DEFAULT_PAGE_RATIO) * w * manga.zoom;
+    return (ratios[i] ?? DEFAULT_PAGE_RATIO) * containerWidth * manga.zoom;
   }
 
-  function edgePadPx(): number {
-    return containerEl ? containerEl.clientHeight / 3 : 0;
-  }
+  const topPad = $derived(
+    chapter.pageUrls.length > 0 ? Math.max(0, (containerHeight - pageHeight(0)) / 2) : 0
+  );
 
   function scrollOffsetFor(page: number): number {
-    let offset = edgePadPx();
+    let offset = topPad;
     for (let i = 0; i < page; i++) {
       offset += pageHeight(i) + GAP;
     }
-    // Center the target page vertically
-    offset += pageHeight(page) / 2 - (containerEl ? containerEl.clientHeight / 2 : 0);
+    offset += pageHeight(page) / 2 - containerHeight / 2;
     return Math.max(0, offset);
   }
 
@@ -215,6 +216,8 @@
 
 <div
   bind:this={containerEl}
+  bind:clientHeight={containerHeight}
+  bind:clientWidth={containerWidth}
   class="mx-auto flex h-full w-full max-w-[900px] flex-col gap-2 overflow-y-auto py-4 select-none"
   role="region"
   aria-label="Manga pages"
@@ -227,7 +230,7 @@
   {:else if chapter.error}
     <p class="py-8 text-center text-sm opacity-60">Failed to load chapter: {chapter.error}</p>
   {:else}
-    <div aria-hidden="true" style="height: 33dvh; flex-shrink: 0"></div>
+    <div aria-hidden="true" style="height: {topPad}px; flex-shrink: 0"></div>
     {#each chapter.pageUrls as src, i (src)}
       <div
         bind:this={slotEls[i]}
@@ -254,6 +257,18 @@
         {/if}
       </div>
     {/each}
-    <div aria-hidden="true" style="height: 33dvh; flex-shrink: 0"></div>
+    <div class="grid h-chapter-end w-full place-items-center select-text">
+      <div class="flex flex-col items-center gap-4">
+        <p class="text-lg opacity-50">End of {manga.selectedChapter}</p>
+        {#if svc.getNextChapter()}
+          <Button size="lg" variant="primary" onclick={() => svc.goToNextChapter()}>
+            {svc.getNextChapter()}
+            <ChevronRight size={16} />
+          </Button>
+        {:else}
+          <span class="text-sm opacity-30">No next chapter</span>
+        {/if}
+      </div>
+    </div>
   {/if}
 </div>
