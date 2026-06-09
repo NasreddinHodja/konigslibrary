@@ -42,7 +42,9 @@
       return;
     }
     const url = apiUrl('/api/library');
-    fetch(url)
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 8000);
+    fetch(url, { signal: controller.signal })
       .then((r) => {
         if (!r.ok) throw new Error(`${r.status}`);
         return r.json();
@@ -52,9 +54,11 @@
         loading = false;
       })
       .catch((e) => {
-        error = `Could not connect to library (${url}: ${e.message})`;
+        const msg = e.name === 'AbortError' ? 'timed out' : e.message;
+        error = `Could not connect to library (${url}: ${msg})`;
         loading = false;
-      });
+      })
+      .finally(() => clearTimeout(timer));
   });
 
   const open = async (entry: LibraryEntry) => {

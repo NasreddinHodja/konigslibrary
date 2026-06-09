@@ -142,7 +142,9 @@
   $effect(() => {
     if (!chapterSentinelEl) return;
     const observer = new IntersectionObserver(
-      ([entry]) => { chapterHeaderStuck = !entry.isIntersecting; },
+      ([entry]) => {
+        chapterHeaderStuck = !entry.isIntersecting;
+      },
       { threshold: 0 }
     );
     observer.observe(chapterSentinelEl);
