@@ -8,7 +8,7 @@
   import { createVirtualizer, createWindowVirtualizer } from '@tanstack/svelte-virtual';
   import type { VirtualItem } from '@tanstack/virtual-core';
   import { getReaderContext } from '$lib/context';
-  import { searchManga, searchMangaMultiple } from '$lib/api/anilist';
+  import { searchManga, searchMangaMultiple, RateLimitError } from '$lib/api/anilist';
   import type { MangaMeta } from '$lib/api/anilist';
   import { fetchLatestChapter } from '$lib/api/mangadex';
 
@@ -21,6 +21,7 @@
 
   let meta: MangaMeta | null = $state(null);
   let metaError = $state(false);
+  let metaRateLimited = $state(false);
   let coverFailed = $state(false);
   let search = $state('');
 
@@ -235,28 +236,41 @@
     if (!mangaName) return;
     meta = null;
     metaError = false;
+    metaRateLimited = false;
     coverFailed = false;
     authorsExpanded = false;
     authorsTruncated = false;
     tagsExpanded = false;
-    searchManga(mangaName)
-      .then(async (result) => {
-        if (!result) {
-          metaError = true;
-          return;
-        }
-        meta = result;
-        if (result.status === 'ongoing' && result.mangadexId) {
-          const latest = await fetchLatestChapter(result.mangadexId);
-          if (latest && meta) {
-            meta = { ...meta, latestChapter: latest.chapter, latestChapterDate: latest.publishAt };
-          }
-        }
-      })
-      .catch(() => {
-        metaError = true;
-      });
+    loadMeta(mangaName);
   });
+
+  async function loadMeta(name: string) {
+    try {
+      const result = await searchManga(name);
+      if (!result) {
+        metaError = true;
+        return;
+      }
+      meta = result;
+      if (result.status === 'ongoing' && result.mangadexId) {
+        const latest = await fetchLatestChapter(result.mangadexId);
+        if (latest && meta) {
+          meta = { ...meta, latestChapter: latest.chapter, latestChapterDate: latest.publishAt };
+        }
+      }
+    } catch (err) {
+      if (err instanceof RateLimitError) {
+        metaRateLimited = true;
+      }
+      metaError = true;
+    }
+  }
+
+  function retryMeta() {
+    metaError = false;
+    metaRateLimited = false;
+    loadMeta(mangaName);
+  }
 
   function resume() {
     if (!savedProgress) return;
@@ -313,6 +327,15 @@
       {#if metaError && !meta}
         <div class="flex flex-col gap-4">
           <h1 class="text-xl leading-tight font-bold">{mangaName}</h1>
+          {#if metaRateLimited}
+            <p class="text-xs opacity-40">AniList is rate-limiting requests.</p>
+            <button
+              class="cursor-pointer self-start text-xs underline opacity-30 hover:opacity-70"
+              onclick={retryMeta}
+            >
+              Retry
+            </button>
+          {/if}
           {#if savedProgress}
             <button
               class="cursor-pointer self-start border-1 border-fg px-4 py-2 text-sm hover:bg-fg hover:text-bg"

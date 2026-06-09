@@ -2,7 +2,7 @@
   "name": "konigslibrary",
   "description": "Client-side manga reader built with Svelte 5 + SvelteKit",
   "packageManager": "bun@1.2.0",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "type": "module",
   "license": "MIT",
   "repository": {

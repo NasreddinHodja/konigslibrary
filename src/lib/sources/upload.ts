@@ -8,7 +8,7 @@ const IMAGE_EXT = /\.(jpe?g|png|gif|webp|avif|bmp)$/i;
 
 export class ZipUploadProvider implements SourceProvider {
   readonly kind = 'upload';
-  readonly mangaName: string;
+  mangaName: string;
 
   private file: File;
   private zipEntries = new Map<string, ZipEntry[]>();
@@ -24,7 +24,7 @@ export class ZipUploadProvider implements SourceProvider {
 
     const { depth, commonRoot } = detectDepth(imageEntries.map((e) => e.name));
     if (commonRoot) {
-      (this as { mangaName: string }).mangaName = commonRoot;
+      this.mangaName = commonRoot;
     }
 
     const grouped = groupByChapter(imageEntries, depth);

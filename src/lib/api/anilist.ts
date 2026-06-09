@@ -1,3 +1,9 @@
+export class RateLimitError extends Error {
+  constructor() {
+    super('AniList rate limit reached');
+  }
+}
+
 const ENDPOINT = 'https://graphql.anilist.co';
 
 const CACHE_TTL = 7 * 24 * 60 * 60 * 1000;
@@ -70,19 +76,16 @@ const QUERY_MANY = `query ($search: String, $perPage: Int) {
 }`;
 
 async function gql<T>(query: string, variables: Record<string, unknown>): Promise<T | null> {
-  try {
-    const res = await fetch(ENDPOINT, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify({ query, variables })
-    });
-    if (!res.ok) return null;
-    const json = await res.json();
-    if (json.errors) return null;
-    return json.data as T;
-  } catch {
-    return null;
-  }
+  const res = await fetch(ENDPOINT, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    body: JSON.stringify({ query, variables })
+  });
+  if (res.status === 429) throw new RateLimitError();
+  if (!res.ok) return null;
+  const json = await res.json();
+  if (json.errors) return null;
+  return json.data as T;
 }
 
 function mapStatus(s: string): MangaMeta['status'] {

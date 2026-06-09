@@ -1,6 +1,6 @@
 import { readdir, readFile, writeFile, stat } from 'node:fs/promises';
-import { join, resolve, extname } from 'node:path';
-import { existsSync } from 'node:fs';
+import { join, resolve, extname, sep } from 'node:path';
+import { existsSync, readFileSync } from 'node:fs';
 import type { LibraryEntry, ServerChapter } from '$lib/utils/types';
 import { getCachedIndex, extractEntryFromFile } from './zip-node';
 import { detectDepth, groupByChapter } from '$lib/chapters';
@@ -24,8 +24,6 @@ function readConfig(): { mangaDir: string } {
   }
   return { mangaDir: '' };
 }
-
-import { readFileSync } from 'node:fs';
 
 export function getMangaDir(): string {
   if (process.env.MANGA_DIR) return resolve(process.env.MANGA_DIR);
@@ -78,7 +76,7 @@ export async function listChapters(mangaSlug: string): Promise<ServerChapter[]> 
   const mangaName = decodeURIComponent(mangaSlug);
   const mangaPath = resolve(dir, mangaName);
 
-  if (!mangaPath.startsWith(resolve(dir))) return [];
+  if (!mangaPath.startsWith(resolve(dir) + sep)) return [];
 
   const s = await stat(mangaPath).catch(() => null);
   if (!s) return [];
@@ -160,7 +158,7 @@ export async function getImageFromDir(
   const mangaName = decodeURIComponent(mangaSlug);
   const resolved = resolve(dir, mangaName, ...pathParts.map(decodeURIComponent));
 
-  if (!resolved.startsWith(resolve(dir))) return null;
+  if (!resolved.startsWith(resolve(dir) + sep)) return null;
   if (!IMAGE_EXT.test(resolved)) return null;
 
   try {
@@ -181,7 +179,7 @@ export async function getImageFromZip(
   const mangaName = decodeURIComponent(mangaSlug);
   const zipPath = resolve(dir, mangaName);
 
-  if (!zipPath.startsWith(resolve(dir))) return null;
+  if (!zipPath.startsWith(resolve(dir) + sep)) return null;
   if (!ZIP_EXT.test(mangaName)) return null;
 
   try {

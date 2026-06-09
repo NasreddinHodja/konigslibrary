@@ -160,11 +160,10 @@
   $effect(() => {
     const z = manga.zoom;
     if (z !== prevZoom && containerEl) {
-      const ratio = containerEl.scrollTop / (containerEl.scrollHeight || 1);
       prevZoom = z;
       requestAnimationFrame(() => {
         if (!containerEl) return;
-        containerEl.scrollTop = ratio * containerEl.scrollHeight;
+        containerEl.scrollTop = scrollOffsetFor(manga.currentPage);
       });
     }
     prevZoom = z;
@@ -191,6 +190,8 @@
   };
 
   commands = { nextPage: scrollNext, prevPage: scrollPrev };
+
+  const nextChapter = $derived(svc.getNextChapter());
 
   // Tap detection: pointerdown → pointerup with < 10px movement = tap
   let tapStartX = 0;
@@ -260,9 +261,9 @@
     <div class="grid h-chapter-end w-full place-items-center select-text">
       <div class="flex flex-col items-center gap-4">
         <p class="text-lg opacity-50">End of {manga.selectedChapter}</p>
-        {#if svc.getNextChapter()}
+        {#if nextChapter}
           <Button size="lg" variant="primary" onclick={() => svc.goToNextChapter()}>
-            {svc.getNextChapter()}
+            {nextChapter}
             <ChevronRight size={16} />
           </Button>
         {:else}

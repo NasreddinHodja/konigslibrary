@@ -77,7 +77,9 @@ export function useChapter(services: ReaderServices, middlewares: Middleware[] =
                   pageUrls[index] = url;
                 }
               })
-              .catch(() => {});
+              .catch((err) => {
+                console.error(`Failed to load page ${index}:`, err);
+              });
           };
           ensurePageUrl = ensure;
 
@@ -113,7 +115,9 @@ export function useChapter(services: ReaderServices, middlewares: Middleware[] =
                 URL.revokeObjectURL(url);
               }
             }
-          })().catch(() => {});
+          })().catch((err) => {
+            console.error('Background page loading stopped:', err);
+          });
         } else {
           pageUrls = output.urls;
           decoded = output.decoded;
