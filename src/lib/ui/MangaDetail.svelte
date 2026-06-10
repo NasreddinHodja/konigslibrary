@@ -2,7 +2,7 @@
   import { tick } from 'svelte';
   import { fade, slide } from 'svelte/transition';
   import { ANIM_DURATION, ANIM_EXIT_DURATION, ANIM_EASE, ANIM_EASE_IN } from '$lib/utils/constants';
-  import { ArrowLeft, Search, X, BookOpen } from 'lucide-svelte';
+  import { ArrowLeft, Search, X } from 'lucide-svelte';
   import Skeleton from '$lib/ui/Skeleton.svelte';
   import Loader from '$lib/ui/Loader.svelte';
   import { createVirtualizer, createWindowVirtualizer } from '@tanstack/svelte-virtual';
@@ -456,116 +456,15 @@
                   RESUME: {savedProgress.chapter}, p.{savedProgress.page + 1}
                 </button>
               {/if}
-              {#if !pickerOpen}
-                <button
-                  class="cursor-pointer text-xs underline opacity-30 hover:opacity-70
-                    {meta ? '' : 'pointer-events-none invisible'}"
-                  onclick={openPicker}
-                  in:fade={{ duration: ANIM_DURATION, easing: ANIM_EASE }}
-                  out:fade={{ duration: ANIM_EXIT_DURATION, easing: ANIM_EASE_IN }}
-                >
-                  Not this manga?
-                </button>
-              {/if}
-            </div>
-          </div>
-        </div>
-      {/if}
-
-      <!-- Picker panel -->
-      {#if pickerOpen && meta}
-        <div
-          class="overflow-hidden border border-fg/15 p-4"
-          in:slide={{ duration: ANIM_DURATION, easing: ANIM_EASE }}
-          out:slide={{ duration: ANIM_EXIT_DURATION, easing: ANIM_EASE_IN }}
-        >
-          <div class="mb-3 flex items-center justify-between">
-            <span class="text-xs font-bold tracking-widest opacity-50">SEARCH ANILIST</span>
-            <button
-              class="cursor-pointer opacity-30 hover:opacity-80"
-              onclick={() => (pickerOpen = false)}
-            >
-              <X size={12} />
-            </button>
-          </div>
-          <div class="flex items-center gap-2 border border-fg/15 px-3 py-1.5">
-            <Search size={12} class="shrink-0 opacity-30" />
-            <input
-              bind:value={pickerQuery}
-              placeholder="Search title…"
-              class="flex-1 bg-transparent text-sm outline-none placeholder:opacity-30"
-            />
-            {#if pickerLoading}
-              <span class="text-xs opacity-30">…</span>
-            {:else if pickerQuery}
               <button
-                class="cursor-pointer opacity-30 hover:opacity-80"
-                onclick={() => {
-                  pickerQuery = '';
-                  pickerResults = [];
-                  pickerError = false;
-                }}
+                class="cursor-pointer text-xs underline opacity-30 hover:opacity-70
+                  {meta ? '' : 'pointer-events-none invisible'}"
+                onclick={() => (pickerOpen ? (pickerOpen = false) : openPicker())}
               >
-                <X size={12} />
+                Not this manga?
               </button>
-            {/if}
-          </div>
-
-          {#if pickerLoading}
-            <div
-              class="mt-3 overflow-hidden py-6"
-              in:slide={{ duration: ANIM_DURATION, easing: ANIM_EASE }}
-              out:slide={{ duration: ANIM_EXIT_DURATION, easing: ANIM_EASE_IN }}
-            >
-              <Loader />
             </div>
-          {:else if pickerError}
-            <p
-              class="mt-3 overflow-hidden text-xs opacity-40"
-              in:slide={{ duration: ANIM_DURATION, easing: ANIM_EASE }}
-              out:slide={{ duration: ANIM_EXIT_DURATION, easing: ANIM_EASE_IN }}
-            >
-              No results found.
-            </p>
-          {:else if pickerResults.length}
-            <ul
-              class="mt-3 flex flex-col gap-0 overflow-hidden border border-fg/10"
-              in:slide={{ duration: ANIM_DURATION, easing: ANIM_EASE }}
-              out:slide={{ duration: ANIM_EXIT_DURATION, easing: ANIM_EASE_IN }}
-            >
-              {#each pickerResults as result (result.id)}
-                <li class="border-b border-fg/10 last:border-b-0">
-                  <button
-                    class="flex w-full cursor-pointer items-center gap-3 px-3 py-2.5 text-left hover:bg-fg/5"
-                    onclick={() => selectFromPicker(result)}
-                  >
-                    {#if result.coverUrl}
-                      <img
-                        src={result.coverUrl}
-                        alt={result.title}
-                        class="h-12 w-9 shrink-0 object-cover opacity-80"
-                      />
-                    {:else}
-                      <div
-                        class="flex h-12 w-9 shrink-0 items-center justify-center border border-fg/10"
-                      >
-                        <BookOpen size={14} class="opacity-20" />
-                      </div>
-                    {/if}
-                    <div class="min-w-0 flex-1">
-                      <p class="truncate text-sm font-bold">{result.title}</p>
-                      <div class="mt-0.5 flex items-center gap-2 text-xs opacity-40">
-                        {#if result.year}<span>{result.year}</span>{/if}
-                        {#if result.status}<span>{result.status.toUpperCase()}</span>{/if}
-                        {#if result.authors.length}<span class="truncate">{result.authors[0]}</span
-                          >{/if}
-                      </div>
-                    </div>
-                  </button>
-                </li>
-              {/each}
-            </ul>
-          {/if}
+          </div>
         </div>
       {/if}
     </div>
@@ -809,116 +708,15 @@
                 RESUME: {savedProgress.chapter}, p.{savedProgress.page + 1}
               </button>
             {/if}
-            {#if !pickerOpen}
-              <button
-                class="cursor-pointer text-xs underline opacity-30 hover:opacity-70
-                  {meta ? '' : 'pointer-events-none invisible'}"
-                onclick={openPicker}
-                in:fade={{ duration: ANIM_DURATION, easing: ANIM_EASE }}
-                out:fade={{ duration: ANIM_EXIT_DURATION, easing: ANIM_EASE_IN }}
-              >
-                Not this manga?
-              </button>
-            {/if}
-          </div>
-        </div>
-      </div>
-    {/if}
-
-    <!-- Picker panel (outside fixed section) -->
-    {#if pickerOpen && meta}
-      <div
-        class="mt-4 overflow-hidden border border-fg/15 p-4"
-        in:slide={{ duration: ANIM_DURATION, easing: ANIM_EASE }}
-        out:slide={{ duration: ANIM_EXIT_DURATION, easing: ANIM_EASE_IN }}
-      >
-        <div class="mb-3 flex items-center justify-between">
-          <span class="text-xs font-bold tracking-widest opacity-50">SEARCH ANILIST</span>
-          <button
-            class="cursor-pointer opacity-30 hover:opacity-80"
-            onclick={() => (pickerOpen = false)}
-          >
-            <X size={12} />
-          </button>
-        </div>
-        <div class="flex items-center gap-2 border border-fg/15 px-3 py-1.5">
-          <Search size={12} class="shrink-0 opacity-30" />
-          <input
-            bind:value={pickerQuery}
-            placeholder="Search title…"
-            class="flex-1 bg-transparent text-sm outline-none placeholder:opacity-30"
-          />
-          {#if pickerLoading}
-            <span class="text-xs opacity-30">…</span>
-          {:else if pickerQuery}
             <button
-              class="cursor-pointer opacity-30 hover:opacity-80"
-              onclick={() => {
-                pickerQuery = '';
-                pickerResults = [];
-                pickerError = false;
-              }}
+              class="cursor-pointer text-xs underline opacity-30 hover:opacity-70
+                {meta ? '' : 'pointer-events-none invisible'}"
+              onclick={() => (pickerOpen ? (pickerOpen = false) : openPicker())}
             >
-              <X size={12} />
+              Not this manga?
             </button>
-          {/if}
-        </div>
-
-        {#if pickerLoading}
-          <div
-            class="mt-3 overflow-hidden py-6"
-            in:slide={{ duration: ANIM_DURATION, easing: ANIM_EASE }}
-            out:slide={{ duration: ANIM_EXIT_DURATION, easing: ANIM_EASE_IN }}
-          >
-            <Loader />
           </div>
-        {:else if pickerError}
-          <p
-            class="mt-3 overflow-hidden text-xs opacity-40"
-            in:slide={{ duration: ANIM_DURATION, easing: ANIM_EASE }}
-            out:slide={{ duration: ANIM_EXIT_DURATION, easing: ANIM_EASE_IN }}
-          >
-            No results found.
-          </p>
-        {:else if pickerResults.length}
-          <ul
-            class="mt-3 flex flex-col gap-0 overflow-hidden border border-fg/10"
-            in:slide={{ duration: ANIM_DURATION, easing: ANIM_EASE }}
-            out:slide={{ duration: ANIM_EXIT_DURATION, easing: ANIM_EASE_IN }}
-          >
-            {#each pickerResults as result (result.id)}
-              <li class="border-b border-fg/10 last:border-b-0">
-                <button
-                  class="flex w-full cursor-pointer items-center gap-3 px-3 py-2.5 text-left hover:bg-fg/5"
-                  onclick={() => selectFromPicker(result)}
-                >
-                  {#if result.coverUrl}
-                    <img
-                      src={result.coverUrl}
-                      alt={result.title}
-                      class="h-12 w-9 shrink-0 object-cover opacity-80"
-                    />
-                  {:else}
-                    <div
-                      class="flex h-12 w-9 shrink-0 items-center justify-center border border-fg/10"
-                    >
-                      <BookOpen size={14} class="opacity-20" />
-                    </div>
-                  {/if}
-                  <div class="min-w-0 flex-1">
-                    <p class="truncate text-sm font-bold">{result.title}</p>
-                    <div class="mt-0.5 flex items-center gap-2 text-xs opacity-40">
-                      {#if result.year}<span>{result.year}</span>{/if}
-                      {#if result.status}<span>{result.status.toUpperCase()}</span>{/if}
-                      {#if result.authors.length}<span class="truncate">{result.authors[0]}</span
-                        >{/if}
-                    </div>
-                  </div>
-                </button>
-              </li>
-            {/each}
-          </ul>
-        {/if}
+        </div>
       </div>
     {/if}
 
@@ -984,5 +782,101 @@
         {/each}
       </div>
     {/if}
+  </div>
+{/if}
+
+{#if pickerOpen}
+  <div
+    class="fixed inset-0 z-50 flex items-center justify-center px-4"
+    in:fade={{ duration: ANIM_DURATION, easing: ANIM_EASE }}
+    out:fade={{ duration: ANIM_EXIT_DURATION, easing: ANIM_EASE_IN }}
+  >
+    <button
+      class="absolute inset-0 bg-bg/80"
+      onclick={() => (pickerOpen = false)}
+      aria-label="Close"
+    ></button>
+    <div
+      class="relative z-10 flex h-[420px] w-full max-w-sm flex-col border-2 border-fg/20 bg-bg p-4"
+    >
+      <div class="mb-3 flex items-center justify-between">
+        <span class="text-xs font-bold tracking-widest opacity-50">SEARCH ANILIST</span>
+        <button
+          class="cursor-pointer opacity-30 hover:opacity-80"
+          onclick={() => (pickerOpen = false)}
+        >
+          <X size={12} />
+        </button>
+      </div>
+      <div class="flex items-center gap-2 border border-fg/15 px-3 py-1.5">
+        <Search size={12} class="shrink-0 opacity-30" />
+        <input
+          bind:value={pickerQuery}
+          placeholder="Search title…"
+          class="flex-1 bg-transparent text-sm outline-none placeholder:opacity-30"
+        />
+        {#if pickerLoading}
+          <span class="text-xs opacity-30">…</span>
+        {:else if pickerQuery}
+          <button
+            class="cursor-pointer opacity-30 hover:opacity-80"
+            onclick={() => {
+              pickerQuery = '';
+              pickerResults = [];
+              pickerError = false;
+            }}
+          >
+            <X size={12} />
+          </button>
+        {/if}
+      </div>
+      <div class="mt-3 flex min-h-0 flex-1 flex-col overflow-hidden">
+        {#if pickerLoading}
+          <div class="flex flex-1 items-center justify-center">
+            <Loader />
+          </div>
+        {:else if pickerError}
+          <p class="text-xs opacity-40">No results found.</p>
+        {:else if pickerResults.length}
+          <ul class="flex max-h-full flex-col gap-0 overflow-y-auto border border-fg/10">
+            {#each pickerResults as result (result.id)}
+              <li class="border-b border-fg/10 last:border-b-0">
+                <button
+                  class="flex w-full cursor-pointer items-center gap-3 px-3 py-2.5 text-left hover:bg-fg/5"
+                  onclick={() => selectFromPicker(result)}
+                >
+                  {#if result.coverUrl}
+                    <img
+                      src={result.coverUrl}
+                      alt={result.title}
+                      class="h-12 w-9 shrink-0 object-cover opacity-80"
+                    />
+                  {:else}
+                    <div
+                      class="flex h-12 w-9 shrink-0 items-center justify-center border border-fg/10"
+                    >
+                      <span class="text-base opacity-20">∅</span>
+                    </div>
+                  {/if}
+                  <div class="min-w-0 flex-1">
+                    <p class="truncate text-sm font-bold">{result.title}</p>
+                    <div class="mt-0.5 flex items-center gap-2 text-xs opacity-40">
+                      {#if result.year}<span>{result.year}</span>{/if}
+                      {#if result.status}<span>{result.status.toUpperCase()}</span>{/if}
+                      {#if result.authors.length}<span class="truncate">{result.authors[0]}</span
+                        >{/if}
+                    </div>
+                  </div>
+                </button>
+              </li>
+            {/each}
+          </ul>
+        {:else}
+          <div class="flex flex-1 items-center justify-center">
+            <span class="text-4xl opacity-10">∅</span>
+          </div>
+        {/if}
+      </div>
+    </div>
   </div>
 {/if}
