@@ -36,18 +36,6 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      - name: Extract version from tag
-        id: version
-        run: |
-          VERSION="${GITHUB_REF_NAME#v}"
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-
-      - name: Update version in tauri.conf.json
-        run: |
-          jq --arg v "${{ steps.version.outputs.version }}" '.version = $v' \
-            src-tauri/tauri.conf.json > /tmp/tauri.conf.json.tmp
-          mv /tmp/tauri.conf.json.tmp src-tauri/tauri.conf.json
-
       - name: Build Android APK
         run: bun tauri android build --target aarch64
         env:

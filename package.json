@@ -2,7 +2,7 @@
   "name": "konigslibrary",
   "description": "Client-side manga reader built with Svelte 5 + SvelteKit",
   "packageManager": "bun@1.2.0",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "type": "module",
   "license": "MIT",
   "repository": {
@@ -27,7 +27,8 @@
     "build:local": "LOCAL_BUILD=1 vite build",
     "tauri:local": "LOCAL_BUILD=1 bun tauri dev",
     "dev:android": "bun tauri android dev",
-    "build:android": "bun tauri android build --target aarch64 && ~/.local/src/Android/build-tools/36.1.0/apksigner sign --ks src-tauri/konigslibrary.jks --ks-key-alias konigslibrary --out konigslibrary.apk src-tauri/gen/android/app/build/outputs/apk/universal/release/app-universal-release-unsigned.apk"
+    "build:android": "bun tauri android build --target aarch64 && ~/.local/src/Android/build-tools/36.1.0/apksigner sign --ks src-tauri/konigslibrary.jks --ks-key-alias konigslibrary --out konigslibrary.apk src-tauri/gen/android/app/build/outputs/apk/universal/release/app-universal-release-unsigned.apk",
+    "version": "bun scripts/sync-version.js"
   },
   "devDependencies": {
     "@eslint/compat": "^2.0.2",
