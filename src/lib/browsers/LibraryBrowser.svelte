@@ -6,10 +6,10 @@
   import { saveManga } from '$lib/sources/download.svelte';
   import { listOfflineManga } from '$lib/sources/offline-db';
   import { isNative } from '$lib/utils/platform';
-  import { Download, Check } from 'lucide-svelte';
   import { showError } from '$lib/ui/toast.svelte';
+  import { Download } from 'lucide-svelte';
   import ConfirmDialog from '$lib/ui/ConfirmDialog.svelte';
-  import Skeleton from '$lib/ui/Skeleton.svelte';
+  import MangaList from './MangaList.svelte';
 
   const { setSource, events } = getReaderContext();
 
@@ -19,6 +19,10 @@
   let downloadedSlugs: Set<string> = $state.raw(new Set());
   let downloadingSlug: string | null = $state(null);
   let pendingDownload: LibraryEntry | null = $state(null);
+
+  const listEntries = $derived(
+    entries.filter((e) => !downloadedSlugs.has(e.slug)).map((e) => ({ id: e.slug, name: e.name }))
+  );
 
   function refreshDownloadedSlugs() {
     listOfflineManga().then((list) => {
@@ -61,13 +65,14 @@
       .finally(() => clearTimeout(timer));
   });
 
-  const open = async (entry: LibraryEntry) => {
+  async function open(slug: string) {
+    const entry = entries.find((e) => e.slug === slug)!;
     try {
       await setSource(new ServerLibraryProvider(entry.slug, entry.name));
     } catch (err) {
       showError(`Failed to open "${entry.name}": ${err instanceof Error ? err.message : err}`);
     }
-  };
+  }
 
   async function startDownload(entry: LibraryEntry) {
     if (downloadingSlug === entry.slug) return;
@@ -87,9 +92,8 @@
     }
   }
 
-  function requestDownload(e: MouseEvent, entry: LibraryEntry) {
-    e.stopPropagation();
-    pendingDownload = entry;
+  function requestDownload(slug: string) {
+    pendingDownload = entries.find((e) => e.slug === slug) ?? null;
   }
 </script>
 
@@ -106,49 +110,11 @@
   />
 {/if}
 
-{#if loading}
-  <div class="w-full min-w-0">
-    <Skeleton class="mb-2 h-3.5 w-14" />
-    <div class="border-2">
-      {#each [180, 140, 210, 160] as w (w)}
-        <div class="flex items-center border-b border-fg/10 px-4 py-3 last:border-b-0">
-          <Skeleton class="h-5" style="width: {w}px" />
-        </div>
-      {/each}
-    </div>
-  </div>
-{:else if error}
-  <p class="text-xs opacity-40">{error}</p>
-{:else if entries.length > 0}
-  <div class="w-full min-w-0">
-    <p class="mb-2 text-xs font-bold tracking-widest opacity-30">LIBRARY</p>
-    <div class="border-2">
-      {#each entries as entry (entry.slug)}
-        <div class="flex items-center border-b border-fg/10 last:border-b-0">
-          <button
-            class="flex min-w-0 flex-1 cursor-pointer px-4 py-3 text-left text-sm hover:bg-fg/10"
-            onclick={() => open(entry)}
-          >
-            <span class="truncate">{entry.name}</span>
-          </button>
-          {#if downloadedSlugs.has(entry.slug)}
-            <span class="shrink-0 px-3 py-3 opacity-30" aria-label="{entry.name} downloaded">
-              <Check size={14} />
-            </span>
-          {:else}
-            <button
-              class="shrink-0 px-3 py-3 {downloadingSlug === entry.slug
-                ? 'animate-pulse cursor-wait opacity-50'
-                : 'cursor-pointer opacity-20 hover:opacity-80'}"
-              onclick={(e) => requestDownload(e, entry)}
-              disabled={downloadingSlug === entry.slug}
-              aria-label="Download {entry.name}"
-            >
-              <Download size={14} />
-            </button>
-          {/if}
-        </div>
-      {/each}
-    </div>
-  </div>
-{/if}
+<MangaList
+  title="LIBRARY"
+  entries={listEntries}
+  {loading}
+  {error}
+  onopen={open}
+  action={{ icon: Download, onclick: requestDownload, loadingId: downloadingSlug }}
+/>

@@ -15,7 +15,7 @@ export type MangaState = {
   pageUrls: string[];
 };
 
-export type ReaderServices = {
+export type Reader = {
   state: MangaState;
   readonly provider: SourceProvider | null;
   readonly chapters: Chapter[];

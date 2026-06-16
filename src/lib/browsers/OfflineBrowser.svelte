@@ -6,11 +6,14 @@
   import { isNative } from '$lib/utils/platform';
   import { Trash2 } from 'lucide-svelte';
   import ConfirmDialog from '$lib/ui/ConfirmDialog.svelte';
+  import MangaList from './MangaList.svelte';
 
   const { setSource, events } = getReaderContext();
 
   let entries: { slug: string; name: string }[] = $state([]);
   let pendingDelete: { slug: string; name: string } | null = $state(null);
+
+  const listEntries = $derived(entries.map((e) => ({ id: e.slug, name: e.name })));
 
   function refreshEntries() {
     if (!isNative()) return;
@@ -50,27 +53,16 @@
   />
 {/if}
 
-{#if entries.length > 0}
-  <div class="w-full min-w-0">
-    <p class="mb-2 text-xs font-bold tracking-widest opacity-30">DOWNLOADED</p>
-    <div class="border-2">
-      {#each entries as entry (entry.slug)}
-        <div class="flex items-center border-b border-fg/10 last:border-b-0">
-          <button
-            class="flex min-w-0 flex-1 cursor-pointer px-4 py-3 text-left text-sm hover:bg-fg/10"
-            onclick={() => setSource(new OfflineFsProvider(entry.slug, entry.name))}
-          >
-            <span class="truncate">{entry.name}</span>
-          </button>
-          <button
-            class="shrink-0 cursor-pointer px-3 py-3 opacity-20 hover:opacity-80"
-            onclick={() => (pendingDelete = entry)}
-            aria-label="Delete {entry.name}"
-          >
-            <Trash2 size={14} />
-          </button>
-        </div>
-      {/each}
-    </div>
-  </div>
-{/if}
+<MangaList
+  title="DOWNLOADED"
+  entries={listEntries}
+  loading={false}
+  onopen={(id) => {
+    const entry = entries.find((e) => e.slug === id)!;
+    setSource(new OfflineFsProvider(entry.slug, entry.name));
+  }}
+  action={{
+    icon: Trash2,
+    onclick: (id) => (pendingDelete = entries.find((e) => e.slug === id) ?? null)
+  }}
+/>

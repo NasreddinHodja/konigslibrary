@@ -8,8 +8,7 @@
   import { convertFileSrc } from '@tauri-apps/api/core';
   import { getReaderContext } from '$lib/context';
   import { ZipUploadProvider, NativeFilesystemProvider } from '$lib/sources';
-  import Skeleton from '$lib/ui/Skeleton.svelte';
-  import { RefreshCw } from 'lucide-svelte';
+  import MangaList from './MangaList.svelte';
 
   const { setSource } = getReaderContext();
 
@@ -17,6 +16,8 @@
   let loading = $state(true);
   let error: string | null = $state(null);
   const mangaDir = getMangaDir();
+
+  const listEntries = $derived(entries.map((e) => ({ id: e.path, name: e.name })));
 
   async function loadEntries() {
     loading = true;
@@ -33,7 +34,8 @@
     loadEntries();
   });
 
-  async function openEntry(entry: NativeMangaEntry) {
+  async function open(path: string) {
+    const entry = entries.find((e) => e.path === path)!;
     if (entry.type === 'zip') {
       const url = convertFileSrc(entry.path);
       const response = await fetch(url);
@@ -47,46 +49,17 @@
   }
 </script>
 
-<div class="w-full min-w-0">
-  <div class="mb-2 flex items-center gap-3">
-    <p class="text-xs font-bold tracking-widest opacity-30">DEVICE LIBRARY</p>
-    <button
-      class="cursor-pointer opacity-20 hover:opacity-70"
-      onclick={loadEntries}
-      aria-label="Refresh"
-    >
-      <RefreshCw size={12} />
-    </button>
-  </div>
-
-  {#if !mangaDir}
-    <p class="text-sm opacity-40">
-      No path set - <a href="/settings" class="underline">configure in Settings</a>
-    </p>
-  {:else if loading}
-    <div class="border-2">
-      {#each [170, 200, 145, 185] as w (w)}
-        <div class="flex items-center border-b border-fg/10 px-4 py-3 last:border-b-0">
-          <Skeleton class="h-5" style="width: {w}px" />
-        </div>
-      {/each}
-    </div>
-  {:else if error}
-    <p class="text-sm opacity-40">{error}</p>
-  {:else if entries.length > 0}
-    <div class="border-2">
-      {#each entries as entry (entry.path)}
-        <button
-          class="flex w-full cursor-pointer items-center border-b border-fg/10 px-4 py-3 text-left text-sm last:border-b-0 hover:bg-fg/10"
-          onclick={() => openEntry(entry)}
-        >
-          <span class="truncate">{entry.name}</span>
-        </button>
-      {/each}
-    </div>
-  {:else}
-    <p class="text-sm opacity-40">
-      No manga found in <code class="opacity-60">{mangaDir}/</code>
-    </p>
-  {/if}
-</div>
+{#if !mangaDir}
+  <p class="text-sm opacity-60">
+    No path set - <a href="/settings" class="underline">configure in Settings</a>
+  </p>
+{:else}
+  <MangaList
+    title="DEVICE LIBRARY"
+    entries={listEntries}
+    {loading}
+    {error}
+    onopen={open}
+    onrefresh={loadEntries}
+  />
+{/if}

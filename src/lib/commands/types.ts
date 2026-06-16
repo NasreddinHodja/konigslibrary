@@ -1,7 +1,7 @@
-import type { ReaderServices } from '$lib/context';
+import type { Reader } from '$lib/context';
 
 export type CommandContext = {
-  services: ReaderServices;
+  reader: Reader;
   viewer: ViewerCommands | null;
 };
 

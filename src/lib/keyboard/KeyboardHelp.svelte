@@ -59,13 +59,13 @@
   aria-modal="true"
 >
   <div
-    class="max-h-[calc(100vh-2rem)] w-full max-w-lg overflow-y-auto border-2 bg-bg p-6 shadow-xl"
+    class="max-h-[calc(100vh-2rem)] w-full max-w-lg overflow-y-auto border-2 bg-surface/75 p-6 shadow-xl backdrop-blur-2xl"
     in:fly={{ y: 16, duration: ANIM_DURATION, easing: ANIM_EASE }}
     out:fade={{ duration: ANIM_EXIT_DURATION, easing: ANIM_EASE_IN }}
   >
     <div class="mb-4 flex items-center justify-between">
       <h2 class="text-lg font-bold">Keyboard shortcuts</h2>
-      <button class="px-2 py-1 text-sm opacity-40 hover:opacity-80" onclick={onclose}>
+      <button class="px-2 py-1 text-sm opacity-60 hover:opacity-80" onclick={onclose}>
         Close
       </button>
     </div>
@@ -79,9 +79,7 @@
               <span class="text-sm opacity-80">{binding.label}</span>
               <div class="flex gap-1">
                 {#each binding.keys as key (key)}
-                  <kbd
-                    class="min-w-[1.75rem] border border-fg/20 px-1.5 py-0.5 text-center text-xs"
-                  >
+                  <kbd class="min-w-7 border border-border/20 px-1.5 py-0.5 text-center text-xs">
                     {formatKey(key)}
                   </kbd>
                 {/each}
@@ -92,7 +90,7 @@
       </div>
     {/each}
 
-    <p class="mt-2 text-xs opacity-30">
+    <p class="mt-2 text-xs opacity-50">
       Customize bindings in <a href="/settings" class="underline" onclick={onclose}>Settings</a>
     </p>
   </div>

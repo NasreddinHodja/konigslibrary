@@ -16,7 +16,7 @@
 
 <div
   class="flex w-full border-2 text-xs font-bold tracking-wide {locked
-    ? 'pointer-events-none opacity-30'
+    ? 'pointer-events-none opacity-50'
     : ''}"
   role="group"
   aria-label="{labelA} / {labelB}"

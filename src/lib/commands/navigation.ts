@@ -18,7 +18,7 @@ export const nextPageRTL: Command = {
   id: 'nextPageRTL',
   execute(ctx) {
     if (!ctx.viewer) return;
-    if (ctx.services.state.rtl) ctx.viewer.prevPage();
+    if (ctx.reader.state.rtl) ctx.viewer.prevPage();
     else ctx.viewer.nextPage();
   }
 };
@@ -27,7 +27,7 @@ export const prevPageRTL: Command = {
   id: 'prevPageRTL',
   execute(ctx) {
     if (!ctx.viewer) return;
-    if (ctx.services.state.rtl) ctx.viewer.nextPage();
+    if (ctx.reader.state.rtl) ctx.viewer.nextPage();
     else ctx.viewer.prevPage();
   }
 };
@@ -35,13 +35,13 @@ export const prevPageRTL: Command = {
 export const nextChapter: Command = {
   id: 'nextChapter',
   execute(ctx) {
-    ctx.services.goToNextChapter();
+    ctx.reader.goToNextChapter();
   }
 };
 
 export const prevChapter: Command = {
   id: 'prevChapter',
   execute(ctx) {
-    ctx.services.goToPrevChapter();
+    ctx.reader.goToPrevChapter();
   }
 };

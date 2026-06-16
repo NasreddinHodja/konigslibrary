@@ -1,7 +1,7 @@
 <script lang="ts">
   import { getReaderContext } from '$lib/context';
   import type { ViewerCommands } from '$lib/commands';
-  import { useChapter, usePreloader, decodeMw } from '$lib/pipeline';
+  import { useChapter, usePreloader } from '$lib/chapter-loader';
   import { PAGE_TURN_ZOOM } from '$lib/utils/constants';
   import Loader from '$lib/ui/Loader.svelte';
   import EndOfChapter from '$lib/chapters/EndOfChapter.svelte';
@@ -9,10 +9,10 @@
   let { commands = $bindable(), ontap }: { commands?: ViewerCommands | null; ontap?: () => void } =
     $props();
 
-  const svc = getReaderContext();
-  const { state: manga } = svc;
+  const reader = getReaderContext();
+  const { state: manga } = reader;
 
-  const chapter = useChapter(svc, [decodeMw]);
+  const chapter = useChapter(reader);
   usePreloader(
     manga,
     () => chapter.pageUrls,
@@ -68,7 +68,7 @@
 
   const commitNext = () => {
     if (showEndScreen) {
-      svc.goToNextChapter();
+      reader.goToNextChapter();
     } else if (manga.currentPage < chapter.pageUrls.length - 1) {
       manga.currentPage++;
     } else {
@@ -82,9 +82,9 @@
       manga.currentPage = chapter.pageUrls.length - 1;
     } else if (manga.currentPage > 0) {
       manga.currentPage--;
-    } else if (svc.getPrevChapter()) {
+    } else if (reader.getPrevChapter()) {
       pendingEndScreen = true;
-      svc.goToPrevChapter();
+      reader.goToPrevChapter();
     }
   };
 
@@ -134,12 +134,12 @@
   };
 
   const next = () => {
-    if (showEndScreen && !svc.getNextChapter()) return;
+    if (showEndScreen && !reader.getNextChapter()) return;
     scheduleCommit(-1);
   };
 
   const prev = () => {
-    if (!showEndScreen && manga.currentPage <= 0 && !svc.getPrevChapter()) return;
+    if (!showEndScreen && manga.currentPage <= 0 && !reader.getPrevChapter()) return;
     scheduleCommit(1);
   };
 
@@ -177,8 +177,8 @@
     if (!dragging) return;
     const dx = e.touches[0].clientX - touchStartX;
     maxDrag = Math.max(maxDrag, Math.abs(dx));
-    const noPrev = !showEndScreen && manga.currentPage <= 0 && !svc.getPrevChapter();
-    const noNext = showEndScreen && !svc.getNextChapter();
+    const noPrev = !showEndScreen && manga.currentPage <= 0 && !reader.getPrevChapter();
+    const noNext = showEndScreen && !reader.getNextChapter();
     const rubberLeft = manga.rtl ? noPrev : noNext;
     const rubberRight = manga.rtl ? noNext : noPrev;
     if ((dx < 0 && rubberLeft) || (dx > 0 && rubberRight)) {
@@ -279,7 +279,7 @@
 
 <div
   bind:this={containerEl}
-  class="relative flex h-full flex-1 items-center justify-center overflow-hidden bg-bg select-none"
+  class="relative flex h-full flex-1 items-center justify-center overflow-hidden bg-reader-bg select-none"
   style="padding-bottom: calc(var(--safe-bottom) - var(--safe-top))"
   onmousemove={handleMouseMove}
   ontouchstart={onTouchStart}
@@ -340,7 +340,7 @@
                 const img = e.currentTarget as HTMLImageElement;
                 img.style.display = 'none';
                 const p = document.createElement('p');
-                p.className = 'py-8 text-sm opacity-40';
+                p.className = 'py-8 text-sm opacity-60';
                 p.textContent = 'Failed to load page';
                 img.insertAdjacentElement('afterend', p);
               }}

@@ -6,11 +6,11 @@ import { createEventBus } from '$lib/events';
 import { ViewerRegistry, scrollViewer, pageTurnViewer } from '$lib/viewers';
 import { PluginRunner } from '$lib/plugins';
 import { windowTitlePlugin } from '$lib/plugins/window-title';
-import type { ReaderServices } from './types';
+import type { Reader } from './types';
 
 const browser = typeof localStorage !== 'undefined';
 
-export function createReaderServices(): ReaderServices {
+export function createReader(): Reader {
   let _chapters: Chapter[] = $state([]);
   let _provider: SourceProvider | null = $state(null);
 
@@ -158,7 +158,7 @@ export function createReaderServices(): ReaderServices {
     return _provider;
   }
 
-  const svc: ReaderServices = {
+  const reader: Reader = {
     state,
     get provider() {
       return _provider;
@@ -187,7 +187,16 @@ export function createReaderServices(): ReaderServices {
     getProvider
   };
 
-  plugins.start(svc);
+  plugins.start(reader);
 
-  return svc;
+  let _saveTimer: ReturnType<typeof setTimeout> | undefined;
+  $effect(() => {
+    if (state.selectedChapter === null) return;
+    void state.currentPage;
+    clearTimeout(_saveTimer);
+    _saveTimer = setTimeout(() => saveProgress(), 300);
+    return () => clearTimeout(_saveTimer);
+  });
+
+  return reader;
 }

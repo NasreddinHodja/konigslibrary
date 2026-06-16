@@ -1,5 +1,5 @@
 import { isNative } from '$lib/utils/platform';
-import type { ReaderServices } from '$lib/context';
+import type { Reader } from '$lib/context';
 import type { Plugin } from './types';
 
 const DEFAULT_TITLE = 'konigslibrary';
@@ -12,9 +12,9 @@ async function setTitle(title: string) {
 export const windowTitlePlugin: Plugin = {
   name: 'window-title',
 
-  install(services: ReaderServices) {
+  install(reader: Reader) {
     if (!isNative()) return;
-    services.events.on('source:cleared', () => {
+    reader.events.on('source:cleared', () => {
       setTitle(DEFAULT_TITLE);
     });
   },

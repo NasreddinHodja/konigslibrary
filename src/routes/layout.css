@@ -12,6 +12,10 @@
   --duration-anim: 200ms;
   --color-bg: oklch(0% 0 0);
   --color-fg: oklch(100% 0 0);
+  --color-surface: oklch(0% 0 0);
+  --color-border: oklch(100% 0 0);
+  --color-muted: oklch(53% 0 0);
+  --color-reader-bg: oklch(0% 0 0);
   --color-success: oklch(72% 0.15 152);
   --color-error: oklch(65% 0.19 22);
 }

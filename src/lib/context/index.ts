@@ -1,15 +1,15 @@
 import { setContext, getContext } from 'svelte';
-import type { ReaderServices } from './types';
+import type { Reader } from './types';
 
-export type { ReaderServices, MangaState } from './types';
-export { createReaderServices } from './create.svelte';
+export type { Reader, MangaState } from './types';
+export { createReader } from './create.svelte';
 
 const CTX_KEY = Symbol('reader-services');
 
-export function setReaderContext(services: ReaderServices): void {
-  setContext(CTX_KEY, services);
+export function setReaderContext(reader: Reader): void {
+  setContext(CTX_KEY, reader);
 }
 
-export function getReaderContext(): ReaderServices {
-  return getContext<ReaderServices>(CTX_KEY);
+export function getReaderContext(): Reader {
+  return getContext<Reader>(CTX_KEY);
 }

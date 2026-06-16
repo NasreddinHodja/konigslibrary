@@ -18,6 +18,20 @@
           U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
       }
     </style>
+    <script>
+      try {
+        var t = JSON.parse(localStorage.getItem('kl:theme') || 'null');
+        if (t) {
+          var r = document.documentElement;
+          if (t.bg) r.style.setProperty('--color-bg', t.bg);
+          if (t.fg) r.style.setProperty('--color-fg', t.fg);
+          if (t.surface) r.style.setProperty('--color-surface', t.surface);
+          if (t.border) r.style.setProperty('--color-border', t.border);
+          if (t.muted) r.style.setProperty('--color-muted', t.muted);
+          if (t.readerBg) r.style.setProperty('--color-reader-bg', t.readerBg);
+        }
+      } catch (e) {}
+    </script>
     %sveltekit.head%
   </head>
   <body data-sveltekit-preload-data="hover">

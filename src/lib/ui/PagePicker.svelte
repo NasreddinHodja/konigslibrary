@@ -5,8 +5,8 @@
 
   let { visible, onclose }: { visible: boolean; onclose: () => void } = $props();
 
-  const svc = getReaderContext();
-  const { state: manga, goToPage } = svc;
+  const reader = getReaderContext();
+  const { state: manga, goToPage } = reader;
 
   let query = $state('');
   let searchEl: HTMLInputElement | null = $state(null);
@@ -42,14 +42,14 @@
 {#if visible}
   <!-- Backdrop -->
   <div
-    class="fixed inset-0 z-50 flex items-center justify-center p-4"
-    style="background: rgba(0,0,0,0.7); padding-bottom: calc(1rem + var(--safe-bottom, 0px))"
+    class="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
+    style="background: rgba(0,0,0,0.6); padding-bottom: calc(1rem + var(--safe-bottom, 0px))"
     role="presentation"
     onclick={onclose}
   >
     <!-- Modal -->
     <div
-      class="flex h-full max-h-[85vh] w-full max-w-2xl flex-col border-2 border-fg/20 bg-bg"
+      class="flex h-full max-h-[85vh] w-full max-w-2xl flex-col border-2 border-border/35 bg-bg"
       role="dialog"
       tabindex="-1"
       aria-modal="true"
@@ -58,43 +58,37 @@
       onkeydown={onKeydown}
     >
       <!-- Header -->
-      <div class="flex shrink-0 items-center gap-3 border-b border-fg/10 px-4 py-3">
+      <div class="flex shrink-0 items-center gap-3 border-b border-border/10 px-4 py-3">
         <div class="flex min-w-0 flex-1 flex-col">
-          <span class="text-xs font-bold tracking-widest opacity-30">JUMP TO PAGE</span>
+          <span class="text-xs font-bold tracking-widest opacity-50">JUMP TO PAGE</span>
           {#if chapterName}
-            <span class="truncate text-xs opacity-20">{chapterName}</span>
+            <span class="truncate text-xs opacity-40">{chapterName}</span>
           {/if}
         </div>
-        <button class="shrink-0 cursor-pointer p-1 opacity-40 hover:opacity-100" onclick={onclose}>
+        <button class="shrink-0 cursor-pointer p-1 opacity-60 hover:opacity-100" onclick={onclose}>
           <X size={16} />
         </button>
       </div>
 
       <!-- Search bar -->
-      <div class="flex shrink-0 items-center gap-3 border-b border-fg/10 px-4 py-3">
-        <Search size={14} class="shrink-0 opacity-30" />
+      <div class="flex shrink-0 items-center gap-3 border-b border-border/10 px-4 py-3">
+        <Search size={14} class="shrink-0 opacity-50" />
         <input
           bind:this={searchEl}
           bind:value={query}
           type="text"
           inputmode="numeric"
           placeholder="Page number…"
-          class="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:opacity-30"
+          class="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:opacity-50"
         />
-        <span class="shrink-0 text-xs tabular-nums opacity-30">{totalPages} pages</span>
+        <span class="shrink-0 text-xs tabular-nums opacity-50">{totalPages} pages</span>
       </div>
 
       <!-- Grid -->
       {#if filteredIndices.length === 0}
-        <p class="flex-1 py-12 text-center text-sm opacity-30">No pages match</p>
+        <p class="flex-1 py-12 text-center text-sm opacity-50">No pages match</p>
       {:else}
-        <VirtualScroll
-          items={filteredIndices}
-          minItemWidth={100}
-          rowHeight={180}
-          gap={8}
-          class="flex-1 p-3"
-        >
+        <VirtualScroll items={filteredIndices} minItemWidth={100} gap={8} class="flex-1 p-3">
           {#snippet item(i)}
             {@const url = pageUrls[i]}
             {@const isCurrent = i === manga.currentPage}
@@ -106,7 +100,7 @@
             >
               <div
                 class="aspect-[2/3] w-full overflow-hidden border-2 transition-colors
-                  {isCurrent ? 'border-fg' : 'border-fg/10 group-hover:border-fg/40'}"
+                  {isCurrent ? 'border-fg' : 'border-border/10 group-hover:border-fg/40'}"
               >
                 {#if url}
                   <img src={url} alt="Page {i + 1}" class="h-full w-full object-cover object-top" />
@@ -118,7 +112,7 @@
               </div>
               <span
                 class="text-center text-xs tabular-nums transition-opacity
-                  {isCurrent ? 'opacity-100' : 'opacity-30 group-hover:opacity-60'}"
+                  {isCurrent ? 'opacity-100' : 'opacity-50 group-hover:opacity-60'}"
               >
                 {i + 1}
               </span>

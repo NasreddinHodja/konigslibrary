@@ -81,10 +81,28 @@
 <button
   type="button"
   onclick={handleClick}
-  class="group flex w-full max-w-lg cursor-pointer flex-col items-center justify-center gap-3 border-2 px-8 py-4 text-center transition-colors duration-150 md:py-16
-    {isDragOver ? 'border-fg bg-fg/5' : 'border-fg/30 hover:border-fg/70'}"
+  class="group flex w-full cursor-pointer items-center justify-between border-2 px-5 py-4 transition-colors duration-150 md:flex-col md:gap-4 md:py-12
+    {isDragOver ? 'border-fg bg-fg/5' : 'border-fg/25 hover:border-fg/70 hover:bg-fg/[0.03]'}"
 >
-  <span class="block text-xl font-bold tracking-wider">SELECT MANGA FILE</span>
-  <span class="block text-xs tracking-widest opacity-30">.ZIP · .CBZ</span>
-  <span class="hidden text-xs tracking-widest opacity-30 md:block">or drag and drop</span>
+  <div class="flex items-center gap-4">
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.5"
+      stroke-linecap="square"
+      stroke-linejoin="miter"
+      class="shrink-0 transition-opacity {isDragOver
+        ? 'opacity-80'
+        : 'opacity-40 group-hover:opacity-70'}"
+    >
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+      <polyline points="17 8 12 3 7 8" />
+      <line x1="12" y1="3" x2="12" y2="15" />
+    </svg>
+    <span class="text-sm font-bold tracking-widest">OPEN FILE</span>
+  </div>
+  <span class="text-xs tracking-widest opacity-40">.ZIP · .CBZ</span>
 </button>

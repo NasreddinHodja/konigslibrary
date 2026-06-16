@@ -51,7 +51,7 @@
 {:else}
   <button
     class="inline-flex items-center gap-2 {variantClass} {sizeClass} {disabled
-      ? 'cursor-not-allowed opacity-40'
+      ? 'cursor-not-allowed opacity-60'
       : 'cursor-pointer'}"
     {onclick}
     {disabled}

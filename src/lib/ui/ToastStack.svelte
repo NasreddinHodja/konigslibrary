@@ -14,7 +14,7 @@
   >
     {#each toasts as toast (toast.id)}
       <div
-        class="flex min-w-72 items-start gap-3 border-2 bg-bg px-4 py-3 shadow-lg"
+        class="flex min-w-72 items-start gap-3 border-2 bg-surface/70 px-4 py-3 shadow-lg backdrop-blur-2xl"
         in:fly={{ x: 100, duration: ANIM_DURATION, easing: ANIM_EASE }}
         out:fly={{ x: 100, duration: ANIM_EXIT_DURATION, easing: ANIM_EASE_IN }}
       >
@@ -45,7 +45,7 @@
 
         {#if toast.cancel}
           <button
-            class="mt-1 shrink-0 cursor-pointer border border-fg/20 px-2 py-0.5 text-xs opacity-50 hover:opacity-100"
+            class="mt-1 shrink-0 cursor-pointer border border-border/20 px-2 py-0.5 text-xs opacity-50 hover:opacity-100"
             onclick={() => {
               toast.cancel?.();
               removeToast(toast.id);
@@ -55,7 +55,7 @@
           </button>
         {:else if toast.phase === 'done' || toast.phase === 'error'}
           <button
-            class="mt-0.5 shrink-0 opacity-40 hover:opacity-100"
+            class="mt-0.5 shrink-0 opacity-60 hover:opacity-100"
             onclick={() => removeToast(toast.id)}
             aria-label="Dismiss"
           >

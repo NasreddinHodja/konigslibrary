@@ -12,12 +12,12 @@
   import type { MangaMeta } from '$lib/api/anilist';
   import { fetchLatestChapter } from '$lib/api/mangadex';
 
-  const svc = getReaderContext();
-  const { state: manga } = svc;
+  const reader = getReaderContext();
+  const { state: manga } = reader;
 
-  const mangaName = $derived(svc.provider?.mangaName ?? '');
-  const chapters = $derived(svc.chapters);
-  const savedProgress = $derived(svc.getSavedProgress());
+  const mangaName = $derived(reader.provider?.mangaName ?? '');
+  const chapters = $derived(reader.chapters);
+  const savedProgress = $derived(reader.getSavedProgress());
 
   let meta: MangaMeta | null = $state(null);
   let metaError = $state(false);
@@ -280,7 +280,7 @@
   }
 
   function readChapter(name: string) {
-    const progress = svc.getSavedProgress();
+    const progress = reader.getSavedProgress();
     manga.selectedChapter = name;
     if (progress?.chapter === name) {
       manga.currentPage = progress.page;
@@ -316,8 +316,8 @@
       <!-- Back -->
       <div>
         <button
-          class="flex cursor-pointer items-center gap-1.5 text-xs tracking-widest opacity-30 hover:opacity-80"
-          onclick={svc.clearManga}
+          class="flex cursor-pointer items-center gap-1.5 text-xs tracking-widest opacity-50 hover:opacity-80"
+          onclick={reader.clearManga}
         >
           <ArrowLeft size={12} />
           LIBRARY
@@ -328,9 +328,9 @@
         <div class="flex flex-col gap-4">
           <h1 class="text-xl leading-tight font-bold">{mangaName}</h1>
           {#if metaRateLimited}
-            <p class="text-xs opacity-40">AniList is rate-limiting requests.</p>
+            <p class="text-xs opacity-60">AniList is rate-limiting requests.</p>
             <button
-              class="cursor-pointer self-start text-xs underline opacity-30 hover:opacity-70"
+              class="cursor-pointer self-start text-xs underline opacity-50 hover:opacity-70"
               onclick={retryMeta}
             >
               Retry
@@ -367,7 +367,7 @@
             <h1 class="text-xl leading-tight font-bold">
               {meta?.title || mangaName}
             </h1>
-            <p class="mt-0.5 text-xs opacity-30">{mangaName}</p>
+            <p class="mt-0.5 text-xs opacity-50">{mangaName}</p>
 
             <div class="mt-3 flex flex-col gap-3">
               {#if meta}
@@ -381,38 +381,39 @@
                         class="border px-2 py-0.5 text-xs font-bold tracking-widest
                         {meta.status === 'ongoing'
                           ? 'border-success/50 text-success'
-                          : 'border-fg/20 opacity-50'}"
+                          : 'border-border/20 opacity-50'}"
                       >
                         {STATUS_LABEL[meta.status] ?? meta.status.toUpperCase()}
                       </span>
                     {/if}
                     {#if meta.year}
-                      <span class="text-xs opacity-40">{meta.year}</span>
+                      <span class="text-xs opacity-60">{meta.year}</span>
                     {/if}
                     {#if meta.authors.length}
-                      <span class="truncate text-xs opacity-40">{meta.authors.join(', ')}</span>
+                      <span class="truncate text-xs opacity-60">{meta.authors.join(', ')}</span>
                     {/if}
                   </div>
 
                   {#if meta.tags.length}
                     <div class="flex flex-wrap gap-1.5" bind:this={tagsEl}>
                       {#each meta.tags.slice(0, TAGS_COLLAPSED) as tag (tag)}
-                        <span class="border border-fg/30 px-2 py-0.5 text-xs opacity-50">{tag}</span
+                        <span class="border border-border/30 px-2 py-0.5 text-xs opacity-50"
+                          >{tag}</span
                         >
                       {/each}
                       {#if tagsExpanded}
                         {#each meta.tags.slice(TAGS_COLLAPSED, 6) as tag (tag)}
-                          <span class="border border-fg/30 px-2 py-0.5 text-xs opacity-50"
+                          <span class="border border-border/30 px-2 py-0.5 text-xs opacity-50"
                             >{tag}</span
                           >
                         {/each}
                         <button
-                          class="cursor-pointer border border-fg/15 px-2 py-0.5 text-xs opacity-60 hover:opacity-100"
+                          class="cursor-pointer border border-border/15 px-2 py-0.5 text-xs opacity-60 hover:opacity-100"
                           onclick={collapseTags}>less</button
                         >
                       {:else if meta.tags.length > TAGS_COLLAPSED}
                         <button
-                          class="cursor-pointer border border-fg/15 px-2 py-0.5 text-xs opacity-60 hover:opacity-100"
+                          class="cursor-pointer border border-border/15 px-2 py-0.5 text-xs opacity-60 hover:opacity-100"
                           onclick={expandTags}>more</button
                         >
                       {/if}
@@ -420,11 +421,11 @@
                   {/if}
 
                   {#if meta.status === 'ongoing' && meta.latestChapter}
-                    <div class="self-start border border-fg/10 px-3 py-2 text-xs">
-                      <span class="opacity-40">Latest on MangaDex: </span>
+                    <div class="self-start border border-border/10 px-3 py-2 text-xs">
+                      <span class="opacity-60">Latest on MangaDex: </span>
                       <span class="">Ch. {meta.latestChapter}</span>
                       {#if meta.latestChapterDate}
-                        <span class="opacity-30"> · {formatDate(meta.latestChapterDate)}</span>
+                        <span class="opacity-50"> · {formatDate(meta.latestChapterDate)}</span>
                       {/if}
                     </div>
                   {/if}
@@ -457,7 +458,7 @@
                 </button>
               {/if}
               <button
-                class="cursor-pointer text-xs underline opacity-30 hover:opacity-70
+                class="cursor-pointer text-xs underline opacity-50 hover:opacity-70
                   {meta ? '' : 'pointer-events-none invisible'}"
                 onclick={() => (pickerOpen ? (pickerOpen = false) : openPicker())}
               >
@@ -470,26 +471,26 @@
     </div>
 
     <!-- Vertical divider -->
-    <div class="border-l border-fg/10"></div>
+    <div class="border-l border-border/10"></div>
 
     <!-- Right panel: chapter list -->
     <div class="flex min-h-0 flex-1 flex-col pl-8">
       <!-- Chapters header -->
       <div class="shrink-0 py-3">
         <div class="flex items-center gap-4">
-          <span class="shrink-0 text-xs font-bold tracking-widest opacity-30">
+          <span class="shrink-0 text-xs font-bold tracking-widest opacity-50">
             CHAPTERS ({chapters.length})
           </span>
-          <div class="flex min-w-0 flex-1 items-center gap-2 border border-fg/15 px-3 py-1.5">
-            <Search size={12} class="shrink-0 opacity-30" />
+          <div class="flex min-w-0 flex-1 items-center gap-2 border border-border/15 px-3 py-1.5">
+            <Search size={12} class="shrink-0 opacity-50" />
             <input
               bind:value={search}
               placeholder="Search chapters…"
-              class="flex-1 bg-transparent text-sm outline-none placeholder:opacity-30"
+              class="flex-1 bg-transparent text-sm outline-none placeholder:opacity-50"
             />
             {#if search}
               <button
-                class="cursor-pointer opacity-30 hover:opacity-80"
+                class="cursor-pointer opacity-50 hover:opacity-80"
                 onclick={() => (search = '')}
               >
                 <X size={12} />
@@ -503,7 +504,7 @@
       <div bind:this={desktopScrollEl} class="min-h-0 flex-1 overflow-y-auto">
         {#if filteredChapters.length === 0}
           <p
-            class="py-8 text-center text-xs opacity-30"
+            class="py-8 text-center text-xs opacity-50"
             in:fade={{ duration: ANIM_DURATION, easing: ANIM_EASE }}
           >
             No chapters match "{search}"
@@ -515,7 +516,7 @@
               {@const isResume = savedProgress?.chapter === chapter.name}
               <button
                 style="position: absolute; top: {row.start}px; left: 0; right: 0; height: {ROW_H}px;"
-                class="flex w-full cursor-pointer items-center justify-between border-b border-fg/10 px-2 text-left hover:bg-fg/5"
+                class="flex w-full cursor-pointer items-center justify-between border-b border-border/10 px-2 text-left hover:bg-fg/5"
                 onclick={() => readChapter(chapter.name)}
               >
                 <span class="truncate text-sm {isResume ? 'font-bold' : 'opacity-70'}"
@@ -523,9 +524,9 @@
                 >
                 <div class="ml-4 flex shrink-0 items-center gap-3">
                   {#if isResume}
-                    <span class="text-xs opacity-40">p.{savedProgress.page + 1}</span>
+                    <span class="text-xs opacity-60">p.{savedProgress.page + 1}</span>
                   {/if}
-                  <span class="text-xs opacity-30">{chapter.pageCount}p</span>
+                  <span class="text-xs opacity-50">{chapter.pageCount}p</span>
                 </div>
               </button>
             {/each}
@@ -542,8 +543,8 @@
     <!-- Back -->
     <div class="mb-6 flex items-center justify-between">
       <button
-        class="flex cursor-pointer items-center gap-1.5 text-xs tracking-widest opacity-30 hover:opacity-80"
-        onclick={svc.clearManga}
+        class="flex cursor-pointer items-center gap-1.5 text-xs tracking-widest opacity-50 hover:opacity-80"
+        onclick={reader.clearManga}
       >
         <ArrowLeft size={12} />
         LIBRARY
@@ -585,7 +586,7 @@
           <h1 class="text-xl leading-tight font-bold">
             {meta?.title || mangaName}
           </h1>
-          <p class="mt-0.5 text-xs opacity-30">{mangaName}</p>
+          <p class="mt-0.5 text-xs opacity-50">{mangaName}</p>
 
           <div
             class="mt-3 flex min-h-[7rem] flex-col gap-3 sm:min-h-0 sm:flex-1 sm:overflow-hidden"
@@ -601,16 +602,16 @@
                       class="border px-2 py-0.5 text-xs font-bold tracking-widest
                       {meta.status === 'ongoing'
                         ? 'border-success/50 text-success'
-                        : 'border-fg/20 opacity-50'}"
+                        : 'border-border/20 opacity-50'}"
                     >
                       {STATUS_LABEL[meta.status] ?? meta.status.toUpperCase()}
                     </span>
                   {/if}
                   {#if meta.year}
-                    <span class="text-xs opacity-40">{meta.year}</span>
+                    <span class="text-xs opacity-60">{meta.year}</span>
                   {/if}
                   {#if meta.authors.length}
-                    <span class="hidden text-xs opacity-40 sm:inline"
+                    <span class="hidden text-xs opacity-60 sm:inline"
                       >{meta.authors.join(', ')}</span
                     >
                   {/if}
@@ -620,12 +621,12 @@
                   <div class="flex flex-col gap-1 sm:hidden">
                     {#if !authorsExpanded}
                       <div class="flex items-center gap-1.5">
-                        <span bind:this={authorsEl} class="min-w-0 truncate text-xs opacity-40"
+                        <span bind:this={authorsEl} class="min-w-0 truncate text-xs opacity-60"
                           >{meta.authors.join(', ')}</span
                         >
                         {#if authorsTruncated}
                           <button
-                            class="shrink-0 cursor-pointer border border-fg/15 px-2 py-0.5 text-xs opacity-60 hover:opacity-100"
+                            class="shrink-0 cursor-pointer border border-border/15 px-2 py-0.5 text-xs opacity-60 hover:opacity-100"
                             onclick={() => (authorsExpanded = true)}>more</button
                           >
                         {/if}
@@ -633,13 +634,13 @@
                     {/if}
                     {#if authorsExpanded}
                       <div
-                        class="overflow-hidden text-xs opacity-40"
+                        class="overflow-hidden text-xs opacity-60"
                         in:slide={{ duration: ANIM_DURATION, easing: ANIM_EASE }}
                         out:slide={{ duration: ANIM_EXIT_DURATION, easing: ANIM_EASE_IN }}
                       >
                         {meta.authors.join(', ')}
                         <button
-                          class="cursor-pointer border border-fg/15 px-2 py-0.5 text-xs opacity-60 hover:opacity-100"
+                          class="cursor-pointer border border-border/15 px-2 py-0.5 text-xs opacity-60 hover:opacity-100"
                           onclick={() => (authorsExpanded = false)}>less</button
                         >
                       </div>
@@ -650,20 +651,23 @@
                 {#if meta.tags.length}
                   <div class="flex flex-wrap gap-1.5" bind:this={tagsEl}>
                     {#each meta.tags.slice(0, TAGS_COLLAPSED) as tag (tag)}
-                      <span class="border border-fg/30 px-2 py-0.5 text-xs opacity-50">{tag}</span>
+                      <span class="border border-border/30 px-2 py-0.5 text-xs opacity-50"
+                        >{tag}</span
+                      >
                     {/each}
                     {#if tagsExpanded}
                       {#each meta.tags.slice(TAGS_COLLAPSED, 6) as tag (tag)}
-                        <span class="border border-fg/30 px-2 py-0.5 text-xs opacity-50">{tag}</span
+                        <span class="border border-border/30 px-2 py-0.5 text-xs opacity-50"
+                          >{tag}</span
                         >
                       {/each}
                       <button
-                        class="cursor-pointer border border-fg/15 px-2 py-0.5 text-xs opacity-60 hover:opacity-100"
+                        class="cursor-pointer border border-border/15 px-2 py-0.5 text-xs opacity-60 hover:opacity-100"
                         onclick={collapseTags}>less</button
                       >
                     {:else if meta.tags.length > TAGS_COLLAPSED}
                       <button
-                        class="cursor-pointer border border-fg/15 px-2 py-0.5 text-xs opacity-60 hover:opacity-100"
+                        class="cursor-pointer border border-border/15 px-2 py-0.5 text-xs opacity-60 hover:opacity-100"
                         onclick={expandTags}>more</button
                       >
                     {/if}
@@ -671,11 +675,11 @@
                 {/if}
 
                 {#if meta.status === 'ongoing' && meta.latestChapter}
-                  <div class="self-start border border-fg/10 px-3 py-2 text-xs">
-                    <span class="opacity-40">Latest on MangaDex: </span>
+                  <div class="self-start border border-border/10 px-3 py-2 text-xs">
+                    <span class="opacity-60">Latest on MangaDex: </span>
                     <span class="">Ch. {meta.latestChapter}</span>
                     {#if meta.latestChapterDate}
-                      <span class="opacity-30"> · {formatDate(meta.latestChapterDate)}</span>
+                      <span class="opacity-50"> · {formatDate(meta.latestChapterDate)}</span>
                     {/if}
                   </div>
                 {/if}
@@ -709,7 +713,7 @@
               </button>
             {/if}
             <button
-              class="cursor-pointer text-xs underline opacity-30 hover:opacity-70
+              class="cursor-pointer text-xs underline opacity-50 hover:opacity-70
                 {meta ? '' : 'pointer-events-none invisible'}"
               onclick={() => (pickerOpen ? (pickerOpen = false) : openPicker())}
             >
@@ -724,23 +728,25 @@
 
     <!-- Sticky chapters header -->
     <div
-      class="sticky z-10 mt-8 bg-bg pb-3 {chapterHeaderStuck ? '' : 'border-t border-fg/10'}"
+      class="sticky z-10 mt-8 bg-bg/80 pb-3 backdrop-blur-lg {chapterHeaderStuck
+        ? ''
+        : 'border-t border-border/10'}"
       style="top: var(--safe-top, 0px); padding-top: {chapterHeaderStuck ? '0.75rem' : '2rem'};"
     >
       <div class="flex items-center gap-4">
-        <span class="shrink-0 text-xs font-bold tracking-widest opacity-30">
+        <span class="shrink-0 text-xs font-bold tracking-widest opacity-50">
           CHAPTERS ({chapters.length})
         </span>
-        <div class="flex min-w-0 flex-1 items-center gap-2 border border-fg/15 px-3 py-1.5">
-          <Search size={12} class="shrink-0 opacity-30" />
+        <div class="flex min-w-0 flex-1 items-center gap-2 border border-border/15 px-3 py-1.5">
+          <Search size={12} class="shrink-0 opacity-50" />
           <input
             bind:value={search}
             placeholder="Search chapters…"
-            class="flex-1 bg-transparent text-sm outline-none placeholder:opacity-30"
+            class="flex-1 bg-transparent text-sm outline-none placeholder:opacity-50"
           />
           {#if search}
             <button
-              class="cursor-pointer opacity-30 hover:opacity-80"
+              class="cursor-pointer opacity-50 hover:opacity-80"
               onclick={() => (search = '')}
             >
               <X size={12} />
@@ -753,7 +759,7 @@
     <!-- Virtual chapter list -->
     {#if filteredChapters.length === 0}
       <p
-        class="py-8 text-center text-xs opacity-30"
+        class="py-8 text-center text-xs opacity-50"
         in:fade={{ duration: ANIM_DURATION, easing: ANIM_EASE }}
       >
         No chapters match "{search}"
@@ -766,7 +772,7 @@
           <button
             style="position: absolute; top: {row.start -
               scrollMargin}px; left: 0; right: 0; height: {ROW_H}px;"
-            class="flex w-full cursor-pointer items-center justify-between border-b border-fg/10 px-2 text-left hover:bg-fg/5"
+            class="flex w-full cursor-pointer items-center justify-between border-b border-border/10 px-2 text-left hover:bg-fg/5"
             onclick={() => readChapter(chapter.name)}
           >
             <span class="truncate text-sm {isResume ? 'font-bold' : 'opacity-70'}"
@@ -774,9 +780,9 @@
             >
             <div class="ml-4 flex shrink-0 items-center gap-3">
               {#if isResume}
-                <span class="text-xs opacity-40">p.{savedProgress.page + 1}</span>
+                <span class="text-xs opacity-60">p.{savedProgress.page + 1}</span>
               {/if}
-              <span class="text-xs opacity-30">{chapter.pageCount}p</span>
+              <span class="text-xs opacity-50">{chapter.pageCount}p</span>
             </div>
           </button>
         {/each}
@@ -788,38 +794,38 @@
 {#if pickerOpen}
   <div
     class="fixed inset-0 z-50 flex items-center justify-center px-4"
-    in:fade={{ duration: ANIM_DURATION, easing: ANIM_EASE }}
     out:fade={{ duration: ANIM_EXIT_DURATION, easing: ANIM_EASE_IN }}
   >
     <button
-      class="absolute inset-0 bg-bg/80"
+      class="absolute inset-0 bg-surface/50 backdrop-blur-xl"
       onclick={() => (pickerOpen = false)}
       aria-label="Close"
     ></button>
     <div
-      class="relative z-10 flex h-[420px] w-full max-w-sm flex-col border-2 border-fg/20 bg-bg p-4"
+      class="relative z-10 flex h-[420px] w-full max-w-sm flex-col border-2 border-border/35 bg-bg p-4"
+      in:fade={{ duration: ANIM_DURATION, easing: ANIM_EASE }}
     >
       <div class="mb-3 flex items-center justify-between">
         <span class="text-xs font-bold tracking-widest opacity-50">SEARCH ANILIST</span>
         <button
-          class="cursor-pointer opacity-30 hover:opacity-80"
+          class="cursor-pointer opacity-50 hover:opacity-80"
           onclick={() => (pickerOpen = false)}
         >
           <X size={12} />
         </button>
       </div>
-      <div class="flex items-center gap-2 border border-fg/15 px-3 py-1.5">
-        <Search size={12} class="shrink-0 opacity-30" />
+      <div class="flex items-center gap-2 border border-border/15 px-3 py-1.5">
+        <Search size={12} class="shrink-0 opacity-50" />
         <input
           bind:value={pickerQuery}
           placeholder="Search title…"
-          class="flex-1 bg-transparent text-sm outline-none placeholder:opacity-30"
+          class="flex-1 bg-transparent text-sm outline-none placeholder:opacity-50"
         />
         {#if pickerLoading}
-          <span class="text-xs opacity-30">…</span>
+          <span class="text-xs opacity-50">…</span>
         {:else if pickerQuery}
           <button
-            class="cursor-pointer opacity-30 hover:opacity-80"
+            class="cursor-pointer opacity-50 hover:opacity-80"
             onclick={() => {
               pickerQuery = '';
               pickerResults = [];
@@ -836,11 +842,11 @@
             <Loader />
           </div>
         {:else if pickerError}
-          <p class="text-xs opacity-40">No results found.</p>
+          <p class="text-xs opacity-60">No results found.</p>
         {:else if pickerResults.length}
-          <ul class="flex max-h-full flex-col gap-0 overflow-y-auto border border-fg/10">
+          <ul class="flex max-h-full flex-col gap-0 overflow-y-auto border border-border/10">
             {#each pickerResults as result (result.id)}
-              <li class="border-b border-fg/10 last:border-b-0">
+              <li class="border-b border-border/10 last:border-b-0">
                 <button
                   class="flex w-full cursor-pointer items-center gap-3 px-3 py-2.5 text-left hover:bg-fg/5"
                   onclick={() => selectFromPicker(result)}
@@ -853,14 +859,14 @@
                     />
                   {:else}
                     <div
-                      class="flex h-12 w-9 shrink-0 items-center justify-center border border-fg/10"
+                      class="flex h-12 w-9 shrink-0 items-center justify-center border border-border/10"
                     >
                       <span class="text-base opacity-20">∅</span>
                     </div>
                   {/if}
                   <div class="min-w-0 flex-1">
                     <p class="truncate text-sm font-bold">{result.title}</p>
-                    <div class="mt-0.5 flex items-center gap-2 text-xs opacity-40">
+                    <div class="mt-0.5 flex items-center gap-2 text-xs opacity-60">
                       {#if result.year}<span>{result.year}</span>{/if}
                       {#if result.status}<span>{result.status.toUpperCase()}</span>{/if}
                       {#if result.authors.length}<span class="truncate">{result.authors[0]}</span

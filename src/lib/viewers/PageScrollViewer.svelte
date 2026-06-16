@@ -1,7 +1,7 @@
 <script lang="ts">
   import { getReaderContext } from '$lib/context';
   import type { ViewerCommands } from '$lib/commands';
-  import { useChapter } from '$lib/pipeline';
+  import { useChapter } from '$lib/chapter-loader';
   import { VIRTUAL_BUFFER, DEFAULT_PAGE_RATIO, INTERSECT_THRESHOLD } from '$lib/utils/constants';
   import { SvelteSet } from 'svelte/reactivity';
   import Loader from '$lib/ui/Loader.svelte';
@@ -11,10 +11,10 @@
   let { commands = $bindable(), ontap }: { commands?: ViewerCommands | null; ontap?: () => void } =
     $props();
 
-  const svc = getReaderContext();
-  const { state: manga } = svc;
+  const reader = getReaderContext();
+  const { state: manga } = reader;
 
-  const chapter = useChapter(svc);
+  const chapter = useChapter(reader);
 
   $effect(() => {
     manga.pageUrls = chapter.pageUrls;
@@ -191,7 +191,7 @@
 
   commands = { nextPage: scrollNext, prevPage: scrollPrev };
 
-  const nextChapter = $derived(svc.getNextChapter());
+  const nextChapter = $derived(reader.getNextChapter());
 
   // Tap detection: pointerdown → pointerup with < 10px movement = tap
   let tapStartX = 0;
@@ -250,7 +250,7 @@
               const img = e.currentTarget as HTMLImageElement;
               img.style.display = 'none';
               const p = document.createElement('p');
-              p.className = 'py-8 text-sm opacity-40';
+              p.className = 'py-8 text-sm opacity-60';
               p.textContent = 'Failed to load page';
               img.insertAdjacentElement('afterend', p);
             }}
@@ -262,12 +262,12 @@
       <div class="flex flex-col items-center gap-4">
         <p class="text-lg opacity-50">End of {manga.selectedChapter}</p>
         {#if nextChapter}
-          <Button size="lg" variant="primary" onclick={() => svc.goToNextChapter()}>
+          <Button size="lg" variant="primary" onclick={() => reader.goToNextChapter()}>
             {nextChapter}
             <ChevronRight size={16} />
           </Button>
         {:else}
-          <span class="text-sm opacity-30">No next chapter</span>
+          <span class="text-sm opacity-50">No next chapter</span>
         {/if}
       </div>
     </div>

@@ -1,7 +1,5 @@
 import { SvelteMap } from 'svelte/reactivity';
-import type { ReaderServices } from '$lib/context';
-import type { Middleware, PipelineOutput } from './types';
-import { createPipeline } from './pipeline';
+import type { Reader } from '$lib/context';
 import { PRELOAD_AHEAD, PRELOAD_BEHIND } from './preloader.svelte';
 
 export type ChapterState = {
@@ -12,7 +10,7 @@ export type ChapterState = {
   readonly ensurePageUrl: ((index: number) => void) | null;
 };
 
-export function useChapter(services: ReaderServices, middlewares: Middleware[] = []): ChapterState {
+export function useChapter(reader: Reader): ChapterState {
   let pageUrls: string[] = $state([]);
   let loading = $state(false);
   let error: string | null = $state(null);
@@ -20,12 +18,10 @@ export function useChapter(services: ReaderServices, middlewares: Middleware[] =
   let decoded: Map<number, HTMLImageElement> = $state.raw(emptyMap);
   let ensurePageUrl: ((index: number) => void) | null = $state(null);
 
-  const pipeline = createPipeline(middlewares);
-
   // Clear stale URLs before the DOM paints so the old chapter's page[0]
   // never flickers in while the new chapter is loading.
   $effect.pre(() => {
-    services.state.selectedChapter; // eslint-disable-line @typescript-eslint/no-unused-expressions
+    reader.state.selectedChapter; // eslint-disable-line @typescript-eslint/no-unused-expressions
     pageUrls = [];
     loading = true;
     error = null;
@@ -34,7 +30,7 @@ export function useChapter(services: ReaderServices, middlewares: Middleware[] =
   });
 
   $effect(() => {
-    const chapter = services.state.selectedChapter;
+    const chapter = reader.state.selectedChapter;
     if (chapter === null) return;
 
     const controller = new AbortController();
@@ -47,25 +43,34 @@ export function useChapter(services: ReaderServices, middlewares: Middleware[] =
     decoded = emptyMap;
     ensurePageUrl = null;
 
-    services
+    reader
       .getChapterUrls(chapter)
       .then(async (result) => {
         if (controller.signal.aborted) return;
         urls = result.urls;
         revoke = result.revoke;
 
-        const output: PipelineOutput = await pipeline(
-          { urls, revoke, services },
-          controller.signal
-        );
+        const startPage = Math.max(0, Math.min(reader.state.currentPage, urls.length - 1));
+        const decodedMap = new SvelteMap<number, HTMLImageElement>();
+
+        if (!controller.signal.aborted && urls[startPage]) {
+          const img = new Image();
+          img.src = urls[startPage];
+          try {
+            await img.decode();
+          } catch {
+            /* decode can fail for aborted loads */
+          }
+          decodedMap.set(startPage, img);
+        }
 
         if (controller.signal.aborted) return;
 
-        const provider = services.provider;
+        const provider = reader.provider;
 
         if (provider?.getPageUrl) {
-          pageUrls = output.urls;
-          decoded = output.decoded;
+          pageUrls = urls;
+          decoded = decodedMap;
 
           const ensure = (index: number) => {
             if (pageUrls[index] || controller.signal.aborted) return;
@@ -83,10 +88,8 @@ export function useChapter(services: ReaderServices, middlewares: Middleware[] =
           };
           ensurePageUrl = ensure;
 
-          // Extract priority window before clearing the loader
-          const startPage = services.state.currentPage;
           const priorityStart = Math.max(0, startPage - PRELOAD_BEHIND);
-          const priorityEnd = Math.min(output.urls.length - 1, startPage + PRELOAD_AHEAD);
+          const priorityEnd = Math.min(urls.length - 1, startPage + PRELOAD_AHEAD);
           for (let i = priorityStart; i <= priorityEnd; i++) {
             if (controller.signal.aborted) return;
             const url = await provider.getPageUrl(chapter, i);
@@ -101,7 +104,7 @@ export function useChapter(services: ReaderServices, middlewares: Middleware[] =
 
           // Background: fill remaining pages sequentially
           (async () => {
-            for (let i = 0; i < output.urls.length; i++) {
+            for (let i = 0; i < urls.length; i++) {
               if (controller.signal.aborted) break;
               if (pageUrls[i]) continue;
               const url = await provider.getPageUrl!(chapter, i);
@@ -119,8 +122,8 @@ export function useChapter(services: ReaderServices, middlewares: Middleware[] =
             console.error('Background page loading stopped:', err);
           });
         } else {
-          pageUrls = output.urls;
-          decoded = output.decoded;
+          pageUrls = urls;
+          decoded = decodedMap;
           loading = false;
         }
       })
