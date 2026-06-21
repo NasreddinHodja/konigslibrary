@@ -2,10 +2,9 @@
   import type { LibraryEntry, ServerChapter } from '$lib/utils/types';
   import { getReaderContext } from '$lib/context';
   import { ServerLibraryProvider } from '$lib/sources';
-  import { apiUrl, getServerUrl } from '$lib/utils/constants';
+  import { apiUrl } from '$lib/utils/constants';
   import { saveManga } from '$lib/sources/download.svelte';
   import { listOfflineManga } from '$lib/sources/offline-db';
-  import { isNative } from '$lib/utils/platform';
   import { showError } from '$lib/ui/toast.svelte';
   import { Download } from 'lucide-svelte';
   import ConfirmDialog from '$lib/ui/ConfirmDialog.svelte';
@@ -41,10 +40,6 @@
   });
 
   $effect(() => {
-    if (isNative() && !getServerUrl()) {
-      loading = false;
-      return;
-    }
     const url = apiUrl('/api/library');
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 8000);

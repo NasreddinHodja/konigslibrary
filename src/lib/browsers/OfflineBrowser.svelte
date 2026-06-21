@@ -3,7 +3,6 @@
   import { getReaderContext } from '$lib/context';
   import { OfflineFsProvider } from '$lib/sources';
   import { addToast, updateToast } from '$lib/ui/toast.svelte';
-  import { isNative } from '$lib/utils/platform';
   import { Trash2 } from 'lucide-svelte';
   import ConfirmDialog from '$lib/ui/ConfirmDialog.svelte';
   import MangaList from './MangaList.svelte';
@@ -16,7 +15,6 @@
   const listEntries = $derived(entries.map((e) => ({ id: e.slug, name: e.name })));
 
   function refreshEntries() {
-    if (!isNative()) return;
     invoke<{ slug: string; name: string }[]>('list_offline_manga').then((list) => {
       entries = list;
     });
@@ -29,7 +27,7 @@
   });
 
   async function confirmRemove() {
-    if (!pendingDelete || !isNative()) return;
+    if (!pendingDelete) return;
     const { slug, name } = pendingDelete;
     pendingDelete = null;
 

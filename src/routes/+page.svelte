@@ -14,7 +14,7 @@
   import OfflineBrowser from '$lib/browsers/OfflineBrowser.svelte';
   import KeyboardHelp from '$lib/keyboard/KeyboardHelp.svelte';
   import { isNative } from '$lib/utils/platform';
-  import { isLocalServer } from '$lib/utils/constants';
+  import { isLocalServer, getServerUrl } from '$lib/utils/constants';
   import { pushState } from '$app/navigation';
   import { CircleQuestionMark, Settings } from 'lucide-svelte';
   import ToastStack from '$lib/ui/ToastStack.svelte';
@@ -26,6 +26,7 @@
 
   const { state: manga, commands: registry } = reader;
   const native = isNative();
+  const serverUrl = getServerUrl();
   const chapters = $derived(reader.chapters);
 
   let helpOpen = $state(false);
@@ -189,9 +190,9 @@
       <UploadButton {isDragOver} />
 
       {#if native || isLocalServer}
-        <div class="flex flex-col gap-8">
-          <OfflineBrowser />
-          <LibraryBrowser />
+        <div class="flex w-full flex-col gap-8">
+          {#if native}<OfflineBrowser />{/if}
+          {#if isLocalServer || serverUrl}<LibraryBrowser />{/if}
           {#if native}<NativeLibraryBrowser />{/if}
         </div>
         <a
@@ -200,8 +201,8 @@
           ><Settings size={12} />SETTINGS</a
         >
       {:else}
-        <div class="flex flex-col gap-8">
-          <OfflineBrowser />
+        <div class="flex w-full flex-col gap-8">
+          {#if native}<OfflineBrowser />{/if}
 
           <div class="border-t border-border/10 pt-6">
             <p class="mb-1 text-xs font-bold tracking-widest opacity-50">RUN LOCALLY</p>
