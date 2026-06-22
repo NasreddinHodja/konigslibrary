@@ -232,7 +232,7 @@
     <p class="py-8 text-center text-sm opacity-60">Failed to load chapter: {chapter.error}</p>
   {:else}
     <div aria-hidden="true" style="height: {topPad}px; flex-shrink: 0"></div>
-    {#each chapter.pageUrls as src, i (src)}
+    {#each chapter.pageUrls as src, i (i)}
       <div
         bind:this={slotEls[i]}
         data-page={i}
