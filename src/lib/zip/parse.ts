@@ -69,7 +69,7 @@ export function parseCentralDirectory(cdBuf: ArrayBuffer): BaseZipEntry[] {
     const nameBytes = new Uint8Array(cdBuf, pos + 46, nameLen);
     const name = decoder.decode(nameBytes);
 
-    if (!name.endsWith('/')) {
+    if (!name.endsWith('/') && !name.split('/').some((s) => s === '..')) {
       entries.push({
         name,
         compressedSize,

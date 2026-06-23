@@ -1,8 +1,8 @@
 import type { Chapter, ServerChapter } from '$lib/utils/types';
 import { apiUrl } from '$lib/utils/constants';
-import type { SourceProvider, PageResult } from './types';
+import type { BulkPageProvider, PageResult } from './types';
 
-export class ServerLibraryProvider implements SourceProvider {
+export class ServerLibraryProvider implements BulkPageProvider {
   readonly kind = 'library';
   readonly mangaName: string;
   readonly slug: string;

@@ -64,7 +64,8 @@ export async function listManga(): Promise<LibraryEntry[]> {
 
     entries.sort((a, b) => a.name.localeCompare(b.name));
     return entries;
-  } catch {
+  } catch (err) {
+    console.warn(`[konigslibrary] Cannot read manga directory "${dir}": ${err}`);
     return [];
   }
 }

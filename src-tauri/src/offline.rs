@@ -1,8 +1,18 @@
-use std::path::PathBuf;
+use std::path::{Component, Path, PathBuf};
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Manager};
 
 use crate::download::ServerChapter;
+
+fn validate_path_component(s: &str) -> Result<(), String> {
+  for component in Path::new(s).components() {
+    match component {
+      Component::Normal(_) => {}
+      _ => return Err(format!("Invalid path component: {s:?}")),
+    }
+  }
+  Ok(())
+}
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct MangaMeta {
@@ -21,6 +31,7 @@ pub async fn save_chapter_meta(
   manga_name: &str,
   chapter: &ServerChapter,
 ) -> Result<(), String> {
+  validate_path_component(slug)?;
   let dir = offline_dir(app)?.join(slug);
   std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
 
@@ -75,6 +86,7 @@ pub async fn list_offline_manga(app: AppHandle) -> Result<Vec<MangaMeta>, String
 
 #[tauri::command]
 pub async fn get_offline_manga(app: AppHandle, slug: String) -> Result<Option<MangaMeta>, String> {
+  validate_path_component(&slug)?;
   let meta_path = offline_dir(&app)?.join(&slug).join("meta.json");
   if !meta_path.exists() {
     return Ok(None);
@@ -90,12 +102,18 @@ pub async fn get_chapter_page_paths(
   chapter_name: String,
   filenames: Vec<String>,
 ) -> Result<Vec<String>, String> {
+  validate_path_component(&slug)?;
+  validate_path_component(&chapter_name)?;
+  for f in &filenames {
+    validate_path_component(f)?;
+  }
   let base = offline_dir(&app)?.join(&slug).join(&chapter_name);
   Ok(filenames.iter().map(|f| base.join(f).to_string_lossy().to_string()).collect())
 }
 
 #[tauri::command]
 pub async fn delete_offline_manga(app: AppHandle, slug: String) -> Result<(), String> {
+  validate_path_component(&slug)?;
   let dir = offline_dir(&app)?.join(&slug);
   if dir.exists() {
     std::fs::remove_dir_all(&dir).map_err(|e| e.to_string())?;

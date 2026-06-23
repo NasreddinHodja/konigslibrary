@@ -1,12 +1,12 @@
 import { invoke } from '@tauri-apps/api/core';
 import { convertFileSrc } from '@tauri-apps/api/core';
 import type { Chapter, ServerChapter } from '$lib/utils/types';
-import type { SourceProvider, PageResult } from './types';
+import type { BulkPageProvider, PageResult } from './types';
 
 type MangaMeta = { slug: string; name: string; chapters: ServerChapter[] };
 
-export class OfflineFsProvider implements SourceProvider {
-  readonly kind = 'offline';
+export class LocalFsProvider implements BulkPageProvider {
+  readonly kind = 'local-fs';
   readonly mangaName: string;
   readonly slug: string;
 

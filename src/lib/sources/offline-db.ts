@@ -1,162 +1,39 @@
-import type { ServerChapter } from '$lib/utils/types';
+import type { Chapter, ServerChapter } from '$lib/utils/types';
+import { getOfflineManga, getOfflinePageBlob } from '$lib/sources/offline-idb';
+import type { BulkPageProvider, PageResult } from './types';
 
-const DB_NAME = 'konigslibrary';
-const DB_VERSION = 1;
+export class OfflineDbProvider implements BulkPageProvider {
+  readonly kind = 'offline-db';
+  readonly mangaName: string;
+  readonly slug: string;
 
-type MangaEntry = { slug: string; name: string; chapters: ServerChapter[] };
-type PageEntry = { key: string; blob: Blob };
+  private chapters: ServerChapter[] = [];
 
-let cachedDB: Promise<IDBDatabase> | null = null;
-
-function openDB(): Promise<IDBDatabase> {
-  if (cachedDB) return cachedDB;
-  cachedDB = new Promise<IDBDatabase>((resolve, reject) => {
-    const req = indexedDB.open(DB_NAME, DB_VERSION);
-    req.onupgradeneeded = () => {
-      const db = req.result;
-      if (!db.objectStoreNames.contains('manga')) {
-        db.createObjectStore('manga', { keyPath: 'slug' });
-      }
-      if (!db.objectStoreNames.contains('pages')) {
-        db.createObjectStore('pages', { keyPath: 'key' });
-      }
-    };
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => {
-      cachedDB = null;
-      reject(req.error);
-    };
-  });
-  return cachedDB;
-}
-
-export async function listOfflineManga(): Promise<{ slug: string; name: string }[]> {
-  const db = await openDB();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction('manga', 'readonly');
-    const store = tx.objectStore('manga');
-    const req = store.getAll();
-    req.onsuccess = () =>
-      resolve(
-        (req.result as MangaEntry[])
-          .filter((e) => e.chapters.length > 0)
-          .map((e) => ({ slug: e.slug, name: e.name }))
-      );
-    req.onerror = () => reject(req.error);
-  });
-}
-
-export async function getOfflineManga(slug: string): Promise<MangaEntry | null> {
-  const db = await openDB();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction('manga', 'readonly');
-    const store = tx.objectStore('manga');
-    const req = store.get(slug);
-    req.onsuccess = () => resolve((req.result as MangaEntry) ?? null);
-    req.onerror = () => reject(req.error);
-  });
-}
-
-export async function saveOfflinePage(
-  slug: string,
-  chapterName: string,
-  filename: string,
-  blob: Blob
-): Promise<void> {
-  const db = await openDB();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction('pages', 'readwrite');
-    const store = tx.objectStore('pages');
-    const entry: PageEntry = { key: `${slug}/${chapterName}/${filename}`, blob };
-    const req = store.put(entry);
-    req.onsuccess = () => resolve();
-    req.onerror = () => reject(req.error);
-  });
-}
-
-export async function saveOfflineMangaMeta(
-  slug: string,
-  name: string,
-  chapters: ServerChapter[]
-): Promise<void> {
-  const db = await openDB();
-  const existing = await getOfflineManga(slug);
-  let merged = chapters;
-  if (existing) {
-    const existingNames = new Set(existing.chapters.map((c) => c.name));
-    const newChapters = chapters.filter((c) => !existingNames.has(c.name));
-    const updated = existing.chapters.map((ec) => {
-      const replacement = chapters.find((c) => c.name === ec.name);
-      return replacement ?? ec;
-    });
-    merged = [...updated, ...newChapters];
+  constructor(slug: string, name: string) {
+    this.slug = slug;
+    this.mangaName = name;
   }
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction('manga', 'readwrite');
-    const store = tx.objectStore('manga');
-    const entry: MangaEntry = { slug, name, chapters: merged };
-    const req = store.put(entry);
-    req.onsuccess = () => resolve();
-    req.onerror = () => reject(req.error);
-  });
-}
 
-export async function getOfflinePageBlob(
-  slug: string,
-  chapterName: string,
-  filename: string
-): Promise<Blob | null> {
-  const db = await openDB();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction('pages', 'readonly');
-    const store = tx.objectStore('pages');
-    const req = store.get(`${slug}/${chapterName}/${filename}`);
-    req.onsuccess = () => {
-      const result = req.result as PageEntry | undefined;
-      resolve(result?.blob ?? null);
-    };
-    req.onerror = () => reject(req.error);
-  });
-}
+  async loadChapters(): Promise<Chapter[]> {
+    const entry = await getOfflineManga(this.slug);
+    this.chapters = entry?.chapters ?? [];
+    return this.chapters.map((c) => ({ name: c.name, pageCount: c.pageCount }));
+  }
 
-export async function deleteOfflineManga(
-  slug: string,
-  onProgress?: (current: number, total: number) => void
-): Promise<void> {
-  const db = await openDB();
-  const range = IDBKeyRange.bound(`${slug}/`, `${slug}/\uffff`);
+  async getPageUrls(chapterName: string): Promise<PageResult> {
+    const chapter = this.chapters.find((c) => c.name === chapterName);
+    if (!chapter) return { urls: [], revoke: true };
+    const blobs = await Promise.all(
+      chapter.pages.map((page) => {
+        const filename = page.split('/').pop() || page;
+        return getOfflinePageBlob(this.slug, chapter.name, filename);
+      })
+    );
+    const urls = blobs.map((b) => (b ? URL.createObjectURL(b) : ''));
+    return { urls, revoke: true };
+  }
 
-  const total = await new Promise<number>((resolve, reject) => {
-    const tx = db.transaction('pages', 'readonly');
-    const req = tx.objectStore('pages').count(range);
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
-  });
-
-  let deleted = 0;
-  await new Promise<void>((resolve, reject) => {
-    const tx = db.transaction('pages', 'readwrite');
-    const store = tx.objectStore('pages');
-    const req = store.openCursor(range);
-    req.onsuccess = () => {
-      const cursor = req.result;
-      if (!cursor) {
-        resolve();
-        return;
-      }
-      cursor.delete();
-      deleted++;
-      onProgress?.(deleted, total);
-      cursor.continue();
-    };
-    req.onerror = () => reject(req.error);
-  });
-
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction('manga', 'readwrite');
-    const store = tx.objectStore('manga');
-    const req = store.delete(slug);
-    req.onsuccess = () => resolve();
-    req.onerror = () => reject(req.error);
-  });
+  getServerChapters(): ServerChapter[] {
+    return this.chapters;
+  }
 }

@@ -40,6 +40,7 @@ export async function indexZip(file: File): Promise<ZipEntry[]> {
     }
   }
 
+  if (cdSize > 8 * 1024 * 1024) throw new Error('Central directory too large');
   const cdBuf = await file.slice(cdOffset, cdOffset + cdSize).arrayBuffer();
   return parseCentralDirectory(cdBuf);
 }

@@ -336,14 +336,6 @@
               src={currentUrl}
               alt="Page {manga.currentPage + 1} of {chapter.pageUrls.length}"
               class="max-h-full max-w-full object-contain"
-              onerror={(e) => {
-                const img = e.currentTarget as HTMLImageElement;
-                img.style.display = 'none';
-                const p = document.createElement('p');
-                p.className = 'py-8 text-sm opacity-60';
-                p.textContent = 'Failed to load page';
-                img.insertAdjacentElement('afterend', p);
-              }}
             />
           {/if}
         </div>

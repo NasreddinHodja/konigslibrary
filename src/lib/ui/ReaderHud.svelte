@@ -35,7 +35,7 @@
   style="padding-top: calc(0.75rem + var(--safe-top)); padding-bottom: 0.75rem;"
 >
   <button
-    class="shrink-0 cursor-pointer p-1 opacity-50 hover:opacity-100"
+    class="shrink-0 cursor-pointer p-1 opacity-70 hover:opacity-100"
     onclick={onback}
     aria-label="Back"
   >
@@ -46,12 +46,12 @@
     <span class="shrink-0 truncate text-sm font-bold">{mangaName}</span>
     {#if manga.selectedChapter}
       <span class="shrink-0 text-xs opacity-50">·</span>
-      <span class="truncate text-xs opacity-50">{manga.selectedChapter}</span>
+      <span class="truncate text-xs opacity-70">{manga.selectedChapter}</span>
     {/if}
   </div>
 
   <button
-    class="shrink-0 cursor-pointer text-xs tabular-nums opacity-60 hover:opacity-80"
+    class="shrink-0 cursor-pointer text-xs tabular-nums hover:opacity-70"
     onclick={() => (pickerOpen = true)}
     title="Jump to page"
   >
@@ -74,13 +74,13 @@
         in:slide={{ duration: ANIM_DURATION, easing: ANIM_EASE }}
         out:slide={{ duration: ANIM_EXIT_DURATION, easing: ANIM_EASE_IN }}
       >
-        <span class="text-xs font-bold tracking-widest opacity-50">ZOOM</span>
+        <span class="text-xs font-bold tracking-widest">ZOOM</span>
         <div class="flex items-center gap-3">
-          <button class="cursor-pointer p-1 opacity-60 hover:opacity-100" onclick={zoomOut}>
+          <button class="cursor-pointer p-1 opacity-70 hover:opacity-100" onclick={zoomOut} aria-label="Zoom out">
             <Minus size={14} />
           </button>
           <span class="w-10 text-center text-sm tabular-nums">{Math.round(manga.zoom * 100)}%</span>
-          <button class="cursor-pointer p-1 opacity-60 hover:opacity-100" onclick={zoomIn}>
+          <button class="cursor-pointer p-1 opacity-70 hover:opacity-100" onclick={zoomIn} aria-label="Zoom in">
             <Plus size={14} />
           </button>
         </div>
@@ -101,7 +101,7 @@
 
     <a
       href="/settings"
-      class="flex items-center justify-center gap-1.5 pt-1 text-xs tracking-widest opacity-40 hover:opacity-70"
+      class="flex items-center justify-center gap-1.5 pt-1 text-xs tracking-widest opacity-60 hover:opacity-100"
     >
       <Settings size={12} />
       SETTINGS

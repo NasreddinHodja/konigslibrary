@@ -1,8 +1,8 @@
 <script lang="ts">
   import { invoke } from '@tauri-apps/api/core';
   import { getReaderContext } from '$lib/context';
-  import { OfflineFsProvider } from '$lib/sources';
-  import { addToast, updateToast } from '$lib/ui/toast.svelte';
+  import { LocalFsProvider } from '$lib/sources';
+  import { addToast, updateToast, showError } from '$lib/ui/toast.svelte';
   import { Trash2 } from 'lucide-svelte';
   import ConfirmDialog from '$lib/ui/ConfirmDialog.svelte';
   import MangaList from './MangaList.svelte';
@@ -34,11 +34,14 @@
     const id = `del-${Date.now()}`;
     addToast({ id, label: name, current: 0, total: 0, phase: 'deleting' });
 
-    await invoke('delete_offline_manga', { slug });
-
-    entries = entries.filter((e) => e.slug !== slug);
-    events.emit('download:deleted', { slug });
-    updateToast(id, { phase: 'done' });
+    try {
+      await invoke('delete_offline_manga', { slug });
+      entries = entries.filter((e) => e.slug !== slug);
+      events.emit('download:deleted', { slug });
+      updateToast(id, { phase: 'done' });
+    } catch (err) {
+      updateToast(id, { phase: 'error', errorMessage: err instanceof Error ? err.message : String(err) });
+    }
   }
 </script>
 
@@ -55,12 +58,15 @@
   title="DOWNLOADED"
   entries={listEntries}
   loading={false}
-  onopen={(id) => {
+  onopen={async (id) => {
     const entry = entries.find((e) => e.slug === id)!;
-    setSource(new OfflineFsProvider(entry.slug, entry.name));
+    await setSource(new LocalFsProvider(entry.slug, entry.name)).catch((err) =>
+      showError(err instanceof Error ? err.message : String(err))
+    );
   }}
   action={{
     icon: Trash2,
+    label: 'Delete',
     onclick: (id) => (pendingDelete = entries.find((e) => e.slug === id) ?? null)
   }}
 />

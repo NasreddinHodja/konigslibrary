@@ -2,11 +2,11 @@ import type { Chapter } from '$lib/utils/types';
 import type { ZipEntry } from '$lib/zip';
 import { indexZipWorker, extractEntryWorker } from '$lib/zip/worker-client';
 import { detectDepth, groupByChapter } from '$lib/chapters';
-import type { SourceProvider, PageResult } from './types';
+import type { LazyPageProvider } from './types';
 
 const IMAGE_EXT = /\.(jpe?g|png|gif|webp|avif|bmp)$/i;
 
-export class ZipUploadProvider implements SourceProvider {
+export class ZipUploadProvider implements LazyPageProvider {
   readonly kind = 'upload';
   mangaName: string;
 
@@ -33,12 +33,6 @@ export class ZipUploadProvider implements SourceProvider {
     return Array.from(grouped.entries())
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([name, chapterEntries]) => ({ name, pageCount: chapterEntries.length }));
-  }
-
-  async getPageUrls(chapterName: string): Promise<PageResult> {
-    const entries = this.zipEntries.get(chapterName);
-    if (!entries) return { urls: [], revoke: true };
-    return { urls: new Array(entries.length).fill(''), revoke: true };
   }
 
   async getPageUrl(chapterName: string, index: number): Promise<string> {

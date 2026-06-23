@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onDestroy } from 'svelte';
   import { fade } from 'svelte/transition';
   import { ANIM_DURATION, ANIM_EXIT_DURATION, ANIM_EASE, ANIM_EASE_IN } from '$lib/utils/constants';
   import { ZipUploadProvider } from '$lib/sources';
@@ -23,6 +24,7 @@
 
   const reader = createReader();
   setReaderContext(reader);
+  onDestroy(() => reader.plugins.destroy());
 
   const { state: manga, commands: registry } = reader;
   const native = isNative();

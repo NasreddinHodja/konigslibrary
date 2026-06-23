@@ -219,6 +219,7 @@
       <div class="grid grid-cols-3 gap-2">
         {#each PRESETS as preset (preset.id)}
           <button
+            aria-label={preset.id}
             class="flex cursor-pointer items-center justify-center border px-3 py-2 text-xs {activePresetId ===
             preset.id
               ? 'border-fg'

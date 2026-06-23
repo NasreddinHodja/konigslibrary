@@ -4,7 +4,7 @@
   import { ServerLibraryProvider } from '$lib/sources';
   import { apiUrl } from '$lib/utils/constants';
   import { saveManga } from '$lib/sources/download.svelte';
-  import { listOfflineManga } from '$lib/sources/offline-db';
+  import { listOfflineManga } from '$lib/sources/offline-idb';
   import { showError } from '$lib/ui/toast.svelte';
   import { Download } from 'lucide-svelte';
   import ConfirmDialog from '$lib/ui/ConfirmDialog.svelte';
@@ -111,5 +111,5 @@
   {loading}
   {error}
   onopen={open}
-  action={{ icon: Download, onclick: requestDownload, loadingId: downloadingSlug }}
+  action={{ icon: Download, label: 'Download', onclick: requestDownload, loadingId: downloadingSlug }}
 />

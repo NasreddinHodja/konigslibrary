@@ -43,10 +43,9 @@ export async function checkForUpdate(): Promise<UpdateInfo | null> {
     const apk = (data.assets as { name: string; browser_download_url: string }[])?.find((a) =>
       a.name.endsWith('.apk')
     );
-    return {
-      version: latest,
-      downloadUrl: apk?.browser_download_url ?? data.html_url
-    };
+    const downloadUrl: string = apk?.browser_download_url ?? data.html_url;
+    if (!downloadUrl.startsWith('https://github.com/')) return null;
+    return { version: latest, downloadUrl };
   } catch {
     return null;
   }

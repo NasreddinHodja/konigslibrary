@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { RefreshCw } from 'lucide-svelte';
+  import type { ComponentType, SvelteComponent } from 'svelte';
+  import { RefreshCw, type IconProps } from 'lucide-svelte';
   import Skeleton from '$lib/ui/Skeleton.svelte';
 
   type Entry = { id: string; name: string };
@@ -20,8 +21,8 @@
     onopen: (id: string) => void;
     onrefresh?: () => void;
     action?: {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      icon: any;
+      icon: ComponentType<SvelteComponent<IconProps>>;
+      label: string;
       onclick: (id: string) => void;
       loadingId?: string | null;
     };
@@ -74,7 +75,7 @@
                 action.onclick(entry.id);
               }}
               disabled={action.loadingId === entry.id}
-              aria-label="{entry.name} action"
+              aria-label="{action.label} {entry.name}"
             >
               <action.icon size={14} />
             </button>

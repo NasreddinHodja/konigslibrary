@@ -1,8 +1,8 @@
 import type { Chapter } from '$lib/utils/types';
 import type { NativeChapter } from '$lib/sources/native-library';
-import type { SourceProvider, PageResult } from './types';
+import type { BulkPageProvider, PageResult } from './types';
 
-export class NativeFilesystemProvider implements SourceProvider {
+export class NativeFilesystemProvider implements BulkPageProvider {
   readonly kind = 'native';
   readonly mangaName: string;
 

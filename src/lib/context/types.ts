@@ -1,5 +1,5 @@
 import type { Chapter } from '$lib/utils/types';
-import type { SourceProvider, PageResult } from '$lib/sources';
+import type { SourceProvider } from '$lib/sources';
 import type { CommandRegistry } from '$lib/commands';
 import type { EventBus } from '$lib/events';
 import type { ViewerRegistry } from '$lib/viewers';
@@ -36,6 +36,5 @@ export type Reader = {
   goToPage(page: number, pageCount: number): void;
   saveProgress(): void;
   getSavedProgress(): { chapter: string; page: number } | null;
-  getChapterUrls(name: string): Promise<PageResult>;
   getProvider(): SourceProvider | null;
 };

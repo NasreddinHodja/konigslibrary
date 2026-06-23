@@ -9,6 +9,7 @@
   import { getReaderContext } from '$lib/context';
   import { ZipUploadProvider, NativeFilesystemProvider } from '$lib/sources';
   import MangaList from './MangaList.svelte';
+  import { showError } from '$lib/ui/toast.svelte';
 
   const { setSource } = getReaderContext();
 
@@ -35,16 +36,20 @@
   });
 
   async function open(path: string) {
-    const entry = entries.find((e) => e.path === path)!;
-    if (entry.type === 'zip') {
-      const url = convertFileSrc(entry.path);
-      const response = await fetch(url);
-      const blob = await response.blob();
-      const file = new File([blob], entry.name + '.cbz', { type: 'application/zip' });
-      await setSource(new ZipUploadProvider(file));
-    } else {
-      const chapters = await listNativeChapters(entry.path);
-      await setSource(new NativeFilesystemProvider(chapters, entry.name));
+    try {
+      const entry = entries.find((e) => e.path === path)!;
+      if (entry.type === 'zip') {
+        const url = convertFileSrc(entry.path);
+        const response = await fetch(url);
+        const blob = await response.blob();
+        const file = new File([blob], entry.name + '.cbz', { type: 'application/zip' });
+        await setSource(new ZipUploadProvider(file));
+      } else {
+        const chapters = await listNativeChapters(entry.path);
+        await setSource(new NativeFilesystemProvider(chapters, entry.name));
+      }
+    } catch (err) {
+      showError(err instanceof Error ? err.message : String(err));
     }
   }
 </script>

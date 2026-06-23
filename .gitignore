@@ -47,3 +47,9 @@ notes.org
 
 # builds
 konigslibrary.apk*
+
+# config
+konigslibrary.json
+
+# audit
+AUDIT.org

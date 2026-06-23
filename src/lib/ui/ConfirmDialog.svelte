@@ -14,10 +14,46 @@
     onconfirm: () => void;
     oncancel: () => void;
   } = $props();
+
+  let dialogEl: HTMLDivElement | undefined = $state();
+  let previousFocus: HTMLElement | null = null;
+
+  const FOCUSABLE = 'a[href], button, [tabindex]:not([tabindex="-1"])';
+
+  function trapFocus(e: KeyboardEvent) {
+    if (e.key !== 'Tab' || !dialogEl) return;
+    const focusable = Array.from(dialogEl.querySelectorAll<HTMLElement>(FOCUSABLE));
+    if (focusable.length === 0) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
+    }
+  }
+
+  $effect(() => {
+    if (!dialogEl) return;
+    previousFocus = document.activeElement as HTMLElement | null;
+    const first = dialogEl.querySelector<HTMLElement>(FOCUSABLE);
+    first?.focus();
+    return () => previousFocus?.focus();
+  });
 </script>
 
+<svelte:window onkeydown={trapFocus} />
+
 <Backdrop onclick={oncancel} />
-<div class="pointer-events-none fixed inset-0 z-50 flex items-center justify-center p-4">
+<div
+  bind:this={dialogEl}
+  class="pointer-events-none fixed inset-0 z-50 flex items-center justify-center p-4"
+  role="dialog"
+  aria-modal="true"
+  aria-label="Confirm action"
+>
   <div
     class="pointer-events-auto w-full max-w-sm border-2 bg-bg px-6 py-5"
     in:fly={{ y: 10, duration: ANIM_DURATION, easing: ANIM_EASE }}

@@ -32,6 +32,7 @@ export function setMangaDir(dir: string) {
 
 export async function listNativeManga(): Promise<NativeMangaEntry[]> {
   const mangaDir = getMangaDir() || (await defaultDir());
+  await invoke('set_manga_dir', { dir: mangaDir });
   const entries: DirEntry[] = await invoke('list_dir', { path: mangaDir });
   const results: NativeMangaEntry[] = [];
 

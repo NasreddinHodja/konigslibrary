@@ -246,14 +246,6 @@
             class="mx-auto"
             style="width: {manga.zoom * 100}%"
             onload={(e) => captureRatio(i, e)}
-            onerror={(e) => {
-              const img = e.currentTarget as HTMLImageElement;
-              img.style.display = 'none';
-              const p = document.createElement('p');
-              p.className = 'py-8 text-sm opacity-60';
-              p.textContent = 'Failed to load page';
-              img.insertAdjacentElement('afterend', p);
-            }}
           />
         {/if}
       </div>

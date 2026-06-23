@@ -1,5 +1,5 @@
 import type { Chapter } from '$lib/utils/types';
-import type { SourceProvider, PageResult } from '$lib/sources';
+import type { SourceProvider } from '$lib/sources';
 import { LS_SCROLL_MODE, LS_RTL, LS_PROGRESS_PREFIX } from '$lib/utils/constants';
 import { createDefaultRegistry } from '$lib/commands';
 import { createEventBus } from '$lib/events';
@@ -149,11 +149,6 @@ export function createReader(): Reader {
     events.emit('progress:saved', { chapter: state.selectedChapter, page: state.currentPage });
   }
 
-  async function getChapterUrls(name: string): Promise<PageResult> {
-    if (!_provider) return { urls: [], revoke: false };
-    return _provider.getPageUrls(name);
-  }
-
   function getProvider(): SourceProvider | null {
     return _provider;
   }
@@ -183,7 +178,6 @@ export function createReader(): Reader {
     goToPage,
     saveProgress,
     getSavedProgress,
-    getChapterUrls,
     getProvider
   };
 

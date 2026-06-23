@@ -2,8 +2,7 @@ import { crc32 } from './crc32';
 
 export function createZip(entries: { name: string; data: Uint8Array }[]): Blob {
   const encoder = new TextEncoder();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const parts: any[] = [];
+  const parts: (ArrayBuffer | Uint8Array)[] = [];
   const central: { nameBuf: Uint8Array; crc: number; size: number; offset: number }[] = [];
   let offset = 0;
 
@@ -66,5 +65,5 @@ export function createZip(entries: { name: string; data: Uint8Array }[]): Blob {
   // comment length stays 0
 
   parts.push(eocd);
-  return new Blob(parts, { type: 'application/zip' });
+  return new Blob(parts as BlobPart[], { type: 'application/zip' });
 }

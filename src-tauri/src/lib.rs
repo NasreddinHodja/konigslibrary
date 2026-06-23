@@ -3,12 +3,17 @@ mod immersive;
 mod offline;
 
 use serde::Serialize;
+use std::path::PathBuf;
+use std::sync::Mutex;
+use tauri::Manager;
 
 #[derive(Serialize)]
 struct DirEntry {
   name: String,
   is_dir: bool,
 }
+
+struct MangaDirState(Mutex<Option<PathBuf>>);
 
 #[tauri::command]
 fn home_dir() -> Result<String, String> {
@@ -18,8 +23,29 @@ fn home_dir() -> Result<String, String> {
 }
 
 #[tauri::command]
-fn list_dir(path: String) -> Result<Vec<DirEntry>, String> {
-  let entries = std::fs::read_dir(&path).map_err(|e| e.to_string())?;
+fn set_manga_dir(app: tauri::AppHandle, state: tauri::State<MangaDirState>, dir: String) -> Result<(), String> {
+  let canonical = std::fs::canonicalize(&dir).map_err(|e| e.to_string())?;
+  app.asset_protocol_scope().allow_directory(&canonical, true).map_err(|e| e.to_string())?;
+  *state.0.lock().unwrap() = Some(canonical);
+  Ok(())
+}
+
+#[tauri::command]
+fn list_dir(state: tauri::State<MangaDirState>, path: String) -> Result<Vec<DirEntry>, String> {
+  let allowed_root = state
+    .0
+    .lock()
+    .unwrap()
+    .clone()
+    .ok_or("manga directory not configured")?;
+
+  let canonical = std::fs::canonicalize(&path).map_err(|e| e.to_string())?;
+
+  if !canonical.starts_with(&allowed_root) {
+    return Err("path is outside the configured manga directory".to_string());
+  }
+
+  let entries = std::fs::read_dir(&canonical).map_err(|e| e.to_string())?;
   let mut results = Vec::new();
   for entry in entries {
     let entry = entry.map_err(|e| e.to_string())?;
@@ -41,21 +67,26 @@ pub fn run() {
 
   tauri::Builder::default()
     .manage(download::DownloadState(Default::default()))
+    .manage(MangaDirState(Mutex::new(None)))
     .plugin(immersive::init())
     .plugin(tauri_plugin_dialog::init())
     .plugin(tauri_plugin_opener::init())
     .setup(|app| {
-      if cfg!(debug_assertions) {
-        app.handle().plugin(
-          tauri_plugin_log::Builder::default()
-            .level(log::LevelFilter::Info)
-            .build(),
-        )?;
-      }
+      let log_level = if cfg!(debug_assertions) {
+        log::LevelFilter::Info
+      } else {
+        log::LevelFilter::Warn
+      };
+      app.handle().plugin(
+        tauri_plugin_log::Builder::default()
+          .level(log_level)
+          .build(),
+      )?;
       Ok(())
     })
     .invoke_handler(tauri::generate_handler![
       home_dir,
+      set_manga_dir,
       list_dir,
       download::download_chapter,
       download::cancel_download,

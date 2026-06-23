@@ -36,11 +36,11 @@ pub async fn download_chapter(
   channel: Channel<DownloadProgress>,
 ) -> Result<(), String> {
   let cancelled = Arc::new(AtomicBool::new(false));
-  state.0.lock().unwrap().insert(id.clone(), cancelled.clone());
+  state.0.lock().unwrap_or_else(|e| e.into_inner()).insert(id.clone(), cancelled.clone());
 
   let result = run(&app, &slug, &manga_name, &chapter, &page_urls, &channel, &cancelled).await;
 
-  state.0.lock().unwrap().remove(&id);
+  state.0.lock().unwrap_or_else(|e| e.into_inner()).remove(&id);
   result
 }
 
@@ -73,7 +73,8 @@ async fn run(
       return Err("Cancelled".to_string());
     }
 
-    let filename = chapter.pages[i].split('/').last().unwrap_or(&chapter.pages[i]);
+    let page = chapter.pages.get(i).ok_or_else(|| format!("page index {i} out of bounds"))?;
+    let filename = page.split('/').last().unwrap_or(page);
     let file_path = chapter_dir.join(filename);
 
     if !file_path.exists() {
@@ -93,7 +94,7 @@ async fn run(
 
 #[tauri::command]
 pub fn cancel_download(state: State<'_, DownloadState>, id: String) {
-  if let Some(flag) = state.0.lock().unwrap().get(&id) {
+  if let Some(flag) = state.0.lock().unwrap_or_else(|e| e.into_inner()).get(&id) {
     flag.store(true, Ordering::Relaxed);
   }
 }
