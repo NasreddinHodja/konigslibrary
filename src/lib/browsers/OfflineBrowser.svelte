@@ -40,7 +40,10 @@
       events.emit('download:deleted', { slug });
       updateToast(id, { phase: 'done' });
     } catch (err) {
-      updateToast(id, { phase: 'error', errorMessage: err instanceof Error ? err.message : String(err) });
+      updateToast(id, {
+        phase: 'error',
+        errorMessage: err instanceof Error ? err.message : String(err)
+      });
     }
   }
 </script>

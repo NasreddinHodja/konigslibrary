@@ -111,5 +111,10 @@
   {loading}
   {error}
   onopen={open}
-  action={{ icon: Download, label: 'Download', onclick: requestDownload, loadingId: downloadingSlug }}
+  action={{
+    icon: Download,
+    label: 'Download',
+    onclick: requestDownload,
+    loadingId: downloadingSlug
+  }}
 />

@@ -76,11 +76,19 @@
       >
         <span class="text-xs font-bold tracking-widest">ZOOM</span>
         <div class="flex items-center gap-3">
-          <button class="cursor-pointer p-1 opacity-70 hover:opacity-100" onclick={zoomOut} aria-label="Zoom out">
+          <button
+            class="cursor-pointer p-1 opacity-70 hover:opacity-100"
+            onclick={zoomOut}
+            aria-label="Zoom out"
+          >
             <Minus size={14} />
           </button>
           <span class="w-10 text-center text-sm tabular-nums">{Math.round(manga.zoom * 100)}%</span>
-          <button class="cursor-pointer p-1 opacity-70 hover:opacity-100" onclick={zoomIn} aria-label="Zoom in">
+          <button
+            class="cursor-pointer p-1 opacity-70 hover:opacity-100"
+            onclick={zoomIn}
+            aria-label="Zoom in"
+          >
             <Plus size={14} />
           </button>
         </div>

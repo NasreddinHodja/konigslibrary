@@ -63,7 +63,9 @@ export function useChapter(reader: Reader): ChapterState {
             }
           })
           .catch((err) => {
-            showError(`Failed to load page ${index + 1}: ${err instanceof Error ? err.message : String(err)}`);
+            showError(
+              `Failed to load page ${index + 1}: ${err instanceof Error ? err.message : String(err)}`
+            );
           });
       };
       ensurePageUrl = ensure;
