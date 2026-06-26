@@ -2,8 +2,7 @@
   import { getReaderContext } from '$lib/context';
   import type { ViewerCommands } from '$lib/commands';
   import { useChapter } from '$lib/chapter-loader';
-  import { VIRTUAL_BUFFER, DEFAULT_PAGE_RATIO, INTERSECT_THRESHOLD } from '$lib/utils/constants';
-  import { SvelteSet } from 'svelte/reactivity';
+  import { DEFAULT_PAGE_RATIO } from '$lib/utils/constants';
   import Loader from '$lib/ui/Loader.svelte';
   import Button from '$lib/ui/Button.svelte';
   import { ChevronRight } from 'lucide-svelte';
@@ -24,15 +23,12 @@
   let containerHeight = $state(0);
   let containerWidth = $state(0);
   let ratios: number[] = $state([]);
-  let visibleSet = new SvelteSet<number>();
 
   const GAP = 8;
-  const BUFFER_MARGIN_PX = 1500;
 
   $effect(() => {
     const len = chapter.pageUrls.length;
     ratios = Array(len).fill(DEFAULT_PAGE_RATIO);
-    visibleSet.clear();
   });
 
   function pageHeight(i: number): number {
@@ -59,81 +55,18 @@
     }
   }
 
-  let bufferObserver: IntersectionObserver | undefined;
-
-  function setupBufferObserver() {
-    bufferObserver?.disconnect();
+  const onScroll = () => {
     if (!containerEl) return;
-    bufferObserver = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          const idx = Number((entry.target as HTMLElement).dataset.page);
-          if (isNaN(idx)) continue;
-          if (entry.isIntersecting) {
-            visibleSet.add(idx);
-          } else {
-            visibleSet.delete(idx);
-          }
-        }
-      },
-      {
-        root: containerEl,
-        rootMargin: `${VIRTUAL_BUFFER * BUFFER_MARGIN_PX}px 0px`
-      }
-    );
-  }
-
-  let pageObserver: IntersectionObserver | undefined;
-
-  function setupPageObserver() {
-    pageObserver?.disconnect();
-    if (!containerEl) return;
-    pageObserver = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          if (entry.boundingClientRect.height === 0) continue;
-          if (entry.isIntersecting) {
-            const idx = Number((entry.target as HTMLElement).dataset.page);
-            if (!isNaN(idx)) manga.currentPage = idx;
-          }
-        }
-      },
-      {
-        root: containerEl,
-        threshold: INTERSECT_THRESHOLD
-      }
-    );
-  }
-
-  $effect(() => {
-    if (!containerEl) return;
-    setupBufferObserver();
-    setupPageObserver();
-    return () => {
-      bufferObserver?.disconnect();
-      pageObserver?.disconnect();
-    };
-  });
-
-  let slotEls: (HTMLDivElement | undefined)[] = $state([]);
-
-  $effect(() => {
-    if (!bufferObserver || !pageObserver) return;
-    const len = chapter.pageUrls.length;
-    for (let i = 0; i < len; i++) {
-      const el = slotEls[i];
-      if (el) {
-        bufferObserver.observe(el);
-        pageObserver.observe(el);
+    const mid = containerEl.scrollTop + containerEl.clientHeight * 0.5;
+    let acc = topPad;
+    for (let i = 0; i < chapter.pageUrls.length; i++) {
+      acc += pageHeight(i) + GAP;
+      if (acc > mid) {
+        if (chapter.pageUrls[i]) manga.currentPage = i;
+        break;
       }
     }
-    return () => {
-      bufferObserver?.disconnect();
-      pageObserver?.disconnect();
-      setupBufferObserver();
-      setupPageObserver();
-    };
-  });
+  };
 
   $effect(() => {
     if (!manga.shouldScroll) return;
@@ -142,8 +75,6 @@
 
     const idx = manga.currentPage;
     const offset = scrollOffsetFor(idx);
-
-    visibleSet.add(idx);
 
     requestAnimationFrame(() => {
       containerEl?.scrollTo({ top: offset });
@@ -193,7 +124,6 @@
 
   const nextChapter = $derived(reader.getNextChapter());
 
-  // Tap detection: pointerdown → pointerup with < 10px movement = tap
   let tapStartX = 0;
   let tapStartY = 0;
   let tapMoved = false;
@@ -222,6 +152,7 @@
   class="mx-auto flex h-full w-full max-w-[900px] flex-col gap-2 overflow-y-auto py-4 select-none"
   role="region"
   aria-label="Manga pages"
+  onscroll={onScroll}
   onpointerdown={onPointerDown}
   onpointermove={onPointerMove}
   onpointerup={onPointerUp}
@@ -233,13 +164,8 @@
   {:else}
     <div aria-hidden="true" style="height: {topPad}px; flex-shrink: 0"></div>
     {#each chapter.pageUrls as src, i (i)}
-      <div
-        bind:this={slotEls[i]}
-        data-page={i}
-        class="flex w-full justify-center"
-        style="min-height: {pageHeight(i)}px"
-      >
-        {#if visibleSet.has(i)}
+      <div data-page={i} class="flex w-full justify-center" style="min-height: {pageHeight(i)}px">
+        {#if src}
           <img
             {src}
             alt="Page {i + 1} of {chapter.pageUrls.length}"
@@ -247,6 +173,13 @@
             style="width: {manga.zoom * 100}%"
             onload={(e) => captureRatio(i, e)}
           />
+        {:else}
+          <div
+            class="flex items-center justify-center opacity-40"
+            style="height: {pageHeight(i)}px"
+          >
+            <Loader />
+          </div>
         {/if}
       </div>
     {/each}

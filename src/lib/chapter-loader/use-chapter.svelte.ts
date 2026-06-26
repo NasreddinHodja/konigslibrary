@@ -1,3 +1,4 @@
+import { untrack } from 'svelte';
 import { SvelteMap } from 'svelte/reactivity';
 import type { Reader } from '$lib/context';
 import type { BulkPageProvider, LazyPageProvider } from '$lib/sources';
@@ -46,10 +47,10 @@ export function useChapter(reader: Reader): ChapterState {
     ensurePageUrl = null;
 
     async function loadLazy(provider: LazyPageProvider, ch: string) {
-      const count = reader.chapters.find((c) => c.name === ch)?.pageCount ?? 0;
+      const count = untrack(() => reader.chapters.find((c) => c.name === ch)?.pageCount ?? 0);
       pageUrls = new Array(count).fill('');
 
-      const startPage = Math.max(0, Math.min(reader.state.currentPage, count - 1));
+      const startPage = untrack(() => Math.max(0, Math.min(reader.state.currentPage, count - 1)));
 
       const ensure = (index: number) => {
         if (pageUrls[index] || controller.signal.aborted) return;
@@ -82,6 +83,19 @@ export function useChapter(reader: Reader): ChapterState {
         pageUrls[i] = url;
         ownedUrls.push(url);
       }
+
+      const decodedMap = new SvelteMap<number, HTMLImageElement>();
+      if (pageUrls[startPage] && !controller.signal.aborted) {
+        const img = new Image();
+        img.src = pageUrls[startPage];
+        try {
+          await img.decode();
+        } catch {
+          /* decode can fail for aborted loads */
+        }
+        if (!controller.signal.aborted) decodedMap.set(startPage, img);
+      }
+      if (!controller.signal.aborted) decoded = decodedMap;
 
       loading = false;
 

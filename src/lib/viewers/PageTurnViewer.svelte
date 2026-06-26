@@ -41,6 +41,7 @@
       animTimer = null;
     }
     pendingDir = 0;
+    pinnedNextUrl = null;
     noTrans = true;
     offset = 0;
     requestAnimationFrame(() => {
@@ -61,6 +62,9 @@
   let dragging = $state(false);
   let pendingDir = $state<-1 | 1 | 0>(0);
   let animTimer: ReturnType<typeof setTimeout> | null = null;
+  // Holds the previous nextUrl for one rAF after commit so the next panel stays
+  // at center (already-painted) while the current panel's new <img> paints.
+  let pinnedNextUrl: string | null = $state(null);
 
   let containerEl: HTMLDivElement | undefined = $state();
   const getW = () =>
@@ -95,14 +99,21 @@
       animTimer = null;
       if (pendingDir === 0) return;
       const d = pendingDir;
+      const savedNext = d === -1 ? nextUrl || null : null;
       pendingDir = 0;
       noTrans = true;
       requestAnimationFrame(() => {
         if (d === -1) commitNext();
         else commitPrev();
-        offset = 0;
+        // Pin the next panel at center for one frame so the already-painted
+        // image stays visible while the current panel's new <img> paints.
+        pinnedNextUrl = savedNext;
         requestAnimationFrame(() => {
-          noTrans = false;
+          offset = 0;
+          requestAnimationFrame(() => {
+            pinnedNextUrl = null;
+            noTrans = false;
+          });
         });
       });
     }, ANIM_MS + 30);
@@ -118,6 +129,7 @@
       const d = pendingDir;
       pendingDir = 0;
       noTrans = true;
+      pinnedNextUrl = null;
       if (d !== 0) {
         if (d === -1) commitNext();
         else commitPrev();
@@ -162,6 +174,7 @@
       }
     }
     noTrans = true;
+    pinnedNextUrl = null;
     offset = 0;
     touchStartX = e.touches[0].clientX;
     containerW = getW();
@@ -300,6 +313,7 @@
       class="absolute inset-0 flex items-center justify-center"
       style:transform="translateX(calc(-100% + {offset}px))"
       style:transition={transStyle}
+      style:will-change="transform"
       aria-hidden="true"
     >
       {#if showEndScreen}
@@ -320,6 +334,7 @@
       class="absolute inset-0 flex items-center justify-center"
       style:transform="translateX({offset}px)"
       style:transition={transStyle}
+      style:will-change="transform"
     >
       {#if showEndScreen}
         <EndOfChapter />
@@ -347,9 +362,12 @@
       class="absolute inset-0 flex items-center justify-center"
       style:transform="translateX(calc(100% + {offset}px))"
       style:transition={transStyle}
+      style:will-change="transform"
       aria-hidden="true"
     >
-      {#if !showEndScreen && manga.currentPage >= chapter.pageUrls.length - 1}
+      {#if pinnedNextUrl}
+        <img src={pinnedNextUrl} alt="Next page" class="max-h-full max-w-full object-contain" />
+      {:else if !showEndScreen && manga.currentPage >= chapter.pageUrls.length - 1}
         <EndOfChapter />
       {:else if nextUrl}
         <img src={nextUrl} alt="Next page" class="max-h-full max-w-full object-contain" />
