@@ -9,7 +9,7 @@
 
 Manga reader that opens ZIP and CBZ archives. Runs in the browser, as a desktop/mobile app (Tauri), or as a self-hosted server for LAN access. No accounts or cloud services.
 
-#+html: <p align="center"><img src=".github/readme/home-mobile.png" alt="Mobile home" width="260">&nbsp;&nbsp;<img src=".github/readme/sidebar-mobile.png" alt="Mobile manga detail" width="260">&nbsp;&nbsp;<img src=".github/readme/reader-mobile.png" alt="Mobile reader" width="260"></p>
+#+html: <p align="center"><img src=".github/readme/home-mobile.jpeg" alt="Mobile home" width="260">&nbsp;&nbsp;<img src=".github/readme/manga-mobile.jpeg" alt="Mobile manga detail" width="260">&nbsp;&nbsp;<img src=".github/readme/reader-mobile.jpeg" alt="Mobile reader" width="260"></p>
 
 * Features
 
