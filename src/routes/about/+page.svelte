@@ -25,14 +25,14 @@
         href="https://github.com/NasreddinHodja/konigslibrary/releases/latest/download/konigslibrary.apk"
         class="border-b border-fg/40 hover:border-fg/80">APK</a
       >, install it, and read manga directly on your phone. Upload ZIPs or point it at a local
-      folder.
+      directory.
     </p>
   </section>
 
   <section class="space-y-3">
     <h2 class="text-lg font-bold opacity-80">Desktop app</h2>
     <p class="text-sm leading-relaxed opacity-70">
-      The desktop app (built with Tauri) can read manga directly from a local folder. Point it at
+      The desktop app (built with Tauri) can read manga directly from a local directory. Point it at
       your manga directory and browse your library.
     </p>
   </section>

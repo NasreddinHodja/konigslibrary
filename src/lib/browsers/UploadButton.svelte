@@ -3,6 +3,7 @@
   import { ZipUploadProvider } from '$lib/sources';
   import { showError } from '$lib/ui/toast.svelte';
   import { isNative } from '$lib/utils/platform';
+  import { describeOpenFileError } from '$lib/utils/errors';
   import { convertFileSrc } from '@tauri-apps/api/core';
 
   let { isDragOver = false }: { isDragOver?: boolean } = $props();
@@ -31,7 +32,7 @@
         const file = new File([blob], fileName, { type: 'application/zip' });
         await loadFile(file);
       } catch (err) {
-        showError(`Failed to open file: ${err instanceof Error ? err.message : err}`);
+        showError(`Failed to open file: ${describeOpenFileError(err)}`);
       }
       return;
     }
@@ -50,7 +51,7 @@
         return;
       } catch (err) {
         if (err instanceof Error && err.name === 'AbortError') return;
-        showError(`Failed to open file: ${err instanceof Error ? err.message : err}`);
+        showError(`Failed to open file: ${describeOpenFileError(err)}`);
         return;
       }
     }

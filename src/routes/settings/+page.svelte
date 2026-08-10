@@ -112,7 +112,7 @@
 
   async function browseDeviceDir() {
     const { open } = await import('@tauri-apps/plugin-dialog');
-    const selected = await open({ directory: true, title: 'Select manga folder' });
+    const selected = await open({ directory: true, title: 'Select manga directory' });
     if (selected) {
       deviceDir = selected;
       saveDeviceDir();
@@ -306,7 +306,7 @@
   {#if native}
     <section class="space-y-3">
       <h2 class="text-lg font-bold opacity-80">Device library</h2>
-      <h3 class="text-sm font-bold opacity-60">Manga folder</h3>
+      <h3 class="text-sm font-bold opacity-60">Manga directory</h3>
       <div class="flex gap-2">
         <input
           type="text"

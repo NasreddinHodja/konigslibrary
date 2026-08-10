@@ -37,7 +37,8 @@ export class ZipUploadProvider implements LazyPageProvider {
 
   async getPageUrl(chapterName: string, index: number): Promise<string> {
     const entries = this.zipEntries.get(chapterName);
-    if (!entries?.[index]) throw new Error(`Page ${index} not found in chapter "${chapterName}"`);
+    if (!entries?.[index])
+      throw new Error(`Page ${index + 1} not found in chapter "${chapterName}"`);
     const blob = await extractEntryWorker(this.file, entries[index]);
     return URL.createObjectURL(blob);
   }

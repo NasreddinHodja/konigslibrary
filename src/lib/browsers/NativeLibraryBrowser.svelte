@@ -10,6 +10,7 @@
   import { ZipUploadProvider, NativeFilesystemProvider } from '$lib/sources';
   import MangaList from './MangaList.svelte';
   import { showError } from '$lib/ui/toast.svelte';
+  import { describeOpenFileError } from '$lib/utils/errors';
 
   const { setSource } = getReaderContext();
 
@@ -26,7 +27,7 @@
     try {
       entries = await listNativeManga();
     } catch {
-      error = `Could not read ${mangaDir}`;
+      error = `Could not read manga directory: ${mangaDir}`;
     }
     loading = false;
   }
@@ -49,14 +50,14 @@
         await setSource(new NativeFilesystemProvider(chapters, entry.name));
       }
     } catch (err) {
-      showError(err instanceof Error ? err.message : String(err));
+      showError(describeOpenFileError(err));
     }
   }
 </script>
 
 {#if !mangaDir}
   <p class="text-sm opacity-60">
-    No path set - <a href="/settings" class="underline">configure in Settings</a>
+    No manga directory set - <a href="/settings" class="underline">configure in Settings</a>
   </p>
 {:else}
   <MangaList

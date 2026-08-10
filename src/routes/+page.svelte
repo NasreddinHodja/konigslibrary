@@ -21,6 +21,7 @@
   import ToastStack from '$lib/ui/ToastStack.svelte';
   import UpdateBanner from '$lib/ui/UpdateBanner.svelte';
   import { showError } from '$lib/ui/toast.svelte';
+  import { describeOpenFileError } from '$lib/utils/errors';
 
   const reader = createReader();
   setReaderContext(reader);
@@ -49,7 +50,7 @@
     try {
       await reader.setSource(new ZipUploadProvider(file));
     } catch (err) {
-      showError(`Failed to open file: ${err instanceof Error ? err.message : err}`);
+      showError(`Failed to open file: ${describeOpenFileError(err)}`);
     }
   };
 
