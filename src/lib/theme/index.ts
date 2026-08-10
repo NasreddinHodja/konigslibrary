@@ -62,6 +62,21 @@ export function setTheme(theme: Theme) {
   applyTheme(theme);
 }
 
+type NativeBridge = {
+  setStatusBarStyle(light: boolean): void;
+};
+
+function getBridge(): NativeBridge | undefined {
+  return (window as unknown as { __kl?: NativeBridge }).__kl;
+}
+
+function isLightColor(hex: string): boolean {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return (r * 299 + g * 587 + b * 114) / 1000 > 128;
+}
+
 export function applyTheme(theme: Theme) {
   const root = document.documentElement;
   root.style.setProperty('--color-bg', theme.bg);
@@ -70,6 +85,7 @@ export function applyTheme(theme: Theme) {
   root.style.setProperty('--color-border', theme.border);
   root.style.setProperty('--color-muted', theme.muted);
   root.style.setProperty('--color-reader-bg', theme.readerBg);
+  getBridge()?.setStatusBarStyle(isLightColor(theme.bg));
 }
 
 export function initTheme() {

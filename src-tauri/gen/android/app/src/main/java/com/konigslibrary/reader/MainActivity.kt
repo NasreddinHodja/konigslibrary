@@ -33,10 +33,21 @@ class MainActivity : TauriActivity() {
     }
   }
 
+  fun applyStatusBarStyle(light: Boolean) {
+    val controller = WindowCompat.getInsetsController(window, window.decorView)
+    controller.isAppearanceLightStatusBars = light
+    controller.isAppearanceLightNavigationBars = light
+  }
+
   inner class NativeBridge {
     @JavascriptInterface
     fun setImmersive(hidden: Boolean) {
       runOnUiThread { applyImmersive(hidden) }
+    }
+
+    @JavascriptInterface
+    fun setStatusBarStyle(light: Boolean) {
+      runOnUiThread { applyStatusBarStyle(light) }
     }
 
     @JavascriptInterface
