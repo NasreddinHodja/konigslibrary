@@ -28,6 +28,8 @@
     "tauri:local": "LOCAL_BUILD=1 bun tauri dev",
     "dev:android": "bun tauri android dev",
     "build:android": "bun tauri android build --target aarch64 && ~/.local/src/Android/build-tools/36.1.0/apksigner sign --ks src-tauri/konigslibrary.jks --ks-key-alias konigslibrary --out konigslibrary.apk src-tauri/gen/android/app/build/outputs/apk/universal/release/app-universal-release-unsigned.apk",
+    "build:sidecar": "bun scripts/build-sidecar.js",
+    "build:desktop": "bun run build:sidecar && rm -rf .svelte-kit && bun run prepare && bun tauri build",
     "version": "bun scripts/sync-version.js"
   },
   "devDependencies": {
@@ -61,8 +63,10 @@
     "@sveltejs/mcp": "^0.1.24",
     "@tanstack/svelte-virtual": "^3.13.29",
     "@tauri-apps/api": "^2.11.1",
+    "@tauri-apps/plugin-deep-link": "^2.4.9",
     "@tauri-apps/plugin-dialog": "^2.7.1",
     "@tauri-apps/plugin-opener": "^2.5.4",
-    "lucide-svelte": "^0.563.0"
+    "lucide-svelte": "^0.563.0",
+    "qrcode-generator": "^2.0.4"
   }
 }

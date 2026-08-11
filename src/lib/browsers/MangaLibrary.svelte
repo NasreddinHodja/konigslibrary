@@ -145,7 +145,7 @@
   });
 
   const filter = $derived.by(() => {
-    if (chips.length === 0) return 'all';
+    if (chips.length === 0 || selectedFilter === 'all') return 'all';
     if (chips.some((c) => c.key === selectedFilter)) return selectedFilter;
     return chips[0].key;
   });
@@ -325,7 +325,7 @@
             chip.key
               ? 'border-fg bg-fg text-bg'
               : 'border-border/20 opacity-60 hover:border-border/50 hover:opacity-100'}"
-            onclick={() => (selectedFilter = chip.key)}
+            onclick={() => (selectedFilter = filter === chip.key ? 'all' : chip.key)}
           >
             {chip.label}
           </button>
@@ -372,7 +372,7 @@
         {/each}
       </div>
     {:else if errors.length === 0}
-      <div class="flex flex-col items-center gap-3 py-10 text-center">
+      <div class="flex min-h-[60dvh] flex-col items-center justify-center gap-3 text-center">
         <LibraryBig size={22} class="opacity-25" />
         <p class="text-xs opacity-60">
           {#if !mangaDir && !serverEnabled}

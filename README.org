@@ -58,7 +58,13 @@ Visit the deployed site and drop a ZIP or CBZ file.
 
 ** Self-hosted server
 
-Download and run the starter script:
+The easiest way to share your library with a phone on the same network: open the
+[[Desktop App (Tauri)][desktop app]], go to Settings -> Share to LAN, and scan the QR code with your
+phone's camera app (the mobile app must already be installed). No separate
+install or script needed.
+
+For a headless/always-on setup (NAS, homelab box, no GUI), download and run the
+starter script instead:
 
 *** Linux / macOS
 

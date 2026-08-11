@@ -47,6 +47,7 @@ notes.org
 
 # builds
 konigslibrary.apk*
+src-tauri/binaries/*
 
 # config
 konigslibrary.json

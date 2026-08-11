@@ -33,6 +33,23 @@
       }
     }
   },
+  "plugins": {
+    "deep-link": {
+      "mobile": [
+        {
+          "scheme": [
+            "konigslibrary"
+          ],
+          "appLink": false
+        }
+      ],
+      "desktop": {
+        "schemes": [
+          "konigslibrary"
+        ]
+      }
+    }
+  },
   "bundle": {
     "active": true,
     "targets": [
@@ -45,6 +62,12 @@
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ]
+    ],
+    "externalBin": [
+      "binaries/konigslibrary-server"
+    ],
+    "resources": {
+      "binaries/konigslibrary-server-assets": "binaries/konigslibrary-server-assets"
+    }
   }
 }

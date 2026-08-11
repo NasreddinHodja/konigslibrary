@@ -13,11 +13,13 @@
     formatKey,
     DEFAULT_BINDINGS
   } from '$lib/keyboard/keybindings.svelte';
-  import { apiUrl, isLocalServer, getServerUrl, setServerUrl } from '$lib/utils/constants';
+  import { apiUrl, isLocalServer, getServerUrl } from '$lib/utils/constants';
   import { isNative } from '$lib/utils/platform';
   import { goto } from '$app/navigation';
   import { showSuccess } from '$lib/ui/toast.svelte';
   import { getMangaDir, setMangaDir, expandHome } from '$lib/sources/native-library';
+  import { validateAndConnect } from '$lib/sources/server-connect';
+  import ShareLan from '$lib/ui/ShareLan.svelte';
   import { FolderOpen } from 'lucide-svelte';
   import Skeleton from '$lib/ui/Skeleton.svelte';
   import DirectoryBrowser from '$lib/ui/DirectoryBrowser.svelte';
@@ -133,16 +135,11 @@
   let connectError: string | null = $state(null);
 
   async function connectServer() {
-    const url = serverUrl.trim();
-    if (!url) return;
+    if (!serverUrl.trim()) return;
     connecting = true;
     connectError = null;
     try {
-      const res = await fetch(`${url.replace(/\/+$/, '')}/api/library`, {
-        signal: AbortSignal.timeout(5000)
-      });
-      if (!res.ok) throw new Error(`Server responded with ${res.status}`);
-      setServerUrl(url);
+      await validateAndConnect(serverUrl);
       showSuccess('Connected to server');
       goto('/');
     } catch (e) {
@@ -421,6 +418,8 @@
           </div>
           <Button size="md" onclick={saveDeviceDir}>Save</Button>
         </div>
+
+        <ShareLan />
 
         <div class="space-y-3">
           <h3 class="text-sm font-bold opacity-60">Server URL</h3>

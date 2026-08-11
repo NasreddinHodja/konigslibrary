@@ -1,5 +1,6 @@
 mod download;
 mod immersive;
+mod lan_server;
 mod offline;
 
 use serde::Serialize;
@@ -68,9 +69,12 @@ pub fn run() {
   tauri::Builder::default()
     .manage(download::DownloadState(Default::default()))
     .manage(MangaDirState(Mutex::new(None)))
+    .manage(lan_server::LanServerState::default())
     .plugin(immersive::init())
     .plugin(tauri_plugin_dialog::init())
     .plugin(tauri_plugin_opener::init())
+    .plugin(tauri_plugin_shell::init())
+    .plugin(tauri_plugin_deep_link::init())
     .setup(|app| {
       let log_level = if cfg!(debug_assertions) {
         log::LevelFilter::Info
@@ -94,7 +98,17 @@ pub fn run() {
       offline::get_offline_manga,
       offline::get_chapter_page_paths,
       offline::delete_offline_manga,
+      lan_server::start_lan_server,
+      lan_server::stop_lan_server,
+      lan_server::lan_server_status,
     ])
-    .run(tauri::generate_context!())
-    .expect("error while running tauri application");
+    .build(tauri::generate_context!())
+    .expect("error while building tauri application")
+    .run(|app_handle, event| {
+      if let tauri::RunEvent::ExitRequested { .. } | tauri::RunEvent::Exit = event {
+        if let Some(state) = app_handle.try_state::<lan_server::LanServerState>() {
+          lan_server::kill_if_running(&state);
+        }
+      }
+    });
 }
