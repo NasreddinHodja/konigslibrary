@@ -2,6 +2,7 @@
   import { X, Search } from 'lucide-svelte';
   import { getReaderContext } from '$lib/context';
   import VirtualScroll from '$lib/ui/virtual/VirtualScroll.svelte';
+  import CoverThumbnail from '$lib/ui/CoverThumbnail.svelte';
 
   let { visible, onclose }: { visible: boolean; onclose: () => void } = $props();
 
@@ -92,31 +93,20 @@
           {#snippet item(i)}
             {@const url = pageUrls[i]}
             {@const isCurrent = i === manga.currentPage}
-            <button
-              class="group flex cursor-pointer flex-col gap-1"
+            <CoverThumbnail
+              src={url || null}
+              caption={String(i + 1)}
+              alt="Go to page {i + 1}"
+              active={isCurrent}
+              objectPosition="top"
               onclick={() => pick(i)}
-              aria-label="Go to page {i + 1}"
-              aria-current={isCurrent ? 'true' : undefined}
             >
-              <div
-                class="aspect-[2/3] w-full overflow-hidden border-2 transition-colors
-                  {isCurrent ? 'border-fg' : 'border-border/10 group-hover:border-fg/40'}"
-              >
-                {#if url}
-                  <img src={url} alt="Page {i + 1}" class="h-full w-full object-cover object-top" />
-                {:else}
-                  <div class="flex h-full w-full items-center justify-center opacity-20">
-                    <span class="text-xs">{i + 1}</span>
-                  </div>
-                {/if}
-              </div>
-              <span
-                class="text-center text-xs tabular-nums transition-opacity
-                  {isCurrent ? 'opacity-100' : 'opacity-50 group-hover:opacity-60'}"
-              >
-                {i + 1}
-              </span>
-            </button>
+              {#snippet placeholder()}
+                <div class="flex h-full w-full items-center justify-center opacity-20">
+                  <span class="text-xs">{i + 1}</span>
+                </div>
+              {/snippet}
+            </CoverThumbnail>
           {/snippet}
         </VirtualScroll>
       {/if}

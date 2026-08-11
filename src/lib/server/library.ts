@@ -1,6 +1,7 @@
 import { readdir, readFile, writeFile, stat } from 'node:fs/promises';
 import { join, resolve, extname, sep } from 'node:path';
 import { existsSync, readFileSync } from 'node:fs';
+import { homedir } from 'node:os';
 import type { LibraryEntry, ServerChapter } from '$lib/utils/types';
 import { getCachedIndex, extractEntryFromFile } from './zip-node';
 import { detectDepth, groupByChapter } from '$lib/chapters';
@@ -10,6 +11,11 @@ const ZIP_EXT = /\.(zip|cbz)$/i;
 
 function configPath(): string {
   return join(process.cwd(), 'konigslibrary.json');
+}
+
+function expandHome(path: string): string {
+  if (path !== '~' && !path.startsWith('~/')) return path;
+  return path.replace(/^~/, homedir());
 }
 
 function readConfig(): { mangaDir: string } {
@@ -26,14 +32,31 @@ function readConfig(): { mangaDir: string } {
 }
 
 export function getMangaDir(): string {
-  if (process.env.MANGA_DIR) return resolve(process.env.MANGA_DIR);
+  if (process.env.MANGA_DIR) return resolve(expandHome(process.env.MANGA_DIR));
   const config = readConfig();
-  return config.mangaDir ? resolve(config.mangaDir) : '';
+  return config.mangaDir ? resolve(expandHome(config.mangaDir)) : '';
 }
 
 export async function saveMangaDir(dir: string): Promise<void> {
   const p = configPath();
-  await writeFile(p, JSON.stringify({ mangaDir: dir }, null, 2));
+  await writeFile(p, JSON.stringify({ mangaDir: expandHome(dir) }, null, 2));
+}
+
+export type BrowseEntry = { name: string; path: string };
+
+export async function browseDir(
+  path?: string
+): Promise<{ path: string; parent: string | null; entries: BrowseEntry[] }> {
+  const dir = resolve(expandHome(path?.trim() || homedir()));
+
+  const items = await readdir(dir, { withFileTypes: true });
+  const entries: BrowseEntry[] = items
+    .filter((i) => i.isDirectory() && !i.name.startsWith('.'))
+    .map((i) => ({ name: i.name, path: join(dir, i.name) }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+
+  const parent = resolve(dir, '..');
+  return { path: dir, parent: parent === dir ? null : parent, entries };
 }
 
 export async function listManga(): Promise<LibraryEntry[]> {

@@ -1,6 +1,9 @@
 <script lang="ts">
-  import { ArrowLeft } from 'lucide-svelte';
+  import { CircleQuestionMark } from 'lucide-svelte';
+  import AppShell from '$lib/ui/AppShell.svelte';
+  import PageContainer from '$lib/ui/PageContainer.svelte';
   import Button from '$lib/ui/Button.svelte';
+  import BackLink from '$lib/ui/BackLink.svelte';
   import {
     type Action,
     type KeyBinding,
@@ -14,9 +17,10 @@
   import { isNative } from '$lib/utils/platform';
   import { goto } from '$app/navigation';
   import { showSuccess } from '$lib/ui/toast.svelte';
-  import { getMangaDir, setMangaDir } from '$lib/sources/native-library';
+  import { getMangaDir, setMangaDir, expandHome } from '$lib/sources/native-library';
   import { FolderOpen } from 'lucide-svelte';
   import Skeleton from '$lib/ui/Skeleton.svelte';
+  import DirectoryBrowser from '$lib/ui/DirectoryBrowser.svelte';
   import { PRESETS, getTheme, setTheme } from '$lib/theme';
   import type { Theme } from '$lib/theme';
 
@@ -119,8 +123,9 @@
     }
   }
 
-  function saveDeviceDir() {
-    setMangaDir(deviceDir.trim());
+  async function saveDeviceDir() {
+    deviceDir = await expandHome(deviceDir.trim());
+    setMangaDir(deviceDir);
   }
 
   let serverUrl = $state(getServerUrl());
@@ -158,6 +163,7 @@
   let saved = $state(false);
   let error: string | null = $state(null);
   let loadingDir = $state(true);
+  let browsingDir = $state(false);
 
   $effect(() => {
     if (!isLocalServer) {
@@ -191,184 +197,279 @@
       error = 'Failed to save settings';
     }
   };
+
+  function selectBrowsedDir(dir: string) {
+    mangaDir = dir;
+    browsingDir = false;
+    saveDir();
+  }
 </script>
 
 <svelte:window onkeydown={handleKeyCapture} />
 
-<div
-  class="mx-auto max-w-2xl space-y-10 px-8 pb-8"
-  style="padding-top: calc(2rem + var(--safe-top, 0px))"
->
-  <div class="flex items-center justify-between">
-    <a
-      href="/"
-      class="flex cursor-pointer items-center gap-1.5 text-xs tracking-widest opacity-50 hover:opacity-80"
-    >
-      <ArrowLeft size={12} />
-      HOME
-    </a>
+{#snippet settingsBody()}
+  <BackLink label="LIBRARY" href="/" />
+
+  <div class="flex items-center justify-between gap-3">
+    <h1 class="text-2xl font-bold">Settings</h1>
+    {#if !native}
+      <a
+        href="/about"
+        class="flex w-fit cursor-pointer items-center gap-1.5 text-xs tracking-widest opacity-50 hover:opacity-80"
+      >
+        <CircleQuestionMark size={12} />
+        HOW TO USE
+      </a>
+    {/if}
   </div>
 
-  <h1 class="text-2xl font-bold">Settings</h1>
+  <div class="flex items-center gap-2 overflow-x-auto">
+    {#if isLocalServer}
+      <a
+        href="#settings-sources"
+        class="cursor-pointer border-2 border-border/20 px-3 py-1.5 text-xs font-bold tracking-wide whitespace-nowrap opacity-60 hover:border-border/50 hover:opacity-100"
+      >
+        Sources
+      </a>
+    {/if}
+    <a
+      href="#settings-theme"
+      class="cursor-pointer border-2 border-border/20 px-3 py-1.5 text-xs font-bold tracking-wide whitespace-nowrap opacity-60 hover:border-border/50 hover:opacity-100"
+    >
+      Theme
+    </a>
+    {#if !isMobile}
+      <a
+        href="#settings-shortcuts"
+        class="cursor-pointer border-2 border-border/20 px-3 py-1.5 text-xs font-bold tracking-wide whitespace-nowrap opacity-60 hover:border-border/50 hover:opacity-100"
+      >
+        Shortcuts
+      </a>
+    {/if}
+    {#if native}
+      <a
+        href="#settings-providers"
+        class="cursor-pointer border-2 border-border/20 px-3 py-1.5 text-xs font-bold tracking-wide whitespace-nowrap opacity-60 hover:border-border/50 hover:opacity-100"
+      >
+        Providers
+      </a>
+    {/if}
+  </div>
 
-  <section class="space-y-5">
-    <h2 class="text-lg font-bold opacity-80">Theme</h2>
-
-    <div>
-      <h3 class="mb-3 text-sm font-bold opacity-60">Presets</h3>
-      <div class="grid grid-cols-3 gap-2">
-        {#each PRESETS as preset (preset.id)}
-          <button
-            aria-label={preset.id}
-            class="flex cursor-pointer items-center justify-center border px-3 py-2 text-xs {activePresetId ===
-            preset.id
-              ? 'border-fg'
-              : 'border-border/20 hover:border-border/50'}"
-            onclick={() => applyPreset(preset)}
-          >
-            <div class="flex shrink-0 gap-0.5">
-              <div
-                class="h-3 w-3 ring-1 ring-border/20 ring-inset"
-                style="background:{preset.bg}"
-              ></div>
-              <div
-                class="h-3 w-3 ring-1 ring-border/20 ring-inset"
-                style="background:{preset.fg}"
-              ></div>
-              <div
-                class="h-3 w-3 ring-1 ring-border/20 ring-inset"
-                style="background:{preset.readerBg}"
-              ></div>
-            </div>
-          </button>
-        {/each}
-      </div>
-    </div>
-
-    <div>
-      <h3 class="mb-1 text-sm font-bold opacity-60">Customize</h3>
-      {#each TOKEN_LABELS as [key, label] (key)}
-        <div class="flex items-center justify-between border-b border-border/10 py-2">
-          <span class="text-sm opacity-80">{label}</span>
-          <input
-            type="color"
-            value={theme[key]}
-            oninput={(e) => updateToken(key, (e.currentTarget as HTMLInputElement).value)}
-            class="h-7 w-12 cursor-pointer border border-border/20 bg-transparent p-0.5"
-          />
-        </div>
-      {/each}
-    </div>
-
-    <Button size="md" onclick={resetTheme}>Reset to default</Button>
-  </section>
-
-  {#if !isMobile}
-    <section class="space-y-4">
-      <div class="flex items-center justify-between">
-        <h2 class="text-lg font-bold opacity-80">Keyboard shortcuts</h2>
-        <Button size="md" onclick={handleReset}>Reset to defaults</Button>
+  {#if isLocalServer}
+    <section id="settings-sources" class="scroll-mt-4 border-2 border-border/15">
+      <div class="border-b border-border/15 px-4 py-3">
+        <span class="text-xs font-bold tracking-widest opacity-50">SOURCES</span>
       </div>
 
-      {#each categories as [category, items] (category)}
-        <div>
-          <h3 class="mb-2 text-sm font-bold opacity-60">{category}</h3>
-          <div class="space-y-1">
-            {#each items as binding (binding.action)}
-              <div class="flex items-center justify-between border-b border-border/10 py-2">
-                <span class="text-sm opacity-80">{binding.label}</span>
-                <button
-                  class="flex min-w-[5rem] cursor-pointer justify-center gap-1 border px-2 py-1 {listening ===
-                  binding.action
-                    ? 'border-fg'
-                    : 'border-fg/20 hover:border-fg/50'}"
-                  onclick={() => startListening(binding.action)}
-                >
-                  {#if listening === binding.action}
-                    <span class="text-xs opacity-60">Press a key...</span>
-                  {:else}
-                    {#each binding.keys as key (key)}
-                      <kbd class="text-xs">{formatKey(key)}</kbd>
-                    {/each}
-                    {#if binding.keys.length === 0}
-                      <span class="text-xs opacity-50">unbound</span>
-                    {/if}
-                  {/if}
-                </button>
-              </div>
-            {/each}
+      <div class="p-4">
+        <h3 class="mb-3 text-sm font-bold opacity-60">Manga directory</h3>
+        {#if loadingDir}
+          <Skeleton class="h-10 w-full border-2 border-transparent" />
+        {:else}
+          <div class="flex gap-2">
+            <input
+              type="text"
+              bind:value={mangaDir}
+              placeholder="/path/to/manga"
+              class="flex-1 border-2 bg-bg px-3 py-2 text-sm text-fg placeholder:opacity-60"
+            />
+            <button
+              class="border-2 px-3 opacity-60 hover:opacity-100"
+              onclick={() => (browsingDir = true)}
+              aria-label="Browse"
+            >
+              <FolderOpen size={16} />
+            </button>
           </div>
-        </div>
-      {/each}
-    </section>
-  {/if}
-
-  {#if native}
-    <section class="space-y-3">
-      <h2 class="text-lg font-bold opacity-80">Device library</h2>
-      <h3 class="text-sm font-bold opacity-60">Manga directory</h3>
-      <div class="flex gap-2">
-        <input
-          type="text"
-          bind:value={deviceDir}
-          placeholder="/home/user/Manga"
-          class="flex-1 border-2 bg-bg px-3 py-2 text-sm text-fg placeholder:opacity-60"
-        />
-        <button
-          class="border-2 px-3 opacity-60 hover:opacity-100"
-          onclick={browseDeviceDir}
-          aria-label="Browse"
-        >
-          <FolderOpen size={16} />
-        </button>
-      </div>
-      <Button size="md" onclick={saveDeviceDir}>Save</Button>
-    </section>
-
-    <section class="space-y-3">
-      <h2 class="text-lg font-bold opacity-80">Server</h2>
-      <h3 class="text-sm font-bold opacity-60">Server URL</h3>
-      <input
-        type="text"
-        bind:value={serverUrl}
-        placeholder="http://192.168.1.x:3000"
-        onkeydown={handleServerUrlKey}
-        class="w-full border-2 bg-bg px-3 py-2 text-sm text-fg placeholder:opacity-60"
-      />
-      <div class="flex items-center gap-3">
-        <Button size="md" onclick={connectServer} disabled={connecting}>
-          {connecting ? 'Connecting…' : 'Connect'}
-        </Button>
-        {#if connectError}
-          <span class="text-sm text-error">{connectError}</span>
+          <div class="mt-3 flex items-center gap-3">
+            <Button size="md" onclick={saveDir}>Save</Button>
+            {#if saved}
+              <span class="text-sm opacity-60">Saved - reload to see library</span>
+            {/if}
+            {#if error}
+              <span class="text-sm text-error">{error}</span>
+            {/if}
+          </div>
         {/if}
       </div>
     </section>
   {/if}
 
-  {#if isLocalServer}
-    <section class="space-y-3">
-      <h2 class="text-lg font-bold opacity-80">Server</h2>
-      <h3 class="text-sm font-bold opacity-60">Manga directory</h3>
-      {#if loadingDir}
-        <Skeleton class="h-10 w-full border-2 border-transparent" />
-      {:else}
-        <input
-          type="text"
-          bind:value={mangaDir}
-          placeholder="/path/to/manga"
-          class="w-full border-2 bg-bg px-3 py-2 text-sm text-fg placeholder:opacity-60"
-        />
-        <div class="flex items-center gap-3">
-          <Button size="md" onclick={saveDir}>Save</Button>
-          {#if saved}
-            <span class="text-sm opacity-60">Saved - reload to see library</span>
-          {/if}
-          {#if error}
-            <span class="text-sm text-error">{error}</span>
-          {/if}
+  <section id="settings-theme" class="scroll-mt-4 border-2 border-border/15">
+    <div class="flex items-center justify-between gap-3 border-b border-border/15 px-4 py-3">
+      <span class="text-xs font-bold tracking-widest opacity-50">THEME</span>
+      <Button size="sm" onclick={resetTheme}>Reset to default</Button>
+    </div>
+
+    <div class="flex flex-col gap-5 p-4">
+      <div>
+        <h3 class="mb-3 text-sm font-bold opacity-60">Presets</h3>
+        <div class="grid grid-cols-3 gap-2">
+          {#each PRESETS as preset (preset.id)}
+            <button
+              aria-label={preset.id}
+              class="flex cursor-pointer items-center justify-center border-2 px-3 py-2 text-xs {activePresetId ===
+              preset.id
+                ? 'border-fg'
+                : 'border-border/20 hover:border-border/50'}"
+              onclick={() => applyPreset(preset)}
+            >
+              <div class="flex shrink-0 gap-0.5">
+                <div
+                  class="h-3 w-3 ring-1 ring-border/20 ring-inset"
+                  style="background:{preset.bg}"
+                ></div>
+                <div
+                  class="h-3 w-3 ring-1 ring-border/20 ring-inset"
+                  style="background:{preset.fg}"
+                ></div>
+                <div
+                  class="h-3 w-3 ring-1 ring-border/20 ring-inset"
+                  style="background:{preset.readerBg}"
+                ></div>
+              </div>
+            </button>
+          {/each}
         </div>
-      {/if}
+      </div>
+
+      <div>
+        <h3 class="mb-1 text-sm font-bold opacity-60">Customize</h3>
+        <div class="divide-y divide-border/10">
+          {#each TOKEN_LABELS as [key, label] (key)}
+            <div class="flex items-center justify-between py-2">
+              <span class="text-sm opacity-80">{label}</span>
+              <input
+                type="color"
+                value={theme[key]}
+                oninput={(e) => updateToken(key, (e.currentTarget as HTMLInputElement).value)}
+                class="h-7 w-12 cursor-pointer border-2 border-border/20 bg-transparent p-0.5"
+              />
+            </div>
+          {/each}
+        </div>
+      </div>
+    </div>
+  </section>
+
+  {#if !isMobile}
+    <section id="settings-shortcuts" class="scroll-mt-4 border-2 border-border/15">
+      <div class="flex items-center justify-between gap-3 border-b border-border/15 px-4 py-3">
+        <span class="text-xs font-bold tracking-widest opacity-50">KEYBOARD SHORTCUTS</span>
+        <Button size="sm" onclick={handleReset}>Reset to defaults</Button>
+      </div>
+
+      <div class="flex flex-col gap-5 p-4">
+        {#each categories as [category, items] (category)}
+          <div>
+            <h3 class="mb-2 text-sm font-bold opacity-60">{category}</h3>
+            <div class="divide-y divide-border/10">
+              {#each items as binding (binding.action)}
+                <div class="flex items-center justify-between py-2">
+                  <span class="text-sm opacity-80">{binding.label}</span>
+                  <button
+                    class="flex min-w-[5rem] cursor-pointer justify-center gap-1 border-2 px-2 py-1 {listening ===
+                    binding.action
+                      ? 'border-fg'
+                      : 'border-fg/20 hover:border-fg/50'}"
+                    onclick={() => startListening(binding.action)}
+                  >
+                    {#if listening === binding.action}
+                      <span class="text-xs opacity-60">Press a key...</span>
+                    {:else}
+                      {#each binding.keys as key (key)}
+                        <kbd class="text-xs">{formatKey(key)}</kbd>
+                      {/each}
+                      {#if binding.keys.length === 0}
+                        <span class="text-xs opacity-50">unbound</span>
+                      {/if}
+                    {/if}
+                  </button>
+                </div>
+              {/each}
+            </div>
+          </div>
+        {/each}
+      </div>
     </section>
   {/if}
-</div>
+
+  {#if native}
+    <section id="settings-providers" class="scroll-mt-4 border-2 border-border/15">
+      <div class="border-b border-border/15 px-4 py-3">
+        <span class="text-xs font-bold tracking-widest opacity-50">PROVIDERS</span>
+      </div>
+
+      <div class="flex flex-col gap-5 p-4">
+        <div class="space-y-3">
+          <h3 class="text-sm font-bold opacity-60">Local directory</h3>
+          <div class="flex gap-2">
+            <input
+              type="text"
+              bind:value={deviceDir}
+              placeholder="/home/user/Manga"
+              class="flex-1 border-2 bg-bg px-3 py-2 text-sm text-fg placeholder:opacity-60"
+            />
+            <button
+              class="border-2 px-3 opacity-60 hover:opacity-100"
+              onclick={browseDeviceDir}
+              aria-label="Browse"
+            >
+              <FolderOpen size={16} />
+            </button>
+          </div>
+          <Button size="md" onclick={saveDeviceDir}>Save</Button>
+        </div>
+
+        <div class="space-y-3">
+          <h3 class="text-sm font-bold opacity-60">Server URL</h3>
+          <input
+            type="text"
+            bind:value={serverUrl}
+            placeholder="http://192.168.1.x:3000"
+            onkeydown={handleServerUrlKey}
+            class="w-full border-2 bg-bg px-3 py-2 text-sm text-fg placeholder:opacity-60"
+          />
+          <div class="flex items-center gap-3">
+            <Button size="md" onclick={connectServer} disabled={connecting}>
+              {connecting ? 'Connecting…' : 'Connect'}
+            </Button>
+            {#if connectError}
+              <span class="text-sm text-error">{connectError}</span>
+            {/if}
+          </div>
+        </div>
+      </div>
+    </section>
+  {/if}
+{/snippet}
+
+{#if native || isLocalServer}
+  <AppShell active="settings">
+    <div class="md:pl-14">
+      <PageContainer maxWidth="max-w-4xl">
+        <div
+          class="space-y-6 pb-[calc(5.25rem_+_var(--safe-bottom,_0px))] md:pb-8"
+          style="padding-top: calc(2rem + var(--safe-top, 0px))"
+        >
+          {@render settingsBody()}
+        </div>
+      </PageContainer>
+    </div>
+  </AppShell>
+{:else}
+  <PageContainer maxWidth="max-w-4xl">
+    <div class="space-y-6 pb-8" style="padding-top: calc(2rem + var(--safe-top, 0px))">
+      {@render settingsBody()}
+    </div>
+  </PageContainer>
+{/if}
+
+{#if browsingDir}
+  <DirectoryBrowser
+    initialPath={mangaDir}
+    onselect={selectBrowsedDir}
+    oncancel={() => (browsingDir = false)}
+  />
+{/if}

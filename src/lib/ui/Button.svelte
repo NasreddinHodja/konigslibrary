@@ -6,13 +6,15 @@
     as = 'button',
     variant = 'default',
     disabled = false,
+    class: className = '',
     onclick,
     children
   }: {
-    size?: 'lg' | 'md' | 'icon';
+    size?: 'lg' | 'md' | 'sm' | 'icon';
     as?: 'button' | 'span';
     variant?: 'default' | 'primary' | 'ghost';
     disabled?: boolean;
+    class?: string;
     onclick?: () => void;
     children: Snippet;
   } = $props();
@@ -29,6 +31,7 @@
     {
       lg: 'px-6 py-3 text-sm font-bold tracking-wide',
       md: 'px-3 py-2 text-sm',
+      sm: 'px-2 py-1 text-xs',
       icon: 'p-2'
     }[size]
   );
@@ -36,7 +39,7 @@
 
 {#if as === 'span'}
   <span
-    class="inline-flex cursor-pointer items-center gap-2 {variantClass} {sizeClass}"
+    class="inline-flex cursor-pointer items-center gap-2 {variantClass} {sizeClass} {className}"
     tabindex="0"
     role="button"
     onkeydown={(e: KeyboardEvent) => {
@@ -50,7 +53,7 @@
   </span>
 {:else}
   <button
-    class="inline-flex items-center gap-2 {variantClass} {sizeClass} {disabled
+    class="inline-flex items-center gap-2 {variantClass} {sizeClass} {className} {disabled
       ? 'cursor-not-allowed opacity-60'
       : 'cursor-pointer'}"
     {onclick}

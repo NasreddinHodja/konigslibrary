@@ -17,9 +17,17 @@ export type NativeChapter = {
   pages: string[];
 };
 
+async function homeDir(): Promise<string> {
+  return await invoke('home_dir');
+}
+
 async function defaultDir(): Promise<string> {
-  const home: string = await invoke('home_dir');
-  return `${home}/Manga`;
+  return `${await homeDir()}/Manga`;
+}
+
+export async function expandHome(path: string): Promise<string> {
+  if (path !== '~' && !path.startsWith('~/')) return path;
+  return path.replace(/^~/, await homeDir());
 }
 
 export function getMangaDir(): string {

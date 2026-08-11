@@ -1,10 +1,16 @@
 <script lang="ts">
+  import { onDestroy } from 'svelte';
   import './layout.css';
   import favicon from '$lib/assets/favicon.svg';
   import { readerActive } from '$lib/ui/reader-active.svelte';
   import { initTheme } from '$lib/theme';
+  import { createReader, setReaderContext } from '$lib/context';
 
   let { children } = $props();
+
+  const reader = createReader();
+  setReaderContext(reader);
+  onDestroy(() => reader.plugins.destroy());
 
   $effect(() => {
     initTheme();

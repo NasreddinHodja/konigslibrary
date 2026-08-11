@@ -1,35 +1,31 @@
 <script lang="ts">
-  import { onDestroy } from 'svelte';
   import { fade } from 'svelte/transition';
   import { ANIM_DURATION, ANIM_EXIT_DURATION, ANIM_EASE, ANIM_EASE_IN } from '$lib/utils/constants';
   import { ZipUploadProvider } from '$lib/sources';
   import { resolveKey } from '$lib/keyboard/keybindings.svelte';
   import type { ViewerCommands } from '$lib/commands';
-  import { createReader, setReaderContext } from '$lib/context';
+  import { getReaderContext } from '$lib/context';
   import { createPinchZoomController } from '$lib/utils/pinch-zoom-controller.svelte';
   import ReaderScreen from '$lib/ui/ReaderScreen.svelte';
   import MangaDetail from '$lib/ui/MangaDetail.svelte';
   import UploadButton from '$lib/browsers/UploadButton.svelte';
-  import LibraryBrowser from '$lib/browsers/LibraryBrowser.svelte';
-  import NativeLibraryBrowser from '$lib/browsers/NativeLibraryBrowser.svelte';
-  import OfflineBrowser from '$lib/browsers/OfflineBrowser.svelte';
+  import MangaLibrary from '$lib/browsers/MangaLibrary.svelte';
   import KeyboardHelp from '$lib/keyboard/KeyboardHelp.svelte';
   import { isNative } from '$lib/utils/platform';
-  import { isLocalServer, getServerUrl } from '$lib/utils/constants';
+  import { isLocalServer } from '$lib/utils/constants';
   import { pushState } from '$app/navigation';
-  import { CircleQuestionMark, Settings } from 'lucide-svelte';
+  import { CircleQuestionMark } from 'lucide-svelte';
+  import AppShell from '$lib/ui/AppShell.svelte';
+  import PageContainer from '$lib/ui/PageContainer.svelte';
   import ToastStack from '$lib/ui/ToastStack.svelte';
   import UpdateBanner from '$lib/ui/UpdateBanner.svelte';
   import { showError } from '$lib/ui/toast.svelte';
   import { describeOpenFileError } from '$lib/utils/errors';
 
-  const reader = createReader();
-  setReaderContext(reader);
-  onDestroy(() => reader.plugins.destroy());
+  const reader = getReaderContext();
 
   const { state: manga, commands: registry } = reader;
   const native = isNative();
-  const serverUrl = getServerUrl();
   const chapters = $derived(reader.chapters);
 
   let helpOpen = $state(false);
@@ -167,85 +163,98 @@
   <KeyboardHelp onclose={() => (helpOpen = false)} />
 {/if}
 
-{#if chapters.length === 0}
+{#if chapters.length > 0 && manga.selectedChapter !== null}
+  <ReaderScreen bind:el={readerEl} bind:viewerCommands {pz} />
+{:else if native || isLocalServer}
+  <!-- AppShell mounted once here so the nav rail/tab bar is persistent chrome that never
+       fades — only the content below (library vs detail) crossfades between the two. -->
+  <AppShell active="library" {isDragOver}>
+    {#if chapters.length === 0}
+      <div
+        class="flex h-dvh w-full flex-col md:pl-14"
+        out:fade={{ duration: ANIM_EXIT_DURATION, easing: ANIM_EASE_IN }}
+        in:fade={{ duration: ANIM_DURATION, delay: ANIM_EXIT_DURATION, easing: ANIM_EASE }}
+      >
+        <div class="min-h-0 flex-1 overflow-y-auto pb-[calc(5.25rem_+_var(--safe-bottom))] md:pb-8">
+          <PageContainer maxWidth="max-w-6xl">
+            <div class="space-y-6 md:space-y-8" style="padding-top: calc(2rem + var(--safe-top))">
+              <h1 class="text-center text-4xl font-bold tracking-widest md:text-left">
+                KONIGSLIBRARY
+              </h1>
+              <MangaLibrary />
+            </div>
+          </PageContainer>
+        </div>
+      </div>
+    {:else}
+      <div
+        class="md:pl-14"
+        out:fade={{ duration: ANIM_EXIT_DURATION, easing: ANIM_EASE_IN }}
+        in:fade={{ duration: ANIM_DURATION, delay: ANIM_EXIT_DURATION, easing: ANIM_EASE }}
+      >
+        <MangaDetail />
+      </div>
+    {/if}
+  </AppShell>
+{:else if chapters.length === 0}
   <div
-    class="flex min-h-screen flex-col"
+    class="flex h-dvh w-full flex-col items-center"
     out:fade={{ duration: ANIM_EXIT_DURATION, easing: ANIM_EASE_IN }}
     in:fade={{ duration: ANIM_DURATION, delay: ANIM_EXIT_DURATION, easing: ANIM_EASE }}
   >
-    {#if !native}
-      <a
-        href="/about"
-        class="fixed z-10 opacity-60 hover:opacity-100"
-        style="top: calc(1rem + var(--safe-top)); right: calc(1rem + var(--safe-right))"
-        aria-label="How to use"
-      >
-        <CircleQuestionMark size={18} />
-      </a>
-    {/if}
+    <a
+      href="/about"
+      class="fixed z-10 opacity-60 hover:opacity-100"
+      style="top: calc(1rem + var(--safe-top)); right: calc(1rem + var(--safe-right))"
+      aria-label="How to use"
+    >
+      <CircleQuestionMark size={18} />
+    </a>
 
     <div
-      class="mx-auto flex w-full max-w-lg flex-1 flex-col items-center gap-8 px-6"
-      style="padding-top: calc(4rem + var(--safe-top)); padding-bottom: calc(2.5rem + var(--safe-bottom))"
+      class="mx-auto flex w-full max-w-lg flex-1 flex-col items-center justify-center gap-10 px-6 py-12"
+      style="padding-top: var(--safe-top); padding-bottom: var(--safe-bottom)"
     >
-      <h1 class="text-4xl font-bold tracking-widest">KONIGSLIBRARY</h1>
+      <div class="flex w-full flex-col items-center gap-8">
+        <h1 class="text-4xl font-bold tracking-widest">KONIGSLIBRARY</h1>
+        <UploadButton {isDragOver} />
+      </div>
 
-      <UploadButton {isDragOver} />
-
-      {#if native || isLocalServer}
-        <div class="flex w-full flex-col gap-8">
-          {#if native}<OfflineBrowser />{/if}
-          {#if isLocalServer || serverUrl}<LibraryBrowser />{/if}
-          {#if native}<NativeLibraryBrowser />{/if}
+      <div class="w-full border-t border-border/10 pt-6">
+        <p class="mb-1 text-xs font-bold tracking-widest opacity-50">RUN LOCALLY</p>
+        <p class="mb-5 text-sm opacity-60">
+          Serve manga from your PC to any device on your network.
+        </p>
+        <div class="flex flex-wrap gap-3">
+          <a
+            href="/download/konigslibrary.sh"
+            download
+            class="border-2 border-fg/30 px-4 py-2 text-sm hover:border-fg hover:bg-fg/10"
+          >
+            Linux / Mac
+          </a>
+          <a
+            href="/download/konigslibrary.bat"
+            download
+            class="border-2 border-fg/30 px-4 py-2 text-sm hover:border-fg hover:bg-fg/10"
+          >
+            Windows
+          </a>
+          <a
+            href="https://github.com/NasreddinHodja/konigslibrary/releases/latest/download/konigslibrary.apk"
+            class="border-2 border-fg/30 px-4 py-2 text-sm hover:border-fg hover:bg-fg/10"
+          >
+            Android
+          </a>
         </div>
-        <a
-          href="/settings"
-          class="flex items-center gap-1.5 text-xs tracking-widest opacity-40 hover:opacity-70"
-          ><Settings size={12} />SETTINGS</a
-        >
-      {:else}
-        <div class="flex w-full flex-col gap-8">
-          {#if native}<OfflineBrowser />{/if}
-
-          <div class="border-t border-border/10 pt-6">
-            <p class="mb-1 text-xs font-bold tracking-widest opacity-50">RUN LOCALLY</p>
-            <p class="mb-5 text-sm opacity-60">
-              Serve manga from your PC to any device on your network.
-            </p>
-            <div class="flex flex-wrap gap-3">
-              <a
-                href="/download/konigslibrary.sh"
-                download
-                class="border-2 border-fg/30 px-4 py-2 text-sm hover:border-fg hover:bg-fg/10"
-              >
-                Linux / Mac
-              </a>
-              <a
-                href="/download/konigslibrary.bat"
-                download
-                class="border-2 border-fg/30 px-4 py-2 text-sm hover:border-fg hover:bg-fg/10"
-              >
-                Windows
-              </a>
-              <a
-                href="https://github.com/NasreddinHodja/konigslibrary/releases/latest/download/konigslibrary.apk"
-                class="border-2 border-fg/30 px-4 py-2 text-sm hover:border-fg hover:bg-fg/10"
-              >
-                Android
-              </a>
-            </div>
-          </div>
-        </div>
-      {/if}
+      </div>
     </div>
   </div>
-{:else if manga.selectedChapter === null}
+{:else}
   <div
     out:fade={{ duration: ANIM_EXIT_DURATION, easing: ANIM_EASE_IN }}
     in:fade={{ duration: ANIM_DURATION, delay: ANIM_EXIT_DURATION, easing: ANIM_EASE }}
   >
     <MangaDetail />
   </div>
-{:else}
-  <ReaderScreen bind:el={readerEl} bind:viewerCommands {pz} />
 {/if}

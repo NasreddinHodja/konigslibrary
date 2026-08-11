@@ -1,19 +1,24 @@
 <script lang="ts">
   import { tick } from 'svelte';
-  import { fade, slide } from 'svelte/transition';
+  import { fade } from 'svelte/transition';
   import { ANIM_DURATION, ANIM_EXIT_DURATION, ANIM_EASE, ANIM_EASE_IN } from '$lib/utils/constants';
-  import { ArrowLeft, Search, X } from 'lucide-svelte';
+  import { Search, X } from 'lucide-svelte';
   import Skeleton from '$lib/ui/Skeleton.svelte';
   import Loader from '$lib/ui/Loader.svelte';
-  import { createVirtualizer, createWindowVirtualizer } from '@tanstack/svelte-virtual';
-  import type { VirtualItem } from '@tanstack/virtual-core';
+  import Button from '$lib/ui/Button.svelte';
+  import PageContainer from '$lib/ui/PageContainer.svelte';
+  import BackLink from '$lib/ui/BackLink.svelte';
   import { getReaderContext } from '$lib/context';
   import { searchManga, searchMangaMultiple, RateLimitError } from '$lib/api/anilist';
   import type { MangaMeta } from '$lib/api/anilist';
   import { fetchLatestChapter } from '$lib/api/mangadex';
+  import { isNative } from '$lib/utils/platform';
+  import { isLocalServer } from '$lib/utils/constants';
 
   const reader = getReaderContext();
   const { state: manga } = reader;
+
+  const showShell = isNative() || isLocalServer;
 
   const mangaName = $derived(reader.provider?.mangaName ?? '');
   const chapters = $derived(reader.chapters);
@@ -25,9 +30,6 @@
   let coverFailed = $state(false);
   let search = $state('');
 
-  let authorsExpanded = $state(false);
-  let authorsTruncated = $state(false);
-  let authorsEl: HTMLSpanElement | undefined = $state();
   let tagsExpanded = $state(false);
   let tagsEl: HTMLDivElement | undefined = $state();
   let tagsCollapsedH = 0;
@@ -130,74 +132,9 @@
       : chapters
   );
 
-  const ROW_H = 48;
+  const chapterIndex = $derived(new Map(chapters.map((c, i) => [c.name, i])));
 
-  // Mobile: window-based virtualizer (page scrolls naturally).
-  // Bug: with a large scrollMargin, the default overscan=5 doesn't render enough
-  // items to fill the viewport — the formula undershoots by scrollMargin/ROW_H items.
-  // Fix: bump overscan by ceil(scrollMargin/ROW_H) so items are always rendered.
-  let listEl = $state<HTMLDivElement | undefined>();
-  let chapterSentinelEl = $state<HTMLDivElement | undefined>();
-  let chapterHeaderStuck = $state(false);
-
-  $effect(() => {
-    if (!chapterSentinelEl) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        chapterHeaderStuck = !entry.isIntersecting;
-      },
-      { threshold: 0 }
-    );
-    observer.observe(chapterSentinelEl);
-    return () => observer.disconnect();
-  });
-  let scrollMargin = $state(0);
-
-  function updateScrollMargin() {
-    if (listEl) scrollMargin = listEl.getBoundingClientRect().top + window.scrollY;
-  }
-
-  $effect(() => {
-    if (!listEl) return;
-    updateScrollMargin();
-    window.addEventListener('resize', updateScrollMargin);
-    const rafId = requestAnimationFrame(() => {
-      updateScrollMargin();
-      window.dispatchEvent(new Event('resize'));
-    });
-    return () => {
-      cancelAnimationFrame(rafId);
-      window.removeEventListener('resize', updateScrollMargin);
-    };
-  });
-
-  $effect(() => {
-    void meta;
-    requestAnimationFrame(updateScrollMargin);
-  });
-
-  let mobileVirtualItems = $state<VirtualItem[]>([]);
-  let mobileTotalSize = $state(0);
-
-  $effect(() => {
-    void scrollMargin;
-    const overscan = 5 + Math.ceil(scrollMargin / ROW_H);
-    const store = createWindowVirtualizer({
-      count: filteredChapters.length,
-      estimateSize: () => ROW_H,
-      overscan,
-      scrollMargin
-    });
-    const unsub = store.subscribe((v) => {
-      mobileVirtualItems = v.getVirtualItems();
-      mobileTotalSize = v.getTotalSize();
-    });
-    return unsub;
-  });
-
-  // Desktop: container-based virtualizer
   let isDesktop = $state(false);
-  let desktopScrollEl = $state<HTMLDivElement | undefined>();
 
   $effect(() => {
     const mq = window.matchMedia('(min-width: 768px)');
@@ -205,29 +142,6 @@
     const handler = (e: MediaQueryListEvent) => (isDesktop = e.matches);
     mq.addEventListener('change', handler);
     return () => mq.removeEventListener('change', handler);
-  });
-
-  let desktopVirtualItems = $state<VirtualItem[]>([]);
-  let desktopTotalSize = $state(0);
-
-  $effect(() => {
-    void desktopScrollEl;
-    const store = createVirtualizer({
-      count: filteredChapters.length,
-      estimateSize: () => ROW_H,
-      overscan: 5,
-      getScrollElement: () => desktopScrollEl ?? null
-    });
-    const unsub = store.subscribe((v) => {
-      desktopVirtualItems = v.getVirtualItems();
-      desktopTotalSize = v.getTotalSize();
-    });
-    return unsub;
-  });
-
-  $effect(() => {
-    if (!authorsEl || authorsExpanded) return;
-    authorsTruncated = authorsEl.scrollWidth > authorsEl.clientWidth;
   });
 
   const TAGS_COLLAPSED = 4;
@@ -238,8 +152,6 @@
     metaError = false;
     metaRateLimited = false;
     coverFailed = false;
-    authorsExpanded = false;
-    authorsTruncated = false;
     tagsExpanded = false;
     loadMeta(mangaName);
   });
@@ -305,275 +217,282 @@
   };
 </script>
 
-{#if isDesktop}
-  <!-- Desktop: centered two-panel layout, no page scroll -->
-  <div
-    class="mx-auto flex max-w-5xl overflow-hidden"
-    style="height: 100dvh; padding: max(2rem, var(--safe-top)) 2rem max(2rem, var(--safe-bottom))"
-  >
-    <!-- Left panel: manga details -->
-    <div class="flex w-96 shrink-0 flex-col gap-6 overflow-y-auto pr-8">
-      <!-- Back -->
-      <div>
+{#snippet tagsValue()}
+  {#if meta && meta.tags.length}
+    {#each meta.tags.slice(0, TAGS_COLLAPSED) as tag (tag)}
+      <span class="border border-border/30 px-2 py-0.5 text-xs opacity-50">{tag}</span>
+    {/each}
+    {#if tagsExpanded}
+      {#each meta.tags.slice(TAGS_COLLAPSED, 6) as tag (tag)}
+        <span class="border border-border/30 px-2 py-0.5 text-xs opacity-50">{tag}</span>
+      {/each}
+      <button
+        class="cursor-pointer border border-border/15 px-2 py-0.5 text-xs opacity-60 hover:opacity-100"
+        onclick={collapseTags}>less</button
+      >
+    {:else if meta.tags.length > TAGS_COLLAPSED}
+      <button
+        class="cursor-pointer border border-border/15 px-2 py-0.5 text-xs opacity-60 hover:opacity-100"
+        onclick={expandTags}>more</button
+      >
+    {/if}
+  {:else}
+    <span class="opacity-40">—</span>
+  {/if}
+{/snippet}
+
+{#snippet specTable()}
+  <div class="w-full divide-y divide-border/10 border-2 border-border/15">
+    <div class="flex">
+      <div
+        class="w-24 shrink-0 border-r border-border/10 px-3 py-2.5 text-[0.65rem] font-bold tracking-widest opacity-45 sm:w-28"
+      >
+        TITLE
+      </div>
+      <div
+        class="flex min-w-0 flex-1 flex-col items-start gap-1 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between sm:gap-3"
+      >
+        <span class="min-w-0 text-sm font-bold sm:truncate">{meta?.title || mangaName}</span>
         <button
-          class="flex cursor-pointer items-center gap-1.5 text-xs tracking-widest opacity-50 hover:opacity-80"
-          onclick={reader.clearManga}
+          class="shrink-0 cursor-pointer text-xs underline opacity-50 hover:opacity-80 disabled:pointer-events-none disabled:opacity-0"
+          disabled={!meta}
+          onclick={() => (pickerOpen ? (pickerOpen = false) : openPicker())}
         >
-          <ArrowLeft size={12} />
-          LIBRARY
+          Not this manga?
         </button>
       </div>
-
-      {#if metaError && !meta}
-        <div class="flex flex-col gap-4">
-          <h1 class="text-xl leading-tight font-bold">{mangaName}</h1>
-          {#if metaRateLimited}
-            <p class="text-xs opacity-60">AniList is rate-limiting requests.</p>
-            <button
-              class="cursor-pointer self-start text-xs underline opacity-50 hover:opacity-70"
-              onclick={retryMeta}
+    </div>
+    <div class="flex">
+      <div
+        class="w-24 shrink-0 border-r border-border/10 px-3 py-2.5 text-[0.65rem] font-bold tracking-widest opacity-45 sm:w-28"
+      >
+        FILENAME
+      </div>
+      <div class="min-w-0 flex-1 truncate px-3 py-2.5 text-sm opacity-50">{mangaName}</div>
+    </div>
+    {#if meta}
+      <div class="flex" in:fade={{ duration: ANIM_DURATION, easing: ANIM_EASE }}>
+        <div
+          class="w-24 shrink-0 border-r border-border/10 px-3 py-2.5 text-[0.65rem] font-bold tracking-widest opacity-45 sm:w-28"
+        >
+          STATUS
+        </div>
+        <div class="flex min-w-0 flex-1 items-center px-3 py-2.5">
+          {#if meta.status}
+            <span
+              class="border px-2 py-0.5 text-xs font-bold tracking-widest
+              {meta.status === 'ongoing'
+                ? 'border-success/50 text-success'
+                : 'border-border/20 opacity-50'}"
             >
-              Retry
-            </button>
-          {/if}
-          {#if savedProgress}
-            <button
-              class="cursor-pointer self-start border-1 border-fg px-4 py-2 text-sm hover:bg-fg hover:text-bg"
-              onclick={resume}
-            >
-              RESUME: {savedProgress.chapter}, p.{savedProgress.page + 1}
-            </button>
+              {STATUS_LABEL[meta.status] ?? meta.status.toUpperCase()}
+            </span>
+          {:else}
+            <span class="text-sm opacity-40">—</span>
           {/if}
         </div>
-      {:else}
-        <!-- Cover then info stacked -->
-        <div class="flex flex-col gap-6">
-          <!-- Cover -->
-          <div class="relative h-64 w-44">
-            {#if meta?.coverUrl && !coverFailed}
-              <img
-                src={meta.coverUrl}
-                alt={meta?.title ?? mangaName}
-                class="absolute inset-0 h-full w-full object-contain object-left"
-                onerror={() => (coverFailed = true)}
-              />
-            {:else}
-              <Skeleton class="absolute inset-0" />
-            {/if}
+      </div>
+      <div class="flex" in:fade={{ duration: ANIM_DURATION, easing: ANIM_EASE }}>
+        <div
+          class="w-24 shrink-0 border-r border-border/10 px-3 py-2.5 text-[0.65rem] font-bold tracking-widest opacity-45 sm:w-28"
+        >
+          AUTHOR
+        </div>
+        <div class="min-w-0 flex-1 px-3 py-2.5 text-sm">{meta.authors.join(', ') || '—'}</div>
+      </div>
+      <div class="flex" in:fade={{ duration: ANIM_DURATION, easing: ANIM_EASE }}>
+        <div
+          class="w-24 shrink-0 border-r border-border/10 px-3 py-2.5 text-[0.65rem] font-bold tracking-widest opacity-45 sm:w-28"
+        >
+          YEAR
+        </div>
+        <div class="min-w-0 flex-1 px-3 py-2.5 text-sm">{meta.year ?? '—'}</div>
+      </div>
+      <div
+        class="flex {meta.status === 'ongoing' && meta.latestChapter
+          ? 'border-b border-border/10'
+          : ''}"
+        in:fade={{ duration: ANIM_DURATION, easing: ANIM_EASE }}
+      >
+        <div
+          class="w-24 shrink-0 border-r border-border/10 px-3 py-2.5 text-[0.65rem] font-bold tracking-widest opacity-45 sm:w-28"
+        >
+          TAGS
+        </div>
+        <div
+          class="flex min-w-0 flex-1 flex-wrap items-center gap-1.5 px-3 py-2.5"
+          bind:this={tagsEl}
+        >
+          {@render tagsValue()}
+        </div>
+      </div>
+      {#if meta.status === 'ongoing' && meta.latestChapter}
+        <div class="flex" in:fade={{ duration: ANIM_DURATION, easing: ANIM_EASE }}>
+          <div
+            class="w-24 shrink-0 border-r border-border/10 px-3 py-2.5 text-[0.65rem] font-bold tracking-widest opacity-45 sm:w-28"
+          >
+            LATEST
           </div>
-
-          <!-- Info -->
-          <div class="flex min-w-0 flex-1 flex-col">
-            <h1 class="text-xl leading-tight font-bold">
-              {meta?.title || mangaName}
-            </h1>
-            <p class="mt-0.5 text-xs opacity-50">{mangaName}</p>
-
-            <div class="mt-3 flex flex-col gap-3">
-              {#if meta}
-                <div
-                  class="flex flex-col gap-3"
-                  in:fade={{ duration: ANIM_DURATION, delay: 50, easing: ANIM_EASE }}
-                >
-                  <div class="flex flex-wrap items-center gap-3">
-                    {#if meta.status}
-                      <span
-                        class="border px-2 py-0.5 text-xs font-bold tracking-widest
-                        {meta.status === 'ongoing'
-                          ? 'border-success/50 text-success'
-                          : 'border-border/20 opacity-50'}"
-                      >
-                        {STATUS_LABEL[meta.status] ?? meta.status.toUpperCase()}
-                      </span>
-                    {/if}
-                    {#if meta.year}
-                      <span class="text-xs opacity-60">{meta.year}</span>
-                    {/if}
-                    {#if meta.authors.length}
-                      <span class="truncate text-xs opacity-60">{meta.authors.join(', ')}</span>
-                    {/if}
-                  </div>
-
-                  {#if meta.tags.length}
-                    <div class="flex flex-wrap gap-1.5" bind:this={tagsEl}>
-                      {#each meta.tags.slice(0, TAGS_COLLAPSED) as tag (tag)}
-                        <span class="border border-border/30 px-2 py-0.5 text-xs opacity-50"
-                          >{tag}</span
-                        >
-                      {/each}
-                      {#if tagsExpanded}
-                        {#each meta.tags.slice(TAGS_COLLAPSED, 6) as tag (tag)}
-                          <span class="border border-border/30 px-2 py-0.5 text-xs opacity-50"
-                            >{tag}</span
-                          >
-                        {/each}
-                        <button
-                          class="cursor-pointer border border-border/15 px-2 py-0.5 text-xs opacity-60 hover:opacity-100"
-                          onclick={collapseTags}>less</button
-                        >
-                      {:else if meta.tags.length > TAGS_COLLAPSED}
-                        <button
-                          class="cursor-pointer border border-border/15 px-2 py-0.5 text-xs opacity-60 hover:opacity-100"
-                          onclick={expandTags}>more</button
-                        >
-                      {/if}
-                    </div>
-                  {/if}
-
-                  {#if meta.status === 'ongoing' && meta.latestChapter}
-                    <div class="self-start border border-border/10 px-3 py-2 text-xs">
-                      <span class="opacity-60">Latest on MangaDex: </span>
-                      <span class="">Ch. {meta.latestChapter}</span>
-                      {#if meta.latestChapterDate}
-                        <span class="opacity-50"> · {formatDate(meta.latestChapterDate)}</span>
-                      {/if}
-                    </div>
-                  {/if}
-                </div>
-              {:else}
-                <div class="flex flex-col gap-3">
-                  <div class="flex flex-wrap items-center gap-3">
-                    <Skeleton class="h-[22px] w-20" />
-                    <Skeleton class="h-[22px] w-8" />
-                    <Skeleton class="h-[22px] w-32" />
-                  </div>
-                  <div class="flex flex-wrap gap-1.5">
-                    {#each [60, 52, 56, 48] as w (w)}
-                      <Skeleton class="h-[22px]" style="width: {w}px" />
-                    {/each}
-                  </div>
-                </div>
-              {/if}
-            </div>
-
-            <!-- Bottom actions -->
-            <div class="mt-auto flex flex-wrap items-center gap-x-4 gap-y-2 pt-3">
-              {#if savedProgress}
-                <button
-                  class="cursor-pointer border-1 border-fg px-4 py-2 text-sm hover:bg-fg hover:text-bg"
-                  onclick={resume}
-                  in:fade={{ duration: ANIM_DURATION, easing: ANIM_EASE }}
-                >
-                  RESUME: {savedProgress.chapter}, p.{savedProgress.page + 1}
-                </button>
-              {/if}
-              <button
-                class="cursor-pointer text-xs underline opacity-50 hover:opacity-70
-                  {meta ? '' : 'pointer-events-none invisible'}"
-                onclick={() => (pickerOpen ? (pickerOpen = false) : openPicker())}
-              >
-                Not this manga?
-              </button>
-            </div>
+          <div class="min-w-0 flex-1 px-3 py-2.5 text-sm">
+            Ch. {meta.latestChapter}
+            {#if meta.latestChapterDate}
+              <span class="opacity-50"> · {formatDate(meta.latestChapterDate)}</span>
+            {/if}
+            <span class="opacity-40"> (MangaDex)</span>
           </div>
         </div>
       {/if}
-    </div>
-
-    <!-- Vertical divider -->
-    <div class="border-l border-border/10"></div>
-
-    <!-- Right panel: chapter list -->
-    <div class="flex min-h-0 flex-1 flex-col pl-8">
-      <!-- Chapters header -->
-      <div class="shrink-0 py-3">
-        <div class="flex items-center gap-4">
-          <span class="shrink-0 text-xs font-bold tracking-widest opacity-50">
-            CHAPTERS ({chapters.length})
-          </span>
-          <div class="flex min-w-0 flex-1 items-center gap-2 border border-border/15 px-3 py-1.5">
-            <Search size={12} class="shrink-0 opacity-50" />
-            <input
-              bind:value={search}
-              placeholder="Search chapters…"
-              class="flex-1 bg-transparent text-sm outline-none placeholder:opacity-50"
-            />
-            {#if search}
-              <button
-                class="cursor-pointer opacity-50 hover:opacity-80"
-                onclick={() => (search = '')}
-              >
-                <X size={12} />
-              </button>
-            {/if}
-          </div>
+    {:else}
+      <div class="flex">
+        <div
+          class="w-24 shrink-0 border-r border-border/10 px-3 py-2.5 text-[0.65rem] font-bold tracking-widest opacity-45 sm:w-28"
+        >
+          STATUS
+        </div>
+        <div class="flex min-w-0 flex-1 items-center px-3 py-2.5">
+          <Skeleton class="h-[18px] w-20" />
         </div>
       </div>
-
-      <!-- Scrollable virtual list -->
-      <div bind:this={desktopScrollEl} class="min-h-0 flex-1 overflow-y-auto">
-        {#if filteredChapters.length === 0}
-          <p
-            class="py-8 text-center text-xs opacity-50"
-            in:fade={{ duration: ANIM_DURATION, easing: ANIM_EASE }}
-          >
-            No chapters match "{search}"
-          </p>
-        {:else}
-          <div style="height: {desktopTotalSize}px; position: relative;">
-            {#each desktopVirtualItems as row (row.key)}
-              {@const chapter = filteredChapters[row.index]}
-              {@const isResume = savedProgress?.chapter === chapter.name}
-              <button
-                style="position: absolute; top: {row.start}px; left: 0; right: 0; height: {ROW_H}px;"
-                class="flex w-full cursor-pointer items-center justify-between border-b border-border/10 px-2 text-left hover:bg-fg/5"
-                onclick={() => readChapter(chapter.name)}
-              >
-                <span class="truncate text-sm {isResume ? 'font-bold' : 'opacity-70'}"
-                  >{chapter.name}</span
-                >
-                <div class="ml-4 flex shrink-0 items-center gap-3">
-                  {#if isResume}
-                    <span class="text-xs opacity-60">p.{savedProgress.page + 1}</span>
-                  {/if}
-                  <span class="text-xs opacity-50">{chapter.pageCount}p</span>
-                </div>
-              </button>
-            {/each}
-          </div>
-        {/if}
+      <div class="flex">
+        <div
+          class="w-24 shrink-0 border-r border-border/10 px-3 py-2.5 text-[0.65rem] font-bold tracking-widest opacity-45 sm:w-28"
+        >
+          AUTHOR
+        </div>
+        <div class="flex min-w-0 flex-1 items-center px-3 py-2.5">
+          <Skeleton class="h-4 w-32" />
+        </div>
       </div>
+      <div class="flex">
+        <div
+          class="w-24 shrink-0 border-r border-border/10 px-3 py-2.5 text-[0.65rem] font-bold tracking-widest opacity-45 sm:w-28"
+        >
+          YEAR
+        </div>
+        <div class="flex min-w-0 flex-1 items-center px-3 py-2.5">
+          <Skeleton class="h-4 w-10" />
+        </div>
+      </div>
+      <div class="flex">
+        <div
+          class="w-24 shrink-0 border-r border-border/10 px-3 py-2.5 text-[0.65rem] font-bold tracking-widest opacity-45 sm:w-28"
+        >
+          TAGS
+        </div>
+        <div class="flex min-w-0 flex-1 flex-wrap items-center gap-1.5 px-3 py-2.5">
+          {#each [60, 52, 56, 48] as w (w)}
+            <Skeleton class="h-[18px]" style="width: {w}px" />
+          {/each}
+        </div>
+      </div>
+    {/if}
+  </div>
+{/snippet}
+
+{#snippet chaptersHeadRow(stacked: boolean)}
+  <div
+    class="flex shrink-0 gap-3 border-b border-border/15 px-4 py-3 {stacked
+      ? 'flex-col'
+      : 'items-center gap-4'}"
+  >
+    <span class="shrink-0 text-xs font-bold tracking-widest opacity-50">
+      CHAPTERS ({chapters.length})
+    </span>
+    <div
+      class="flex min-w-0 items-center gap-2 border-2 border-border/15 px-3 py-1.5 {stacked
+        ? 'w-full'
+        : 'flex-1'}"
+    >
+      <Search size={12} class="shrink-0 opacity-50" />
+      <input
+        bind:value={search}
+        placeholder="Search chapters…"
+        class="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:opacity-50"
+      />
+      {#if search}
+        <button class="cursor-pointer opacity-50 hover:opacity-80" onclick={() => (search = '')}>
+          <X size={12} />
+        </button>
+      {/if}
     </div>
   </div>
-{:else}
+{/snippet}
+
+{#snippet chapterTile(chapter: (typeof filteredChapters)[number])}
+  {@const isResume = savedProgress?.chapter === chapter.name}
+  {@const trueIndex = chapterIndex.get(chapter.name) ?? 0}
+  <button
+    class="flex aspect-square cursor-pointer flex-col items-center justify-center gap-0.5 border-2 text-center
+      {isResume ? 'border-fg bg-fg/5' : 'border-border/12 hover:border-border/40'}"
+    title="Chapter {trueIndex + 1} — {chapter.pageCount} pages{isResume
+      ? ` — resume at p.${savedProgress.page + 1}`
+      : ''}"
+    onclick={() => readChapter(chapter.name)}
+  >
+    <span class="text-base font-bold tabular-nums md:text-sm {isResume ? '' : 'opacity-80'}"
+      >{trueIndex + 1}</span
+    >
+    <span class="text-xs tabular-nums opacity-45 md:text-[0.6rem]">{chapter.pageCount}p</span>
+  </button>
+{/snippet}
+
+{#snippet chapterGrid()}
+  {#if filteredChapters.length === 0}
+    <p
+      class="py-8 text-center text-xs opacity-50"
+      in:fade={{ duration: ANIM_DURATION, easing: ANIM_EASE }}
+    >
+      No chapters match "{search}"
+    </p>
+  {:else}
+    <div
+      class="grid grid-cols-[repeat(auto-fill,minmax(4rem,1fr))] gap-2.5 p-4 md:grid-cols-[repeat(auto-fill,minmax(3rem,1fr))] md:gap-2"
+    >
+      {#each filteredChapters as chapter (chapter.name)}
+        {@render chapterTile(chapter)}
+      {/each}
+    </div>
+  {/if}
+{/snippet}
+
+{#if isDesktop}
+  <!-- Desktop: single scroll column, bordered panels -->
   <div
-    class="mx-auto flex min-h-screen w-full max-w-3xl flex-col px-6"
-    style="padding-top: calc(1.5rem + var(--safe-top)); padding-bottom: calc(2rem + var(--safe-bottom))"
+    class="mx-auto flex max-w-4xl flex-col gap-6 overflow-hidden"
+    style="height: 100dvh; padding: calc(2rem + var(--safe-top)) 2rem max(2rem, var(--safe-bottom))"
   >
     <!-- Back -->
-    <div class="mb-6 flex items-center justify-between">
-      <button
-        class="flex cursor-pointer items-center gap-1.5 text-xs tracking-widest opacity-50 hover:opacity-80"
-        onclick={reader.clearManga}
-      >
-        <ArrowLeft size={12} />
-        LIBRARY
-      </button>
+    <div class="shrink-0">
+      <BackLink label="LIBRARY" onclick={reader.clearManga} />
     </div>
 
     {#if metaError && !meta}
-      <!-- Empty state: title + resume only -->
-      <div class="flex flex-col gap-4">
+      <div class="flex shrink-0 flex-col gap-4">
         <h1 class="text-xl leading-tight font-bold">{mangaName}</h1>
-        {#if savedProgress}
+        {#if metaRateLimited}
+          <p class="text-xs opacity-60">AniList is rate-limiting requests.</p>
           <button
-            class="cursor-pointer self-start border-1 border-fg px-4 py-2 text-sm hover:bg-fg hover:text-bg"
-            onclick={resume}
+            class="cursor-pointer self-start text-xs underline opacity-50 hover:opacity-70"
+            onclick={retryMeta}
           >
-            RESUME: {savedProgress.chapter}, p.{savedProgress.page + 1}
+            Retry
           </button>
+        {/if}
+        {#if savedProgress}
+          <Button size="lg" variant="default" class="self-start" onclick={resume}>
+            RESUME: {savedProgress.chapter}, p.{savedProgress.page + 1}
+          </Button>
         {/if}
       </div>
     {:else}
-      <!-- Cover + info side by side -->
-      <div class="flex flex-col gap-6 sm:flex-row">
-        <!-- Cover -->
-        <div class="relative h-56 w-40 shrink-0 self-center sm:self-auto">
+      <!-- Cover + spec table -->
+      <div class="flex shrink-0 items-center gap-6">
+        <div class="relative h-56 w-40 shrink-0 border-2 border-border/15">
           {#if meta?.coverUrl && !coverFailed}
             <img
               src={meta.coverUrl}
               alt={meta?.title ?? mangaName}
-              class="absolute inset-0 h-full w-full object-contain"
+              class="absolute inset-0 h-full w-full object-cover"
               onerror={() => (coverFailed = true)}
             />
           {:else}
@@ -581,214 +500,90 @@
           {/if}
         </div>
 
-        <!-- Info -->
-        <div class="flex min-w-0 flex-1 flex-col sm:h-56">
-          <h1 class="text-xl leading-tight font-bold">
-            {meta?.title || mangaName}
-          </h1>
-          <p class="mt-0.5 text-xs opacity-50">{mangaName}</p>
-
-          <div
-            class="mt-3 flex min-h-[7rem] flex-col gap-3 sm:min-h-0 sm:flex-1 sm:overflow-hidden"
-          >
-            {#if meta}
-              <div
-                class="flex flex-col gap-3"
-                in:fade={{ duration: ANIM_DURATION, delay: 50, easing: ANIM_EASE }}
-              >
-                <div class="flex flex-wrap items-center gap-3">
-                  {#if meta.status}
-                    <span
-                      class="border px-2 py-0.5 text-xs font-bold tracking-widest
-                      {meta.status === 'ongoing'
-                        ? 'border-success/50 text-success'
-                        : 'border-border/20 opacity-50'}"
-                    >
-                      {STATUS_LABEL[meta.status] ?? meta.status.toUpperCase()}
-                    </span>
-                  {/if}
-                  {#if meta.year}
-                    <span class="text-xs opacity-60">{meta.year}</span>
-                  {/if}
-                  {#if meta.authors.length}
-                    <span class="hidden text-xs opacity-60 sm:inline"
-                      >{meta.authors.join(', ')}</span
-                    >
-                  {/if}
-                </div>
-
-                {#if meta.authors.length}
-                  <div class="flex flex-col gap-1 sm:hidden">
-                    {#if !authorsExpanded}
-                      <div class="flex items-center gap-1.5">
-                        <span bind:this={authorsEl} class="min-w-0 truncate text-xs opacity-60"
-                          >{meta.authors.join(', ')}</span
-                        >
-                        {#if authorsTruncated}
-                          <button
-                            class="shrink-0 cursor-pointer border border-border/15 px-2 py-0.5 text-xs opacity-60 hover:opacity-100"
-                            onclick={() => (authorsExpanded = true)}>more</button
-                          >
-                        {/if}
-                      </div>
-                    {/if}
-                    {#if authorsExpanded}
-                      <div
-                        class="overflow-hidden text-xs opacity-60"
-                        in:slide={{ duration: ANIM_DURATION, easing: ANIM_EASE }}
-                        out:slide={{ duration: ANIM_EXIT_DURATION, easing: ANIM_EASE_IN }}
-                      >
-                        {meta.authors.join(', ')}
-                        <button
-                          class="cursor-pointer border border-border/15 px-2 py-0.5 text-xs opacity-60 hover:opacity-100"
-                          onclick={() => (authorsExpanded = false)}>less</button
-                        >
-                      </div>
-                    {/if}
-                  </div>
-                {/if}
-
-                {#if meta.tags.length}
-                  <div class="flex flex-wrap gap-1.5" bind:this={tagsEl}>
-                    {#each meta.tags.slice(0, TAGS_COLLAPSED) as tag (tag)}
-                      <span class="border border-border/30 px-2 py-0.5 text-xs opacity-50"
-                        >{tag}</span
-                      >
-                    {/each}
-                    {#if tagsExpanded}
-                      {#each meta.tags.slice(TAGS_COLLAPSED, 6) as tag (tag)}
-                        <span class="border border-border/30 px-2 py-0.5 text-xs opacity-50"
-                          >{tag}</span
-                        >
-                      {/each}
-                      <button
-                        class="cursor-pointer border border-border/15 px-2 py-0.5 text-xs opacity-60 hover:opacity-100"
-                        onclick={collapseTags}>less</button
-                      >
-                    {:else if meta.tags.length > TAGS_COLLAPSED}
-                      <button
-                        class="cursor-pointer border border-border/15 px-2 py-0.5 text-xs opacity-60 hover:opacity-100"
-                        onclick={expandTags}>more</button
-                      >
-                    {/if}
-                  </div>
-                {/if}
-
-                {#if meta.status === 'ongoing' && meta.latestChapter}
-                  <div class="self-start border border-border/10 px-3 py-2 text-xs">
-                    <span class="opacity-60">Latest on MangaDex: </span>
-                    <span class="">Ch. {meta.latestChapter}</span>
-                    {#if meta.latestChapterDate}
-                      <span class="opacity-50"> · {formatDate(meta.latestChapterDate)}</span>
-                    {/if}
-                  </div>
-                {/if}
-              </div>
-            {:else}
-              <div class="flex flex-col gap-3">
-                <div class="flex flex-wrap items-center gap-3">
-                  <Skeleton class="h-[22px] w-20" />
-                  <Skeleton class="h-[22px] w-8" />
-                  <Skeleton class="hidden h-[22px] w-32 sm:block" />
-                </div>
-                <Skeleton class="h-4 w-40 sm:hidden" />
-                <div class="flex flex-wrap gap-1.5">
-                  {#each [60, 52, 56, 48] as w (w)}
-                    <Skeleton class="h-[22px]" style="width: {w}px" />
-                  {/each}
-                </div>
-              </div>
-            {/if}
-          </div>
-
-          <!-- Bottom actions: resume + not this manga, pinned to bottom -->
-          <div class="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 sm:mt-auto sm:pt-3">
-            {#if savedProgress}
-              <button
-                class="cursor-pointer border-1 border-fg px-4 py-2 text-sm hover:bg-fg hover:text-bg"
-                onclick={resume}
-                in:fade={{ duration: ANIM_DURATION, easing: ANIM_EASE }}
-              >
-                RESUME: {savedProgress.chapter}, p.{savedProgress.page + 1}
-              </button>
-            {/if}
-            <button
-              class="cursor-pointer text-xs underline opacity-50 hover:opacity-70
-                {meta ? '' : 'pointer-events-none invisible'}"
-              onclick={() => (pickerOpen ? (pickerOpen = false) : openPicker())}
-            >
-              Not this manga?
-            </button>
-          </div>
+        <div class="min-w-0 flex-1">
+          {@render specTable()}
         </div>
       </div>
+
+      {#if savedProgress}
+        <!-- Actions -->
+        <div class="flex shrink-0 items-center justify-end">
+          <Button size="md" variant="default" onclick={resume}>
+            RESUME: {savedProgress.chapter}, p.{savedProgress.page + 1}
+          </Button>
+        </div>
+      {/if}
     {/if}
 
-    <div bind:this={chapterSentinelEl}></div>
+    <!-- Chapters panel -->
+    <div class="flex min-h-0 flex-1 flex-col border-2 border-border/15">
+      {@render chaptersHeadRow(false)}
 
-    <!-- Sticky chapters header -->
-    <div
-      class="sticky z-10 mt-8 bg-bg/80 pb-3 backdrop-blur-lg {chapterHeaderStuck
-        ? ''
-        : 'border-t border-border/10'}"
-      style="top: var(--safe-top, 0px); padding-top: {chapterHeaderStuck ? '0.75rem' : '2rem'};"
-    >
-      <div class="flex items-center gap-4">
-        <span class="shrink-0 text-xs font-bold tracking-widest opacity-50">
-          CHAPTERS ({chapters.length})
-        </span>
-        <div class="flex min-w-0 flex-1 items-center gap-2 border border-border/15 px-3 py-1.5">
-          <Search size={12} class="shrink-0 opacity-50" />
-          <input
-            bind:value={search}
-            placeholder="Search chapters…"
-            class="flex-1 bg-transparent text-sm outline-none placeholder:opacity-50"
-          />
-          {#if search}
-            <button
-              class="cursor-pointer opacity-50 hover:opacity-80"
-              onclick={() => (search = '')}
-            >
-              <X size={12} />
-            </button>
-          {/if}
-        </div>
+      <div class="min-h-0 flex-1 overflow-y-auto">
+        {@render chapterGrid()}
       </div>
     </div>
-
-    <!-- Virtual chapter list -->
-    {#if filteredChapters.length === 0}
-      <p
-        class="py-8 text-center text-xs opacity-50"
-        in:fade={{ duration: ANIM_DURATION, easing: ANIM_EASE }}
-      >
-        No chapters match "{search}"
-      </p>
-    {:else}
-      <div bind:this={listEl} style="height: {mobileTotalSize}px; position: relative;">
-        {#each mobileVirtualItems as row (row.key)}
-          {@const chapter = filteredChapters[row.index]}
-          {@const isResume = savedProgress?.chapter === chapter.name}
-          <button
-            style="position: absolute; top: {row.start -
-              scrollMargin}px; left: 0; right: 0; height: {ROW_H}px;"
-            class="flex w-full cursor-pointer items-center justify-between border-b border-border/10 px-2 text-left hover:bg-fg/5"
-            onclick={() => readChapter(chapter.name)}
-          >
-            <span class="truncate text-sm {isResume ? 'font-bold' : 'opacity-70'}"
-              >{chapter.name}</span
-            >
-            <div class="ml-4 flex shrink-0 items-center gap-3">
-              {#if isResume}
-                <span class="text-xs opacity-60">p.{savedProgress.page + 1}</span>
-              {/if}
-              <span class="text-xs opacity-50">{chapter.pageCount}p</span>
-            </div>
-          </button>
-        {/each}
-      </div>
-    {/if}
   </div>
+{:else}
+  <!-- Mobile: stacked single column, whole page scrolls -->
+  <PageContainer maxWidth="max-w-4xl">
+    <div
+      class="flex min-h-screen w-full flex-col {showShell
+        ? 'pb-[calc(5.25rem_+_var(--safe-bottom))]'
+        : 'pb-[calc(2rem_+_var(--safe-bottom))]'}"
+      style="padding-top: calc(2rem + var(--safe-top))"
+    >
+      <!-- Back -->
+      <div class="mb-6 flex items-center justify-between">
+        <BackLink label="LIBRARY" onclick={reader.clearManga} />
+      </div>
+
+      {#if metaError && !meta}
+        <div class="flex flex-col gap-4">
+          <h1 class="text-xl leading-tight font-bold">{mangaName}</h1>
+          {#if savedProgress}
+            <Button size="lg" variant="default" class="self-start" onclick={resume}>
+              RESUME: {savedProgress.chapter}, p.{savedProgress.page + 1}
+            </Button>
+          {/if}
+        </div>
+      {:else}
+        <!-- Cover -->
+        <div class="relative mx-auto h-64 w-44 shrink-0 border-2 border-border/15">
+          {#if meta?.coverUrl && !coverFailed}
+            <img
+              src={meta.coverUrl}
+              alt={meta?.title ?? mangaName}
+              class="absolute inset-0 h-full w-full object-cover"
+              onerror={() => (coverFailed = true)}
+            />
+          {:else}
+            <Skeleton class="absolute inset-0" />
+          {/if}
+        </div>
+
+        <!-- Spec table -->
+        <div class="mt-6">
+          {@render specTable()}
+        </div>
+
+        {#if savedProgress}
+          <!-- Actions -->
+          <div class="mt-4">
+            <Button size="md" variant="default" class="w-full" onclick={resume}>
+              RESUME: {savedProgress.chapter}, p.{savedProgress.page + 1}
+            </Button>
+          </div>
+        {/if}
+      {/if}
+
+      <!-- Chapters panel -->
+      <div class="mt-3 border-2 border-border/15">
+        {@render chaptersHeadRow(true)}
+        {@render chapterGrid()}
+      </div>
+    </div></PageContainer
+  >
 {/if}
 
 {#if pickerOpen}
@@ -814,7 +609,7 @@
           <X size={12} />
         </button>
       </div>
-      <div class="flex items-center gap-2 border border-border/15 px-3 py-1.5">
+      <div class="flex items-center gap-2 border-2 border-border/15 px-3 py-1.5">
         <Search size={12} class="shrink-0 opacity-50" />
         <input
           bind:value={pickerQuery}
