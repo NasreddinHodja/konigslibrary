@@ -6,8 +6,13 @@ After=network.target
 Type=simple
 WorkingDirectory=/home/nasreddin/Prog/konigslibrary
 Environment=PORT=5511
-ExecStart=/home/nasreddin/.local/share/nvm/versions/node/v22.22.0/bin/node server.js
 Environment=NO_BROWSER=1
+# The static SPA, built by `LOCAL_BUILD=1 bun run build`. Set explicitly because
+# the repo's build/ directory is also the output of the Tauri and website builds.
+Environment=KL_STATIC_DIR=/home/nasreddin/Prog/konigslibrary/build
+# Built by `bun run build:server`. Replaces `node server.js`, which needed a
+# whole Node runtime plus a SvelteKit adapter-node bundle to serve the same API.
+ExecStart=/home/nasreddin/Prog/konigslibrary/crates/target/release/konigslibrary-server
 Restart=on-failure
 RestartSec=3
 

@@ -1,0 +1,16 @@
+[package]
+name = "klparse"
+description = "ZIP64 parsing and chapter grouping for konigslibrary"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+serde = { workspace = true }
+# rust_backend (miniz_oxide) rather than a C zlib, so this crate also builds for wasm32.
+flate2 = { version = "1.0", default-features = false, features = ["rust_backend"] }
+
+[features]
+# Test-only ZIP builder, also used by klserver's tests.
+fixtures = []

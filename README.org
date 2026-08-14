@@ -1,7 +1,7 @@
 #+TITLE: konigslibrary
 #+DESCRIPTION: Client-side manga reader - Svelte 5, Tauri, custom ZIP parser
 
-Manga reader that opens ZIP and CBZ archives. Runs in the browser, as a desktop/mobile app (Tauri), or as a self-hosted server for LAN access. No accounts or cloud services.
+Manga reader that opens ZIP and CBZ archives. Runs in the browser, as a desktop/mobile app (Tauri), or as a self-hosted server for LAN access. No accounts required.
 
 #+html: <p align="center"><img src=".github/readme/home-mobile.jpeg" alt="Mobile home" width="260">&nbsp;&nbsp;<img src=".github/readme/manga-mobile.jpeg" alt="Mobile manga detail" width="260">&nbsp;&nbsp;<img src=".github/readme/reader-mobile.jpeg" alt="Mobile reader" width="260"></p>
 
@@ -14,8 +14,9 @@ Manga reader that opens ZIP and CBZ archives. Runs in the browser, as a desktop/
 - Offline downloads via IndexedDB
 - Rebindable keyboard shortcuts
 - Native Tauri 2 desktop app with file dialog
-- Self-hosted server mode (adapter-node) for LAN access
+- Self-hosted server mode (native binary, no runtime to install) for LAN access
 - Custom ZIP/CBZ parser with ZIP64 support, no third-party ZIP library
+- One parser implementation in Rust, compiled to wasm for the browser and natively for the server
 
 * Architecture
 
@@ -23,20 +24,33 @@ Manga reader that opens ZIP and CBZ archives. Runs in the browser, as a desktop/
 src/lib/
 ├── actions/         # Svelte actions (intersect, edge swipe)
 ├── browsers/        # Source browser UIs (library, native, offline, upload)
-├── chapters/        # Chapter grouping logic + EndOfChapter UI
+├── chapters/        # EndOfChapter UI
 ├── commands/        # Command registry and keybinding actions
 ├── context/         # ReaderServices factory (createReaderServices)
 ├── events/          # Typed event bus
 ├── keyboard/        # Configurable keybindings + help overlay
 ├── pipeline/        # Image decode pipeline + preloader
 ├── plugins/         # Plugin system (runner, registry, window title)
-├── server/          # Local server: directory listing + Node ZIP parsing
 ├── sources/         # Data source abstraction (upload, server, Tauri, offline)
 ├── ui/              # Shared UI components (sidebar, toast, buttons)
 ├── utils/           # Constants, types, platform detection
 ├── viewers/         # Reading modes (scroll, page-turn) + viewer registry
-└── zip/             # Custom ZIP/CBZ parser (ZIP64, Web Compression API)
+└── zip/             # Byte-range plumbing around the wasm parser
 #+end_src
+
+The archive parser is a Rust workspace, built once and used everywhere:
+
+#+begin_src
+crates/
+├── klparse/         # ZIP64 parsing, chapter grouping, JS-compatible collation
+├── klwasm/          # wasm-bindgen bindings — the browser's no-backend path
+└── klserver/        # axum binary — LAN sharing and self-hosted deployments
+#+end_src
+
+The browser and the server run the same parsing code, so a fix in one is a fix
+in both. The wasm build keeps the lazy read behaviour that makes the plain
+website work with no backend at all: opening a 2GB CBZ reads only the archive's
+tail, its central directory, and the page on screen.
 
 * Tech Stack
 
@@ -46,7 +60,8 @@ src/lib/
 | Language    | TypeScript 5.9 (strict)                         |
 | Styling     | Tailwind CSS 4, Source Code Pro monospace font   |
 | Desktop     | Tauri 2 (Rust)                                  |
-| ZIP Parsing | Custom implementation - Web Compression API       |
+| ZIP Parsing | Custom Rust crate - wasm in browser, native on server |
+| Server      | Rust, axum                                      |
 | Icons       | Lucide Svelte                                   |
 | Quality     | ESLint 9, Prettier, Vitest, svelte-check         |
 
@@ -80,13 +95,23 @@ Download =konigslibrary.bat= from =static/download/= and run it.
 
 The script installs Bun if needed, builds the app, and starts a server on =http://localhost:3000=. LAN addresses are printed so other devices can connect.
 
-*** Manual (Bun required)
+*** Manual (Bun and Rust required)
 
 #+begin_src sh
 bun install
-bun run build:local
 bun run serve
 #+end_src
+
+=bun run serve= builds the frontend, builds the =konigslibrary-server= binary,
+and runs it. Once built, the binary is standalone — no Bun, Node or Rust needed
+to run it, just the =build/= directory beside it:
+
+#+begin_src sh
+KL_STATIC_DIR=./build MANGA_DIR=~/Manga NO_BROWSER=1 \
+  crates/target/release/konigslibrary-server
+#+end_src
+
+See =konigslibrary.service= for a systemd user unit that does exactly this.
 
 Set =MANGA_DIR= to your manga directory:
 
@@ -173,7 +198,12 @@ JPEG, PNG, GIF, WebP, AVIF, BMP.
 
 * Development
 
-*Prerequisites:* [[https://bun.sh/][Bun]]
+*Prerequisites:* [[https://bun.sh/][Bun]], and [[https://rustup.rs/][Rust]] for the archive parser:
+
+#+begin_src sh
+rustup target add wasm32-unknown-unknown
+cargo install -f wasm-bindgen-cli --version 0.2.99  # must match crates/klwasm/Cargo.toml
+#+end_src
 
 #+begin_src sh
 bun install
@@ -184,12 +214,15 @@ bun dev
 |----------------------------+--------------------------------------|
 | =bun dev=                  | Start dev server                     |
 | =bun run build=            | Production build (adapter-auto)      |
-| =bun run build:local=      | Local server build (adapter-node)    |
-| =bun run serve=            | Start local server                   |
+| =bun run build:local=      | Static build for the local server    |
+| =bun run build:wasm=       | Compile the parser to wasm           |
+| =bun run build:server=     | Build the konigslibrary-server binary |
+| =bun run serve=            | Build and start the local server     |
 | =bun run check=            | Svelte type checking                 |
 | =bun run lint=             | Prettier + ESLint check              |
 | =bun run format=           | Auto-format with Prettier            |
 | =bun run test=             | Run tests (Vitest)                   |
+| =bun run test:rust=        | Run parser and server tests (cargo)  |
 | =bun run tauri:local=      | Tauri dev mode                       |
 | =bun tauri build=          | Tauri release build                  |
 

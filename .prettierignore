@@ -10,3 +10,9 @@ bun.lockb
 
 # Tauri
 /src-tauri/
+
+# Rust
+/crates/
+
+# Generated wasm bindings
+/src/lib/zip/wasm/

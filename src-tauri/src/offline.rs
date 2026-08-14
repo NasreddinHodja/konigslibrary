@@ -1,5 +1,5 @@
-use std::path::{Component, Path, PathBuf};
 use serde::{Deserialize, Serialize};
+use std::path::{Component, Path, PathBuf};
 use tauri::{AppHandle, Manager};
 
 use crate::download::ServerChapter;
@@ -22,7 +22,13 @@ pub struct MangaMeta {
 }
 
 fn offline_dir(app: &AppHandle) -> Result<PathBuf, String> {
-  Ok(app.path().app_data_dir().map_err(|e| e.to_string())?.join("offline"))
+  Ok(
+    app
+      .path()
+      .app_data_dir()
+      .map_err(|e| e.to_string())?
+      .join("offline"),
+  )
 }
 
 pub async fn save_chapter_meta(
@@ -44,7 +50,11 @@ pub async fn save_chapter_meta(
       chapters: vec![],
     })
   } else {
-    MangaMeta { slug: slug.to_string(), name: manga_name.to_string(), chapters: vec![] }
+    MangaMeta {
+      slug: slug.to_string(),
+      name: manga_name.to_string(),
+      chapters: vec![],
+    }
   };
 
   if let Some(existing) = meta.chapters.iter_mut().find(|c| c.name == chapter.name) {
@@ -54,8 +64,11 @@ pub async fn save_chapter_meta(
   }
   meta.chapters.sort_by(|a, b| a.name.cmp(&b.name));
 
-  std::fs::write(&meta_path, serde_json::to_string(&meta).map_err(|e| e.to_string())?)
-    .map_err(|e| e.to_string())
+  std::fs::write(
+    &meta_path,
+    serde_json::to_string(&meta).map_err(|e| e.to_string())?,
+  )
+  .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -92,7 +105,9 @@ pub async fn get_offline_manga(app: AppHandle, slug: String) -> Result<Option<Ma
     return Ok(None);
   }
   let data = std::fs::read_to_string(&meta_path).map_err(|e| e.to_string())?;
-  Ok(Some(serde_json::from_str(&data).map_err(|e| e.to_string())?))
+  Ok(Some(
+    serde_json::from_str(&data).map_err(|e| e.to_string())?,
+  ))
 }
 
 #[tauri::command]
@@ -108,7 +123,12 @@ pub async fn get_chapter_page_paths(
     validate_path_component(f)?;
   }
   let base = offline_dir(&app)?.join(&slug).join(&chapter_name);
-  Ok(filenames.iter().map(|f| base.join(f).to_string_lossy().to_string()).collect())
+  Ok(
+    filenames
+      .iter()
+      .map(|f| base.join(f).to_string_lossy().to_string())
+      .collect(),
+  )
 }
 
 #[tauri::command]

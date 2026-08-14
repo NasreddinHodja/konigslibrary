@@ -1,15 +1,14 @@
 use serde::Serialize;
 use std::net::{TcpListener, UdpSocket};
+use std::process::Stdio;
 use std::sync::Mutex;
 use std::time::Duration;
 use tauri::{path::BaseDirectory, AppHandle, Manager, State};
-use tauri_plugin_shell::{
-  process::{CommandChild, CommandEvent},
-  ShellExt,
-};
+use tokio::io::{AsyncBufReadExt, BufReader};
+use tokio::process::{Child, Command};
 
 pub struct Running {
-  child: CommandChild,
+  child: Child,
   port: u16,
   lan_ip: String,
 }
@@ -34,7 +33,13 @@ fn lan_ip() -> Result<String, String> {
   // can read back the LAN-facing local address.
   let socket = UdpSocket::bind("0.0.0.0:0").map_err(|e| e.to_string())?;
   socket.connect("8.8.8.8:80").map_err(|e| e.to_string())?;
-  Ok(socket.local_addr().map_err(|e| e.to_string())?.ip().to_string())
+  Ok(
+    socket
+      .local_addr()
+      .map_err(|e| e.to_string())?
+      .ip()
+      .to_string(),
+  )
 }
 
 #[tauri::command]
@@ -66,28 +71,53 @@ pub async fn start_lan_server(
     )
     .map_err(|e| e.to_string())?;
 
-  let (mut rx, child) = app
-    .shell()
-    .sidecar("konigslibrary-server")
-    .map_err(|e| e.to_string())?
+  let server_bin = assets_dir.join("konigslibrary-server");
+
+  // Spawned through tokio directly rather than tauri-plugin-shell's sidecar
+  // API. A sidecar has to be declared in bundle.externalBin, and Tauri's
+  // bundler patches a __TAURI_BUNDLE_TYPE marker into every externalBin
+  // binary for update detection — when the marker is absent, as it is in any
+  // non-Tauri binary, it corrupts the file rather than skipping it, which
+  // broke AppImage bundling. This server ships as a plain bundle.resources
+  // entry, which the bundler leaves alone, and plain resources cannot be
+  // reached through .sidecar().
+  let mut child = Command::new(&server_bin)
     .env("MANGA_DIR", &manga_dir)
     .env("PORT", port.to_string())
     .env("HOST", "0.0.0.0")
     .env("NO_BROWSER", "1")
-    .env("KL_STATIC_DIR", assets_dir.to_string_lossy().to_string())
+    // KL_STATIC_DIR is the static root itself, not the directory holding it.
+    .env(
+      "KL_STATIC_DIR",
+      assets_dir.join("client").to_string_lossy().to_string(),
+    )
+    .stdout(Stdio::piped())
+    .stderr(Stdio::piped())
+    .kill_on_drop(true)
     .spawn()
-    .map_err(|e| e.to_string())?;
+    .map_err(|e| format!("could not start {}: {e}", server_bin.display()))?;
 
-  tauri::async_runtime::spawn(async move {
-    while let Some(event) = rx.recv().await {
-      match event {
-        CommandEvent::Stdout(line) | CommandEvent::Stderr(line) => {
-          log::info!("[lan-server] {}", String::from_utf8_lossy(&line));
-        }
-        _ => {}
+  // Drain both pipes, or the child blocks once a pipe buffer fills.
+  for stream in [
+    child
+      .stdout
+      .take()
+      .map(|s| Box::new(s) as Box<dyn tokio::io::AsyncRead + Unpin + Send>),
+    child
+      .stderr
+      .take()
+      .map(|s| Box::new(s) as Box<dyn tokio::io::AsyncRead + Unpin + Send>),
+  ]
+  .into_iter()
+  .flatten()
+  {
+    tauri::async_runtime::spawn(async move {
+      let mut lines = BufReader::new(stream).lines();
+      while let Ok(Some(line)) = lines.next_line().await {
+        log::info!("[lan-server] {line}");
       }
-    }
-  });
+    });
+  }
 
   let client = reqwest::Client::new();
   let ready_url = format!("http://127.0.0.1:{port}/api/library");
@@ -108,8 +138,14 @@ pub async fn start_lan_server(
   }
 
   if !ready {
-    let _ = child.kill();
-    return Err("server did not become ready".to_string());
+    let _ = child.start_kill();
+    // A child that already exited usually means the binary is missing or not
+    // executable, which is worth saying plainly rather than reporting a timeout.
+    let detail = match child.try_wait() {
+      Ok(Some(status)) => format!("server exited early ({status})"),
+      _ => "server did not become ready".to_string(),
+    };
+    return Err(detail);
   }
 
   let url = format!("http://{ip}:{port}");
@@ -128,8 +164,8 @@ pub async fn start_lan_server(
 
 #[tauri::command]
 pub fn stop_lan_server(state: State<'_, LanServerState>) -> Result<(), String> {
-  if let Some(running) = state.0.lock().unwrap().take() {
-    running.child.kill().map_err(|e| e.to_string())?;
+  if let Some(mut running) = state.0.lock().unwrap().take() {
+    running.child.start_kill().map_err(|e| e.to_string())?;
   }
   Ok(())
 }
@@ -151,7 +187,7 @@ pub fn lan_server_status(state: State<'_, LanServerState>) -> LanServerStatus {
 }
 
 pub fn kill_if_running(state: &LanServerState) {
-  if let Some(running) = state.0.lock().unwrap().take() {
-    let _ = running.child.kill();
+  if let Some(mut running) = state.0.lock().unwrap().take() {
+    let _ = running.child.start_kill();
   }
 }

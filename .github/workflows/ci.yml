@@ -15,12 +15,30 @@ jobs:
 
       - uses: oven-sh/setup-bun@v2
 
+      # The archive parser is a Rust crate compiled to wasm, so the frontend
+      # cannot be type-checked or built without a Rust toolchain.
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: crates
+
+      # Must match the wasm-bindgen version pinned in crates/klwasm/Cargo.toml;
+      # the two refuse to work together across versions. Cached by rust-cache.
+      - run: cargo install -f wasm-bindgen-cli --version 0.2.99
+
       - run: bun install --frozen-lockfile
+
+      - run: bun run build:wasm
 
       - run: bun run lint
 
       - run: bun run check
 
       - run: bun run test:run
+
+      - run: cargo test --manifest-path crates/Cargo.toml
 
       - run: bun run build

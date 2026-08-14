@@ -53,9 +53,10 @@
   "bundle": {
     "active": true,
     "targets": [
-      "deb",
-      "rpm"
+      "appimage"
     ],
+    "category": "GraphicsAndDesign",
+    "homepage": "https://github.com/NasreddinHodja/konigslibrary",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -63,11 +64,15 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
-    "externalBin": [
-      "binaries/konigslibrary-server"
-    ],
     "resources": {
       "binaries/konigslibrary-server-assets": "binaries/konigslibrary-server-assets"
+    },
+    "linux": {
+      "appimage": {
+        "files": {
+          "usr/share/metainfo/com.konigslibrary.reader.metainfo.xml": "com.konigslibrary.reader.metainfo.xml"
+        }
+      }
     }
   }
 }

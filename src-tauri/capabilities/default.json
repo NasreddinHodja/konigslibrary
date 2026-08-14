@@ -9,15 +9,6 @@
     "core:default",
     "dialog:default",
     "opener:default",
-    "deep-link:default",
-    {
-      "identifier": "shell:allow-execute",
-      "allow": [
-        {
-          "name": "binaries/konigslibrary-server",
-          "sidecar": true
-        }
-      ]
-    }
+    "deep-link:default"
   ]
 }

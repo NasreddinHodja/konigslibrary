@@ -42,6 +42,7 @@
     }
     pendingDir = 0;
     pinnedNextUrl = null;
+    pinnedPrevUrl = null;
     noTrans = true;
     offset = 0;
     requestAnimationFrame(() => {
@@ -62,9 +63,11 @@
   let dragging = $state(false);
   let pendingDir = $state<-1 | 1 | 0>(0);
   let animTimer: ReturnType<typeof setTimeout> | null = null;
-  // Holds the previous nextUrl for one rAF after commit so the next panel stays
-  // at center (already-painted) while the current panel's new <img> paints.
+  // Holds the previous nextUrl/prevUrl for one rAF after commit so whichever
+  // side panel ends up centered stays at its already-painted content while
+  // the current panel's new <img> paints.
   let pinnedNextUrl: string | null = $state(null);
+  let pinnedPrevUrl: string | null = $state(null);
 
   let containerEl: HTMLDivElement | undefined = $state();
   const getW = () =>
@@ -100,18 +103,23 @@
       if (pendingDir === 0) return;
       const d = pendingDir;
       const savedNext = d === -1 ? nextUrl || null : null;
+      const savedPrev = d === 1 ? prevUrl || null : null;
       pendingDir = 0;
       noTrans = true;
       requestAnimationFrame(() => {
         if (d === -1) commitNext();
         else commitPrev();
-        // Pin the next panel at center for one frame so the already-painted
-        // image stays visible while the current panel's new <img> paints.
+        // Pin whichever side panel is now centered (next panel going forward,
+        // prev panel going back) to its already-painted image for one frame,
+        // so it doesn't flash the freshly-recomputed (now-wrong) neighbor page
+        // while the current panel's new <img> paints.
         pinnedNextUrl = savedNext;
+        pinnedPrevUrl = savedPrev;
         requestAnimationFrame(() => {
           offset = 0;
           requestAnimationFrame(() => {
             pinnedNextUrl = null;
+            pinnedPrevUrl = null;
             noTrans = false;
           });
         });
@@ -130,6 +138,7 @@
       pendingDir = 0;
       noTrans = true;
       pinnedNextUrl = null;
+      pinnedPrevUrl = null;
       if (d !== 0) {
         if (d === -1) commitNext();
         else commitPrev();
@@ -175,6 +184,7 @@
     }
     noTrans = true;
     pinnedNextUrl = null;
+    pinnedPrevUrl = null;
     offset = 0;
     touchStartX = e.touches[0].clientX;
     containerW = getW();
@@ -316,7 +326,9 @@
       style:will-change="transform"
       aria-hidden="true"
     >
-      {#if showEndScreen}
+      {#if pinnedPrevUrl}
+        <img src={pinnedPrevUrl} alt="Previous page" class="max-h-full max-w-full object-contain" />
+      {:else if showEndScreen}
         {#if chapter.pageUrls[chapter.pageUrls.length - 1]}
           <img
             src={chapter.pageUrls[chapter.pageUrls.length - 1]}

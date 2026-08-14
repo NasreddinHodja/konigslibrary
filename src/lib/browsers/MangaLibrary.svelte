@@ -41,7 +41,6 @@
 
   let serverEntries: LibraryEntry[] = $state([]);
   let serverLoading = $state(serverEnabled);
-  let serverError: string | null = $state(null);
 
   let downloadedEntries: { slug: string; name: string }[] = $state([]);
 
@@ -66,7 +65,6 @@
   function loadServer() {
     if (!serverEnabled) return;
     serverLoading = true;
-    serverError = null;
     const url = apiUrl('/api/library');
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 8000);
@@ -79,9 +77,7 @@
         serverEntries = data;
         serverLoading = false;
       })
-      .catch((e) => {
-        const msg = e.name === 'AbortError' ? 'timed out' : e.message;
-        serverError = `Could not connect to library (${url}: ${msg})`;
+      .catch(() => {
         serverLoading = false;
       })
       .finally(() => clearTimeout(timer));
@@ -166,9 +162,7 @@
   });
 
   const loading = $derived(deviceLoading || serverLoading);
-  const errors = $derived(
-    ([deviceError, serverError] as (string | null)[]).filter((e): e is string => e !== null)
-  );
+  const errors = $derived(deviceError ? [deviceError] : []);
 
   function rowAction(row: Row) {
     if (!native || !row.server) return null;

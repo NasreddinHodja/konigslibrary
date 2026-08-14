@@ -31,7 +31,17 @@ jobs:
       - name: Set up Rust with Android target
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: aarch64-linux-android
+          targets: aarch64-linux-android,wasm32-unknown-unknown
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: crates
+
+      # Must match the wasm-bindgen version pinned in crates/klwasm/Cargo.toml;
+      # the two refuse to work together across versions. Cached by rust-cache.
+      # `bun tauri android build` triggers `TAURI_BUILD=1 bun run build`
+      # (tauri.conf.json's beforeBuildCommand), which needs this to build the wasm parser.
+      - run: cargo install -f wasm-bindgen-cli --version 0.2.99
 
       - name: Install dependencies
         run: bun install --frozen-lockfile

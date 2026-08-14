@@ -49,8 +49,17 @@ notes.org
 konigslibrary.apk*
 src-tauri/binaries/*
 
+# rust
+/crates/target/
+
+# generated wasm bindings (built by `bun run build:wasm`)
+/src/lib/zip/wasm/
+
 # config
 konigslibrary.json
 
 # audit
 AUDIT.org
+
+# appimage output
+/dist/

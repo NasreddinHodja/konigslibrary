@@ -24,9 +24,16 @@ fn home_dir() -> Result<String, String> {
 }
 
 #[tauri::command]
-fn set_manga_dir(app: tauri::AppHandle, state: tauri::State<MangaDirState>, dir: String) -> Result<(), String> {
+fn set_manga_dir(
+  app: tauri::AppHandle,
+  state: tauri::State<MangaDirState>,
+  dir: String,
+) -> Result<(), String> {
   let canonical = std::fs::canonicalize(&dir).map_err(|e| e.to_string())?;
-  app.asset_protocol_scope().allow_directory(&canonical, true).map_err(|e| e.to_string())?;
+  app
+    .asset_protocol_scope()
+    .allow_directory(&canonical, true)
+    .map_err(|e| e.to_string())?;
   *state.0.lock().unwrap() = Some(canonical);
   Ok(())
 }
@@ -60,7 +67,6 @@ fn list_dir(state: tauri::State<MangaDirState>, path: String) -> Result<Vec<DirE
   Ok(results)
 }
 
-
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
   #[cfg(target_os = "linux")]
@@ -73,7 +79,6 @@ pub fn run() {
     .plugin(immersive::init())
     .plugin(tauri_plugin_dialog::init())
     .plugin(tauri_plugin_opener::init())
-    .plugin(tauri_plugin_shell::init())
     .plugin(tauri_plugin_deep_link::init())
     .setup(|app| {
       let log_level = if cfg!(debug_assertions) {

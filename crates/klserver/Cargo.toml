@@ -1,0 +1,25 @@
+[package]
+name = "klserver"
+description = "Local HTTP server for konigslibrary"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[[bin]]
+name = "konigslibrary-server"
+path = "src/main.rs"
+
+[dependencies]
+klparse = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+axum = "0.8"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "net"] }
+tower-http = { version = "0.6", features = ["fs", "cors"] }
+
+[dev-dependencies]
+klparse = { workspace = true, features = ["fixtures"] }
+tempfile = "3"
+tower = { version = "0.5", features = ["util"] }
+http-body-util = "0.1"

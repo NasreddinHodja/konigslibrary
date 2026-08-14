@@ -1,10 +1,7 @@
 import type { Chapter } from '$lib/utils/types';
 import type { ZipEntry } from '$lib/zip';
-import { indexZipWorker, extractEntryWorker } from '$lib/zip/worker-client';
-import { detectDepth, groupByChapter } from '$lib/chapters';
+import { loadChaptersWorker, extractEntryWorker } from '$lib/zip/worker-client';
 import type { LazyPageProvider } from './types';
-
-const IMAGE_EXT = /\.(jpe?g|png|gif|webp|avif|bmp)$/i;
 
 export class ZipUploadProvider implements LazyPageProvider {
   readonly kind = 'upload';
@@ -19,20 +16,16 @@ export class ZipUploadProvider implements LazyPageProvider {
   }
 
   async loadChapters(): Promise<Chapter[]> {
-    const entries = await indexZipWorker(this.file);
-    const imageEntries = entries.filter((e) => IMAGE_EXT.test(e.name));
+    // Image filtering, depth detection and grouping all happen in the wasm
+    // parser, which is the same code the server runs for a zip-backed manga.
+    const { commonRoot, chapters } = await loadChaptersWorker(this.file);
 
-    const { depth, commonRoot } = detectDepth(imageEntries.map((e) => e.name));
     if (commonRoot) {
       this.mangaName = commonRoot;
     }
 
-    const grouped = groupByChapter(imageEntries, depth);
-    this.zipEntries = grouped;
-
-    return Array.from(grouped.entries())
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([name, chapterEntries]) => ({ name, pageCount: chapterEntries.length }));
+    this.zipEntries = new Map(chapters.map((c) => [c.name, c.entries]));
+    return chapters.map((c) => ({ name: c.name, pageCount: c.entries.length }));
   }
 
   async getPageUrl(chapterName: string, index: number): Promise<string> {

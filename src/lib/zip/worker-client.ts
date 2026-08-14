@@ -1,8 +1,8 @@
-import type { ZipEntry } from './index';
+import type { GroupedChapters, ZipEntry } from './index';
 
 type Resolver = { resolve: (v: unknown) => void; reject: (e: Error) => void };
 type WorkerResponse =
-  | { id: number; entries: ZipEntry[] }
+  | { id: number; grouped: GroupedChapters }
   | { id: number; buffer: ArrayBuffer }
   | { id: number; error: string };
 
@@ -19,8 +19,8 @@ function getWorker(): Worker {
       pending.delete(e.data.id);
       if ('error' in e.data) {
         p.reject(new Error(e.data.error));
-      } else if ('entries' in e.data) {
-        p.resolve(e.data.entries);
+      } else if ('grouped' in e.data) {
+        p.resolve(e.data.grouped);
       } else {
         p.resolve(e.data.buffer);
       }
@@ -54,8 +54,8 @@ function dispatch<T>(msg: object, transfer?: Transferable[]): Promise<T> {
   });
 }
 
-export function indexZipWorker(file: File): Promise<ZipEntry[]> {
-  return call<ZipEntry[]>({ type: 'index', file });
+export function loadChaptersWorker(file: File): Promise<GroupedChapters> {
+  return call<GroupedChapters>({ type: 'chapters', file });
 }
 
 export async function extractEntryWorker(file: File, entry: ZipEntry): Promise<Blob> {

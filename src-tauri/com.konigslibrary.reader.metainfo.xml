@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>com.konigslibrary.reader</id>
+  <name>Konigslibrary</name>
+  <summary>Read manga and comics from your local library</summary>
+  <metadata_license>MIT</metadata_license>
+  <project_license>MIT</project_license>
+  <developer id="io.github.nasreddinhodja">
+    <name>NasreddinHodja</name>
+  </developer>
+  <description>
+    <p>
+      Konigslibrary is a manga reader that opens ZIP/CBZ files directly, with no account
+      required.
+    </p>
+  </description>
+  <launchable type="desktop-id">konigslibrary.desktop</launchable>
+  <url type="homepage">https://github.com/NasreddinHodja/konigslibrary</url>
+  <url type="bugtracker">https://github.com/NasreddinHodja/konigslibrary/issues</url>
+</component>

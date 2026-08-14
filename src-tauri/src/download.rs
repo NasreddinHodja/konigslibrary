@@ -1,11 +1,11 @@
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::{
   atomic::{AtomicBool, Ordering},
   Arc, Mutex,
 };
-use serde::{Deserialize, Serialize};
-use tauri::{AppHandle, State};
 use tauri::ipc::Channel;
+use tauri::{AppHandle, State};
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct ServerChapter {
@@ -24,6 +24,9 @@ pub struct DownloadProgress {
 
 pub struct DownloadState(pub Mutex<HashMap<String, Arc<AtomicBool>>>);
 
+// The argument list is the command's JS-facing signature; collapsing it into a
+// struct would change every invoke() call site for no gain.
+#[allow(clippy::too_many_arguments)]
 #[tauri::command]
 pub async fn download_chapter(
   app: AppHandle,
@@ -36,11 +39,28 @@ pub async fn download_chapter(
   channel: Channel<DownloadProgress>,
 ) -> Result<(), String> {
   let cancelled = Arc::new(AtomicBool::new(false));
-  state.0.lock().unwrap_or_else(|e| e.into_inner()).insert(id.clone(), cancelled.clone());
+  state
+    .0
+    .lock()
+    .unwrap_or_else(|e| e.into_inner())
+    .insert(id.clone(), cancelled.clone());
 
-  let result = run(&app, &slug, &manga_name, &chapter, &page_urls, &channel, &cancelled).await;
+  let result = run(
+    &app,
+    &slug,
+    &manga_name,
+    &chapter,
+    &page_urls,
+    &channel,
+    &cancelled,
+  )
+  .await;
 
-  state.0.lock().unwrap_or_else(|e| e.into_inner()).remove(&id);
+  state
+    .0
+    .lock()
+    .unwrap_or_else(|e| e.into_inner())
+    .remove(&id);
   result
 }
 
@@ -73,8 +93,11 @@ async fn run(
       return Err("Cancelled".to_string());
     }
 
-    let page = chapter.pages.get(i).ok_or_else(|| format!("page index {i} out of bounds"))?;
-    let filename = page.split('/').last().unwrap_or(page);
+    let page = chapter
+      .pages
+      .get(i)
+      .ok_or_else(|| format!("page index {i} out of bounds"))?;
+    let filename = page.split('/').next_back().unwrap_or(page);
     let file_path = chapter_dir.join(filename);
 
     if !file_path.exists() {
@@ -86,7 +109,10 @@ async fn run(
       std::fs::write(&file_path, &bytes).map_err(|e| e.to_string())?;
     }
 
-    let _ = channel.send(DownloadProgress { current: i + 1, total });
+    let _ = channel.send(DownloadProgress {
+      current: i + 1,
+      total,
+    });
   }
 
   crate::offline::save_chapter_meta(app, slug, manga_name, chapter).await
