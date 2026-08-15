@@ -35,7 +35,7 @@ jobs:
 
       # Builds the konigslibrary-server.exe sidecar + its embedded static
       # assets, packaged as a bundle.resources entry (see build-sidecar.js).
-      - run: bun scripts/build-sidecar.js
+      - run: bun run build:sidecar
 
       - run: bun run clean:kit
 

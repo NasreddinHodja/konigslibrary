@@ -2,7 +2,7 @@
   "name": "konigslibrary",
   "description": "Client-side manga reader built with Svelte 5 + SvelteKit",
   "packageManager": "bun@1.2.0",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "type": "module",
   "license": "MIT",
   "repository": {
@@ -36,6 +36,7 @@
     "build:desktop": "bun scripts/build-appimage.js",
     "build:desktop:host": "bun run build:sidecar && bun run clean:kit && bun run prepare && bun tauri build",
     "build:windows": "bun scripts/build-windows.js",
+    "build:tauri": "TAURI_BUILD=1 bun run build",
     "version": "bun scripts/sync-version.js"
   },
   "devDependencies": {
