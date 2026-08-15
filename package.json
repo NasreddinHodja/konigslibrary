@@ -35,6 +35,7 @@
     "build:sidecar": "bun scripts/build-sidecar.js",
     "build:desktop": "bun scripts/build-appimage.js",
     "build:desktop:host": "bun run build:sidecar && bun run clean:kit && bun run prepare && bun tauri build",
+    "build:windows": "bun scripts/build-windows.js",
     "version": "bun scripts/sync-version.js"
   },
   "devDependencies": {

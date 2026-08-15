@@ -71,7 +71,7 @@ pub async fn start_lan_server(
     )
     .map_err(|e| e.to_string())?;
 
-  let server_bin = assets_dir.join("konigslibrary-server");
+  let server_bin = assets_dir.join(format!("konigslibrary-server{}", std::env::consts::EXE_SUFFIX));
 
   // Spawned through tokio directly rather than tauri-plugin-shell's sidecar
   // API. A sidecar has to be declared in bundle.externalBin, and Tauri's

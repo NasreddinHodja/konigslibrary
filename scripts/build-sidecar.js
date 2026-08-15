@@ -17,7 +17,14 @@ import { cpSync, mkdirSync, rmSync, existsSync, copyFileSync, chmodSync, statSyn
 
 const BIN_DIR = 'src-tauri/binaries';
 const ASSETS_DIR = `${BIN_DIR}/konigslibrary-server-assets`;
-const SERVER_BIN = 'crates/target/release/konigslibrary-server';
+
+// KL_TARGET cross-compiles the server (e.g. x86_64-pc-windows-msvc via
+// cargo-xwin, from build-windows.js). Without it, this targets the host,
+// matching whatever platform this script is running on.
+const TARGET = process.env.KL_TARGET || '';
+const IS_WINDOWS = TARGET ? TARGET.includes('windows') : process.platform === 'win32';
+const EXE = IS_WINDOWS ? '.exe' : '';
+const SERVER_BIN = `crates/target/${TARGET ? `${TARGET}/` : ''}release/konigslibrary-server${EXE}`;
 
 function run(cmd, env) {
   execSync(cmd, { stdio: 'inherit', env: { ...process.env, ...env } });
@@ -30,7 +37,12 @@ run('bun scripts/build-wasm.js');
 run('vite build', { LOCAL_BUILD: '1' });
 
 console.log('Building konigslibrary-server (release)...');
-run('cargo build --manifest-path crates/Cargo.toml -p klserver --release');
+// cargo-xwin provides the MSVC CRT/SDK needed to cross-compile a Windows
+// target from a non-Windows host; a native build (no KL_TARGET, or KL_TARGET
+// matching the host) uses plain cargo.
+const cargoBin = TARGET && IS_WINDOWS && process.platform !== 'win32' ? 'cargo xwin' : 'cargo';
+const targetFlag = TARGET ? ` --target ${TARGET}` : '';
+run(`${cargoBin} build --manifest-path crates/Cargo.toml -p klserver --release${targetFlag}`);
 
 if (!existsSync(SERVER_BIN)) {
   console.error(`Expected ${SERVER_BIN} to exist after the build.`);
@@ -44,9 +56,10 @@ mkdirSync(ASSETS_DIR, { recursive: true });
 // points at this directory.
 cpSync('build', `${ASSETS_DIR}/client`, { recursive: true });
 
-const out = `${ASSETS_DIR}/konigslibrary-server`;
+const out = `${ASSETS_DIR}/konigslibrary-server${EXE}`;
 copyFileSync(SERVER_BIN, out);
-chmodSync(out, 0o755);
+// Windows doesn't have a unix mode bit; the exe is already runnable as-is.
+if (!IS_WINDOWS) chmodSync(out, 0o755);
 
 const mb = (statSync(out).size / 1024 / 1024).toFixed(1);
 console.log(`Server binary: ${out} (${mb} MB)`);
