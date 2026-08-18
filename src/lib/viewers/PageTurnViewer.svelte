@@ -396,6 +396,9 @@
       class:cursor-zoom-in={zoomHeld}
       class:cursor-w-resize={!zoomHeld}
       aria-label="Previous page"
+      onpointerdown={(e) => {
+        if (e.pointerType === 'mouse') e.preventDefault();
+      }}
       onpointerup={(e) => {
         if (e.pointerType !== 'mouse') return;
         handleClickLeft();
@@ -411,6 +414,9 @@
       class="absolute inset-y-0 left-[40%] z-10 w-[20%]"
       class:cursor-zoom-in={zoomHeld}
       aria-label="Toggle menu"
+      onpointerdown={(e) => {
+        if (e.pointerType === 'mouse') e.preventDefault();
+      }}
       onpointerup={(e) => {
         if (e.pointerType !== 'mouse') return;
         handleClickCenter();
@@ -427,6 +433,9 @@
       class:cursor-zoom-in={zoomHeld}
       class:cursor-e-resize={!zoomHeld}
       aria-label="Next page"
+      onpointerdown={(e) => {
+        if (e.pointerType === 'mouse') e.preventDefault();
+      }}
       onpointerup={(e) => {
         if (e.pointerType !== 'mouse') return;
         handleClickRight();
