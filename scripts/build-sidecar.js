@@ -52,9 +52,9 @@ if (!existsSync(SERVER_BIN)) {
 rmSync(ASSETS_DIR, { recursive: true, force: true });
 mkdirSync(ASSETS_DIR, { recursive: true });
 
-// The server resolves its static root from KL_STATIC_DIR, which lan_server.rs
-// points at this directory.
-cpSync('build', `${ASSETS_DIR}/client`, { recursive: true });
+// static_dir() in crates/klserver/src/main.rs finds this next to the binary
+// when KL_STATIC_DIR isn't set (as it isn't for the bundled desktop sidecar).
+cpSync('build-local', `${ASSETS_DIR}/client`, { recursive: true });
 
 const out = `${ASSETS_DIR}/konigslibrary-server${EXE}`;
 copyFileSync(SERVER_BIN, out);

@@ -104,10 +104,12 @@ bun run serve
 
 =bun run serve= builds the frontend, builds the =konigslibrary-server= binary,
 and runs it. Once built, the binary is standalone — no Bun, Node or Rust needed
-to run it, just the =build/= directory beside it:
+to run it, just the =build-local/= directory beside it (its own output,
+separate from the Tauri/website builds' =build/=, so a later =bun tauri
+build= or =bun run build:android= can't silently swap out what this serves):
 
 #+begin_src sh
-KL_STATIC_DIR=./build MANGA_DIR=~/Manga NO_BROWSER=1 \
+KL_STATIC_DIR=./build-local MANGA_DIR=~/Manga NO_BROWSER=1 \
   crates/target/release/konigslibrary-server
 #+end_src
 
@@ -209,6 +211,24 @@ cargo install -f wasm-bindgen-cli --version 0.2.99  # must match crates/klwasm/C
 bun install
 bun dev
 #+end_src
+
+*** Android
+
+Building/running the Android app additionally needs the Android SDK and NDK.
+Gradle needs a JDK 17 to run its daemon (CI pins this version — see
+[[file:.github/workflows/release-android.yml][release-android.yml]]); the project's Gradle wrapper is configured with a
+[[file:src-tauri/gen/android/gradle/gradle-daemon-jvm.properties][daemon JVM criteria]] (=gradle/gradle-daemon-jvm.properties=) requesting JDK 17,
+so Gradle auto-detects (or auto-downloads, via the Foojay toolchain resolver)
+a matching JDK on its own — no need to set =JAVA_HOME= or change your system's
+default JDK, even if it's a much newer version.
+
+=bun run build:android= is unsigned unless a release keystore is configured —
+copy [[file:src-tauri/gen/android/app/key.properties.example][key.properties.example]] to =key.properties= (gitignored) next to it and fill
+in your keystore's path/passwords. CI supplies the same four values as
+=KEYSTORE_PATH=/=STORE_PASSWORD=/=KEY_ALIAS=/=KEY_PASSWORD= env vars instead
+(see [[file:.github/workflows/release-android.yml][release-android.yml]]). Either way, signing happens inside the normal
+Gradle build (=build.gradle.kts='s =signingConfigs=) — there's no separate
+=apksigner= step to run or SDK build-tools version to match.
 
 | Command                    | Description                          |
 |----------------------------+--------------------------------------|

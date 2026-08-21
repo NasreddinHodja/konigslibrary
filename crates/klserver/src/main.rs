@@ -70,7 +70,7 @@ fn static_dir() -> PathBuf {
       }
     }
   }
-  PathBuf::from("build")
+  PathBuf::from("build-local")
 }
 
 fn print_banner(port: u16) {

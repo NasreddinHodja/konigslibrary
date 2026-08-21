@@ -23,10 +23,10 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Install Android NDK and build-tools
+      - name: Install Android NDK
         run: |
           yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --licenses > /dev/null 2>&1 || true
-          $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager "ndk;28.2.13676358" "build-tools;36.1.0" "platforms;android-36"
+          $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager "ndk;28.2.13676358" "platforms;android-36"
 
       - name: Set up Rust with Android target
         uses: dtolnay/rust-toolchain@stable
@@ -46,24 +46,18 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      - name: Build Android APK
-        run: bun tauri android build --target aarch64
-        env:
-          ANDROID_SDK_ROOT: ${{ env.ANDROID_SDK_ROOT || '/usr/local/lib/android/sdk' }}
-          ANDROID_NDK_HOME: ${{ env.ANDROID_SDK_ROOT || '/usr/local/lib/android/sdk' }}/ndk/28.2.13676358
-
       - name: Decode keystore
         run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > /tmp/release.jks
 
-      - name: Sign APK
-        run: |
-          "${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}/build-tools/36.1.0/apksigner" sign \
-            --ks /tmp/release.jks \
-            --ks-key-alias "${{ secrets.KEY_ALIAS }}" \
-            --ks-pass "pass:${{ secrets.STORE_PASSWORD }}" \
-            --key-pass "pass:${{ secrets.KEY_PASSWORD }}" \
-            --out "konigslibrary.apk" \
-            src-tauri/gen/android/app/build/outputs/apk/universal/release/app-universal-release-unsigned.apk
+      - name: Build and sign Android APK
+        run: bun run build:android
+        env:
+          ANDROID_SDK_ROOT: ${{ env.ANDROID_SDK_ROOT || '/usr/local/lib/android/sdk' }}
+          ANDROID_NDK_HOME: ${{ env.ANDROID_SDK_ROOT || '/usr/local/lib/android/sdk' }}/ndk/28.2.13676358
+          KEYSTORE_PATH: /tmp/release.jks
+          STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2

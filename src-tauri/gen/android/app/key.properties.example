@@ -1,0 +1,4 @@
+storeFile=../../../konigslibrary.jks
+storePassword=
+keyAlias=konigslibrary
+keyPassword=
