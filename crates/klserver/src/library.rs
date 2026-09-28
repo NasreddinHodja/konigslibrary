@@ -8,7 +8,7 @@ use std::path::{Path, PathBuf};
 
 use klparse::{
   chapters::{detect_depth, group_by_chapter},
-  collate::locale_cmp,
+  collate::{locale_cmp, natural_cmp},
   ext_with_dot, is_image_name, is_zip_name,
   names::strip_zip_ext,
   uri::encode_uri_component,
@@ -164,7 +164,7 @@ pub fn list_chapters(cfg: &Config, cache: &ZipCache, manga_name: &str) -> Vec<Se
   };
 
   if meta.is_dir() {
-    list_chapters_from_dir(&path)
+    list_chapters_from_dir(cache, &path)
   } else if is_zip_name(manga_name) {
     list_chapters_from_zip(cache, &path)
   } else {
@@ -173,12 +173,13 @@ pub fn list_chapters(cfg: &Config, cache: &ZipCache, manga_name: &str) -> Vec<Se
   }
 }
 
-fn list_chapters_from_dir(manga_path: &Path) -> Vec<ServerChapter> {
+fn list_chapters_from_dir(cache: &ZipCache, manga_path: &Path) -> Vec<ServerChapter> {
   let Ok(read) = std::fs::read_dir(manga_path) else {
     return Vec::new();
   };
 
   let mut subdirs: Vec<String> = Vec::new();
+  let mut archives: Vec<String> = Vec::new();
   let mut images: Vec<String> = Vec::new();
   for item in read.flatten() {
     let name = item.file_name().to_string_lossy().into_owned();
@@ -189,10 +190,12 @@ fn list_chapters_from_dir(manga_path: &Path) -> Vec<ServerChapter> {
       }
     } else if ft.is_file() && is_image_name(&name) {
       images.push(name);
+    } else if ft.is_file() && is_zip_name(&name) && !name.starts_with('.') {
+      archives.push(name);
     }
   }
 
-  if !subdirs.is_empty() {
+  if !subdirs.is_empty() || !archives.is_empty() {
     let mut chapters: Vec<ServerChapter> = Vec::new();
     for sub in subdirs {
       let Ok(read) = std::fs::read_dir(manga_path.join(&sub)) else {
@@ -212,6 +215,29 @@ fn list_chapters_from_dir(manga_path: &Path) -> Vec<ServerChapter> {
         chapters.push(ServerChapter {
           slug: encode_uri_component(&sub),
           name: sub,
+          page_count: pages.len(),
+          pages,
+        });
+      }
+    }
+    // One archive per chapter. Every image in it is a page, whatever folders
+    // it is nested under; the slug keeps the extension so page requests can
+    // tell it apart from a subdirectory.
+    for file in archives {
+      let Ok(entries) = cache.get(&manga_path.join(&file)) else {
+        continue;
+      };
+      let mut pages: Vec<String> = entries
+        .iter()
+        .filter(|e| is_image_name(&e.name))
+        .map(|e| e.name.clone())
+        .collect();
+      pages.sort_by(|a, b| natural_cmp(a, b));
+
+      if !pages.is_empty() {
+        chapters.push(ServerChapter {
+          slug: encode_uri_component(&file),
+          name: strip_zip_ext(&file).to_string(),
           page_count: pages.len(),
           pages,
         });
@@ -263,13 +289,27 @@ fn list_chapters_from_zip(cache: &ZipCache, zip_path: &Path) -> Vec<ServerChapte
   chapters
 }
 
-/// Reads a page out of a directory-backed manga.
+/// Reads a page out of a directory-backed manga, including one whose chapters
+/// are archives (`<manga>/<chapter>.cbz/<entry path>`).
 pub fn get_image_from_dir(
   cfg: &Config,
+  cache: &ZipCache,
   manga_name: &str,
   path_parts: &[String],
 ) -> Option<ImageResult> {
   let dir = cfg.manga_dir()?;
+
+  if let [chapter, entry @ ..] = path_parts {
+    if !entry.is_empty() && is_zip_name(chapter) {
+      let zip_path = resolve_from(&dir, &[manga_name, chapter]);
+      if !is_inside(&dir, &zip_path) {
+        return None;
+      }
+      if std::fs::metadata(&zip_path).is_ok_and(|m| m.is_file()) {
+        return read_zip_entry(cache, &zip_path, &entry.join("/"));
+      }
+    }
+  }
 
   let mut segments: Vec<&str> = vec![manga_name];
   segments.extend(path_parts.iter().map(String::as_str));
@@ -302,14 +342,18 @@ pub fn get_image_from_zip(
   if !is_zip_name(manga_name) {
     return None;
   }
+  read_zip_entry(cache, &zip_path, entry_path)
+}
+
+fn read_zip_entry(cache: &ZipCache, zip_path: &Path, entry_path: &str) -> Option<ImageResult> {
   if !is_image_name(entry_path) {
     return None;
   }
 
-  let entries = cache.get(&zip_path).ok()?;
+  let entries = cache.get(zip_path).ok()?;
   let entry = entries.iter().find(|e| e.name == entry_path)?;
 
-  let reader = FileReader::open(&zip_path).ok()?;
+  let reader = FileReader::open(zip_path).ok()?;
   let bytes = klparse::zip::extract_entry(&reader, entry).ok()?;
   Some(ImageResult {
     ext: ext_with_dot(entry_path),
@@ -552,6 +596,52 @@ mod tests {
   }
 
   #[test]
+  fn dir_manga_makes_one_chapter_per_archive() {
+    let l = lib();
+    mkdir(&l.root, "Berserk");
+    let berserk = l.root.join("Berserk");
+    write_zip(&berserk, "ch02.cbz", &[("p10.png", b"b"), ("p9.png", b"a")]);
+    write_zip(
+      &berserk,
+      "ch01.zip",
+      &[("inner/p1.png", b"c"), ("info.txt", b"x")],
+    );
+
+    let chapters = list_chapters(&l.cfg, &l.cache, "Berserk");
+    assert_eq!(chapters.len(), 2);
+    assert_eq!(chapters[0].name, "ch01");
+    assert_eq!(chapters[0].slug, "ch01.zip");
+    assert_eq!(chapters[0].pages, ["inner/p1.png"]);
+    assert_eq!(chapters[1].name, "ch02");
+    assert_eq!(chapters[1].pages, ["p9.png", "p10.png"]);
+  }
+
+  #[test]
+  fn dir_manga_mixes_archive_and_folder_chapters() {
+    let l = lib();
+    touch(&l.root, "Berserk/ch02/page01.png", b"a");
+    touch(&l.root, "Berserk/cover.png", b"cover");
+    write_zip(&l.root.join("Berserk"), "ch01.cbz", &[("p1.png", b"b")]);
+
+    let chapters = list_chapters(&l.cfg, &l.cache, "Berserk");
+    let names: Vec<&str> = chapters.iter().map(|c| c.name.as_str()).collect();
+    assert_eq!(names, ["ch01", "ch02"]);
+  }
+
+  #[test]
+  fn dir_manga_skips_archives_with_no_images() {
+    let l = lib();
+    mkdir(&l.root, "Berserk");
+    write_zip(&l.root.join("Berserk"), "ch01.cbz", &[("p1.png", b"b")]);
+    write_zip(&l.root.join("Berserk"), "notes.zip", &[("a.txt", b"x")]);
+    touch(&l.root, "Berserk/broken.cbz", b"not a zip");
+
+    let chapters = list_chapters(&l.cfg, &l.cache, "Berserk");
+    let names: Vec<&str> = chapters.iter().map(|c| c.name.as_str()).collect();
+    assert_eq!(names, ["ch01"]);
+  }
+
+  #[test]
   fn dir_manga_with_nothing_readable_yields_no_chapters() {
     let l = lib();
     mkdir(&l.root, "Empty");
@@ -679,7 +769,13 @@ mod tests {
     let l = lib();
     touch(&l.root, "Berserk/ch01/page01.png", b"PNGDATA");
 
-    let img = get_image_from_dir(&l.cfg, "Berserk", &["ch01".into(), "page01.png".into()]).unwrap();
+    let img = get_image_from_dir(
+      &l.cfg,
+      &l.cache,
+      "Berserk",
+      &["ch01".into(), "page01.png".into()],
+    )
+    .unwrap();
     assert_eq!(img.bytes, b"PNGDATA");
     assert_eq!(img.ext, ".png");
   }
@@ -689,7 +785,13 @@ mod tests {
     let l = lib();
     touch(&l.root, "Berserk/ch01/page01.JPG", b"JPEGDATA");
 
-    let img = get_image_from_dir(&l.cfg, "Berserk", &["ch01".into(), "page01.JPG".into()]).unwrap();
+    let img = get_image_from_dir(
+      &l.cfg,
+      &l.cache,
+      "Berserk",
+      &["ch01".into(), "page01.JPG".into()],
+    )
+    .unwrap();
     assert_eq!(img.ext, ".jpg");
   }
 
@@ -700,12 +802,13 @@ mod tests {
 
     assert!(get_image_from_dir(
       &l.cfg,
+      &l.cache,
       "Berserk",
       &["..".into(), "..".into(), "secret.png".into()]
     )
     .is_none());
-    assert!(get_image_from_dir(&l.cfg, "..", &["secret.png".into()]).is_none());
-    assert!(get_image_from_dir(&l.cfg, "/etc", &["hostname".into()]).is_none());
+    assert!(get_image_from_dir(&l.cfg, &l.cache, "..", &["secret.png".into()]).is_none());
+    assert!(get_image_from_dir(&l.cfg, &l.cache, "/etc", &["hostname".into()]).is_none());
   }
 
   #[test]
@@ -714,15 +817,51 @@ mod tests {
     touch(&l.root, "Berserk/secrets.txt", b"PLAINTEXT");
     touch(&l.root, "Berserk/id_rsa", b"KEY");
 
-    assert!(get_image_from_dir(&l.cfg, "Berserk", &["secrets.txt".into()]).is_none());
-    assert!(get_image_from_dir(&l.cfg, "Berserk", &["id_rsa".into()]).is_none());
+    assert!(get_image_from_dir(&l.cfg, &l.cache, "Berserk", &["secrets.txt".into()]).is_none());
+    assert!(get_image_from_dir(&l.cfg, &l.cache, "Berserk", &["id_rsa".into()]).is_none());
   }
 
   #[test]
   fn dir_image_returns_none_for_a_missing_file() {
     let l = lib();
     mkdir(&l.root, "Berserk");
-    assert!(get_image_from_dir(&l.cfg, "Berserk", &["nope.png".into()]).is_none());
+    assert!(get_image_from_dir(&l.cfg, &l.cache, "Berserk", &["nope.png".into()]).is_none());
+  }
+
+  #[test]
+  fn reads_a_page_out_of_a_chapter_archive() {
+    let l = lib();
+    mkdir(&l.root, "Berserk");
+    write_zip(
+      &l.root.join("Berserk"),
+      "ch01.cbz",
+      &[("inner/p1.png", b"PNGDATA")],
+    );
+
+    let parts = ["ch01.cbz".into(), "inner".into(), "p1.png".into()];
+    let img = get_image_from_dir(&l.cfg, &l.cache, "Berserk", &parts).unwrap();
+    assert_eq!(img.bytes, b"PNGDATA");
+    assert_eq!(img.ext, ".png");
+  }
+
+  #[test]
+  fn chapter_archive_rejects_paths_escaping_the_manga_directory() {
+    let l = lib();
+    write_zip(l.root.parent().unwrap(), "secret.cbz", &[("p.png", b"x")]);
+    mkdir(&l.root, "Berserk");
+
+    let parts = ["../../secret.cbz".into(), "p.png".into()];
+    assert!(get_image_from_dir(&l.cfg, &l.cache, "Berserk", &parts).is_none());
+  }
+
+  #[test]
+  fn a_folder_named_like_an_archive_is_still_read_as_a_folder() {
+    let l = lib();
+    touch(&l.root, "Berserk/vol.cbz/p1.png", b"DIRDATA");
+
+    let parts = ["vol.cbz".into(), "p1.png".into()];
+    let img = get_image_from_dir(&l.cfg, &l.cache, "Berserk", &parts).unwrap();
+    assert_eq!(img.bytes, b"DIRDATA");
   }
 
   // --- getImageFromZip ---

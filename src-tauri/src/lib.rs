@@ -1,3 +1,4 @@
+mod archive;
 mod download;
 mod immersive;
 mod lan_server;
@@ -38,8 +39,9 @@ fn set_manga_dir(
   Ok(())
 }
 
-#[tauri::command]
-fn list_dir(state: tauri::State<MangaDirState>, path: String) -> Result<Vec<DirEntry>, String> {
+/// Canonicalizes `path`, rejecting anything outside the configured manga
+/// directory.
+fn allowed_path(state: &MangaDirState, path: &str) -> Result<PathBuf, String> {
   let allowed_root = state
     .0
     .lock()
@@ -47,11 +49,35 @@ fn list_dir(state: tauri::State<MangaDirState>, path: String) -> Result<Vec<DirE
     .clone()
     .ok_or("manga directory not configured")?;
 
-  let canonical = std::fs::canonicalize(&path).map_err(|e| e.to_string())?;
+  let canonical = std::fs::canonicalize(path).map_err(|e| e.to_string())?;
 
   if !canonical.starts_with(&allowed_root) {
     return Err("path is outside the configured manga directory".to_string());
   }
+  Ok(canonical)
+}
+
+#[tauri::command]
+fn list_archive_pages(
+  state: tauri::State<MangaDirState>,
+  path: String,
+) -> Result<Vec<String>, String> {
+  archive::list_pages(&allowed_path(&state, &path)?)
+}
+
+#[tauri::command]
+fn read_archive_page(
+  state: tauri::State<MangaDirState>,
+  path: String,
+  entry: String,
+) -> Result<tauri::ipc::Response, String> {
+  let bytes = archive::read_page(&allowed_path(&state, &path)?, &entry)?;
+  Ok(tauri::ipc::Response::new(bytes))
+}
+
+#[tauri::command]
+fn list_dir(state: tauri::State<MangaDirState>, path: String) -> Result<Vec<DirEntry>, String> {
+  let canonical = allowed_path(&state, &path)?;
 
   let entries = std::fs::read_dir(&canonical).map_err(|e| e.to_string())?;
   let mut results = Vec::new();
@@ -97,6 +123,8 @@ pub fn run() {
       home_dir,
       set_manga_dir,
       list_dir,
+      list_archive_pages,
+      read_archive_page,
       download::download_chapter,
       download::cancel_download,
       offline::list_offline_manga,

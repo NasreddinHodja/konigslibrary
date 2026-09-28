@@ -137,7 +137,7 @@ async fn get_image(State(state): State<SharedState>, params: RawPathParams) -> R
   let result = if klparse::is_zip_name(&manga) {
     library::get_image_from_zip(&state.config, &state.cache, &manga, &parts.join("/"))
   } else {
-    library::get_image_from_dir(&state.config, &manga, &parts)
+    library::get_image_from_dir(&state.config, &state.cache, &manga, &parts)
   };
 
   let Some(image) = result else {

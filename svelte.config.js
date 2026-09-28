@@ -20,7 +20,12 @@ const config = {
     // disk for as long as it runs, so a later unrelated build overwriting
     // build/ would silently swap out what it serves.
     adapter: process.env.LOCAL_BUILD
-      ? adapterStatic({ fallback: 'index.html', strict: false, pages: 'build-local', assets: 'build-local' })
+      ? adapterStatic({
+          fallback: 'index.html',
+          strict: false,
+          pages: 'build-local',
+          assets: 'build-local'
+        })
       : process.env.TAURI_BUILD || process.env.STATIC_BUILD
         ? adapterStatic({ fallback: 'index.html', strict: false })
         : adapterAuto(),

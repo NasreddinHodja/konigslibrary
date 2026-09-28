@@ -1,8 +1,9 @@
+import { invoke } from '@tauri-apps/api/core';
 import type { Chapter } from '$lib/utils/types';
 import type { NativeChapter } from '$lib/sources/native-library';
-import type { BulkPageProvider, PageResult } from './types';
+import type { LazyPageProvider } from './types';
 
-export class NativeFilesystemProvider implements BulkPageProvider {
+export class NativeFilesystemProvider implements LazyPageProvider {
   readonly kind = 'native';
   readonly mangaName: string;
 
@@ -17,9 +18,19 @@ export class NativeFilesystemProvider implements BulkPageProvider {
     return this.chapters.map((c) => ({ name: c.name, pageCount: c.pages.length }));
   }
 
-  async getPageUrls(chapterName: string): Promise<PageResult> {
+  // Lazy so archive chapters extract one page at a time. Folder pages are
+  // asset URLs, which the loader's revokeObjectURL calls leave untouched.
+  async getPageUrl(chapterName: string, index: number): Promise<string> {
     const chapter = this.chapters.find((c) => c.name === chapterName);
-    if (!chapter) return { urls: [], revoke: false };
-    return { urls: chapter.pages, revoke: false };
+    const page = chapter?.pages[index];
+    if (!chapter || page === undefined)
+      throw new Error(`Page ${index + 1} not found in chapter "${chapterName}"`);
+    if (!chapter.archive) return page;
+
+    const bytes = await invoke<ArrayBuffer>('read_archive_page', {
+      path: chapter.archive,
+      entry: page
+    });
+    return URL.createObjectURL(new Blob([bytes]));
   }
 }

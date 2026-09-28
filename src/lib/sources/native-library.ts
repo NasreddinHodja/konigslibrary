@@ -12,9 +12,12 @@ export type NativeMangaEntry = {
   path: string;
 };
 
+// `archive` is set for a chapter stored as a `.zip`/`.cbz`; `pages` are then
+// entry names inside it rather than file URLs.
 export type NativeChapter = {
   name: string;
   pages: string[];
+  archive?: string;
 };
 
 async function homeDir(): Promise<string> {
@@ -64,8 +67,11 @@ export async function listNativeChapters(path: string): Promise<NativeChapter[]>
   const entries: DirEntry[] = await invoke('list_dir', { path });
   const subdirs = entries.filter((e) => e.is_dir && !e.name.startsWith('.'));
   const images = entries.filter((e) => !e.is_dir && IMAGE_EXT.test(e.name));
+  const archives = entries.filter(
+    (e) => !e.is_dir && !e.name.startsWith('.') && ZIP_EXT.test(e.name)
+  );
 
-  if (subdirs.length > 0) {
+  if (subdirs.length > 0 || archives.length > 0) {
     const chapters: NativeChapter[] = [];
     for (const sub of subdirs) {
       const subEntries: DirEntry[] = await invoke('list_dir', { path: `${path}/${sub.name}` });
@@ -76,6 +82,14 @@ export async function listNativeChapters(path: string): Promise<NativeChapter[]>
 
       if (pages.length > 0) {
         chapters.push({ name: sub.name, pages });
+      }
+    }
+    for (const file of archives) {
+      const archive = `${path}/${file.name}`;
+      // A corrupt archive is skipped rather than failing the whole manga.
+      const pages = await invoke<string[]>('list_archive_pages', { path: archive }).catch(() => []);
+      if (pages.length > 0) {
+        chapters.push({ name: file.name.replace(ZIP_EXT, ''), pages, archive });
       }
     }
     chapters.sort((a, b) => a.name.localeCompare(b.name));
