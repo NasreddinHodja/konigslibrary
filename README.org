@@ -1,5 +1,5 @@
 #+TITLE: konigslibrary
-#+DESCRIPTION: Client-side manga reader - Svelte 5, Tauri, custom ZIP parser
+#+DESCRIPTION: Client-side manga reader
 
 Manga reader that opens ZIP and CBZ archives. Runs in the browser, as a desktop/mobile app (Tauri), or as a self-hosted server for LAN access. No accounts required.
 
@@ -7,17 +7,15 @@ Manga reader that opens ZIP and CBZ archives. Runs in the browser, as a desktop/
 
 * Features
 
-- Vertical scroll mode and page-turn mode
-- RTL reading support
-- Hold =z= to zoom to cursor in page-turn mode
-- Chapter and page progress saved to localStorage
-- Download manga from a server to read offline (desktop and Android apps)
-- Title, summary, authors, tags and status from =ComicInfo.xml=
-- Rebindable keyboard shortcuts
-- Native Tauri 2 desktop app with file dialog
-- Self-hosted server mode (native binary, no runtime to install) for LAN access
-- Custom ZIP/CBZ parser with ZIP64 support, no third-party ZIP library
-- One parser implementation in Rust, compiled to wasm for the browser and natively for the server
+- *In the browser*: open a manga folder, or drop a chapter =.cbz= to read it
+  right away. Nothing to install.
+- *Desktop app* (Windows, Linux): point it at your library folder.
+- *Android app*: open a chapter =.cbz=, or download manga from your computer
+  to read offline.
+- *Computer to phone*: in the desktop app, Settings → Share to LAN, then scan
+  the QR code with your phone.
+- *Server*: run it on a NAS or home server and read from any device on your
+  network.
 
 * Architecture
 
@@ -55,16 +53,15 @@ tail, its central directory, and the page on screen.
 
 * Tech Stack
 
-| Layer       | Technology                                     |
-|-------------+------------------------------------------------|
-| Framework   | Svelte 5 (runes), SvelteKit 2                  |
-| Language    | TypeScript 5.9 (strict)                         |
-| Styling     | Tailwind CSS 4, Source Code Pro monospace font   |
-| Desktop     | Tauri 2 (Rust)                                  |
-| ZIP Parsing | Custom Rust crate - wasm in browser, native on server |
-| Server      | Rust, axum                                      |
-| Icons       | Lucide Svelte                                   |
-| Quality     | ESLint 9, Prettier, Vitest, svelte-check         |
+| Layer     | Technology                                     |
+|-----------+------------------------------------------------|
+| Framework | Svelte 5 (runes), SvelteKit 2                  |
+| Language  | TypeScript 5.9 (strict)                        |
+| Styling   | Tailwind CSS 4, Source Code Pro monospace font |
+| Desktop   | Tauri 2 (Rust)                                 |
+| Server    | Rust, axum                                     |
+| Icons     | Lucide Svelte                                  |
+| Quality   | ESLint 9, Prettier, Vitest, svelte-check       |
 
 * Usage
 
@@ -96,7 +93,7 @@ build= or =bun run build:android= can't silently swap out what this serves):
 
 #+begin_src sh
 KL_STATIC_DIR=./build-local MANGA_DIR=~/Manga NO_BROWSER=1 \
-  crates/target/release/konigslibrary-server
+1. Only konigslibrary changes: parse Count, and show COMPLETE when it's there and nothing otherwise. That's small: a field on MangaMeta, one element(xml, "Count") line, and the row in MangaDetail.svelte.  crates/target/release/konigslibrary-server
 #+end_src
 
 See =konigslibrary.service= for a systemd user unit that does exactly this.
@@ -128,12 +125,12 @@ A signed APK is available on the [[https://github.com/NasreddinHodja/konigslibra
 
 ** Environment Variables
 
-| Variable      | Default       | Description                      |
-|---------------+---------------+----------------------------------|
-| =MANGA_DIR=  | (from config) | Path to your manga directory     |
-| =PORT=       | =3000=        | Server port                      |
-| =HOST=       | =0.0.0.0=     | Bind address                     |
-| =LOCAL_BUILD= | (unset)      | Set to =1= for local server build |
+| Variable      | Default       | Description                       |
+|---------------+---------------+-----------------------------------|
+| =MANGA_DIR=   | (from config) | Path to your manga directory      |
+| =PORT=        | =3000=        | Server port                       |
+| =HOST=        | =0.0.0.0=     | Bind address                      |
+| =LOCAL_BUILD= | (unset)       | Set to =1= for local server build |
 
 * Library Structure
 
@@ -169,14 +166,14 @@ chapter archives. Only the first and last chapters are read: the first one's
 values win, and the last one fills whatever the first lacks. Without it, the
 folder name is the title.
 
-| Element                 | Shown as                              |
-|-------------------------+---------------------------------------|
-| =Series=                | Title                                 |
-| =Summary=               | Description                           |
-| =Year=                  | Year                                  |
-| =Writer=, =Penciller=   | Authors (comma-separated)             |
-| =Genre=, =Tags=         | Tags (comma-separated)                |
-| =Status=                | Status badge, shown as written        |
+| Element               | Shown as                       |
+|-----------------------+--------------------------------|
+| =Series=              | Title                          |
+| =Summary=             | Description                    |
+| =Year=                | Year                           |
+| =Writer=, =Penciller= | Authors (comma-separated)      |
+| =Genre=, =Tags=       | Tags (comma-separated)         |
+| =Status=              | Status badge, shown as written |
 
 =Status= is not in the ComicInfo v2.1 schema; it is an extension. An archive
 with =Count= but no =Status= is shown as complete.
@@ -185,8 +182,8 @@ with =Count= but no =Status= is shown as complete.
 
 Chapters sort lexicographically. Zero-pad file names to get correct numeric order:
 
-| Wrong           | Right            |
-|-----------------+------------------|
+| Wrong                | Right                  |
+|----------------------+------------------------|
 | =ch1=, =ch10=, =ch2= | =ch01=, =ch02=, =ch10= |
 
 Archives named =chapter_<major>-<minor>= are shown
@@ -229,42 +226,42 @@ in your keystore's path/passwords. CI supplies the same four values as
 Gradle build (=build.gradle.kts='s =signingConfigs=) — there's no separate
 =apksigner= step to run or SDK build-tools version to match.
 
-| Command                    | Description                          |
-|----------------------------+--------------------------------------|
-| =bun dev=                  | Start dev server                     |
-| =bun run build=            | Production build (adapter-auto)      |
-| =bun run build:local=      | Static build for the local server    |
-| =bun run build:wasm=       | Compile the parser to wasm           |
-| =bun run build:server=     | Build the konigslibrary-server binary |
-| =bun run serve=            | Build and start the local server     |
-| =bun run check=            | Svelte type checking                 |
-| =bun run lint=             | Prettier + ESLint check              |
-| =bun run format=           | Auto-format with Prettier            |
-| =bun run test=             | Run tests (Vitest)                   |
-| =bun run test:rust=        | Run parser and server tests (cargo)  |
-| =bun run tauri:local=      | Tauri dev mode                       |
-| =bun tauri build=          | Tauri release build                  |
+| Command                | Description                           |
+|------------------------+---------------------------------------|
+| =bun dev=              | Start dev server                      |
+| =bun run build=        | Production build (adapter-auto)       |
+| =bun run build:local=  | Static build for the local server     |
+| =bun run build:wasm=   | Compile the parser to wasm            |
+| =bun run build:server= | Build the konigslibrary-server binary |
+| =bun run serve=        | Build and start the local server      |
+| =bun run check=        | Svelte type checking                  |
+| =bun run lint=         | Prettier + ESLint check               |
+| =bun run format=       | Auto-format with Prettier             |
+| =bun run test=         | Run tests (Vitest)                    |
+| =bun run test:rust=    | Run parser and server tests (cargo)   |
+| =bun run tauri:local=  | Tauri dev mode                        |
+| =bun tauri build=      | Tauri release build                   |
 
 * Keyboard Shortcuts
 
 All shortcuts are rebindable from Settings. Defaults:
 
-| Key              | Action                                |
-|------------------+---------------------------------------|
-| =j= / =↓=       | Next page                             |
-| =k= / =↑=       | Previous page                         |
-| =l= / =→=       | Next page (prev in RTL)               |
-| =h= / =←=       | Previous page (next in RTL)           |
-| =n= / =]=       | Next chapter                          |
-| =p= / =[=       | Previous chapter                      |
-| =z= (hold)      | Zoom to cursor (page-turn mode)       |
-| =s=              | Toggle sidebar                        |
-| =b=              | Back to library                       |
-| =m=              | Toggle scroll / page-turn mode        |
-| =r=              | Toggle LTR / RTL                      |
-| =-= / ===       | Zoom out / in (scroll mode)           |
-| =?=              | Show keyboard shortcuts help          |
-| =Escape=         | Close sidebar or help dialog          |
+| Key        | Action                          |
+|------------+---------------------------------|
+| =j= / =↓=  | Next page                       |
+| =k= / =↑=  | Previous page                   |
+| =l= / =→=  | Next page (prev in RTL)         |
+| =h= / =←=  | Previous page (next in RTL)     |
+| =n= / =]=  | Next chapter                    |
+| =p= / =[=  | Previous chapter                |
+| =z= (hold) | Zoom to cursor (page-turn mode) |
+| =s=        | Toggle sidebar                  |
+| =b=        | Back to library                 |
+| =m=        | Toggle scroll / page-turn mode  |
+| =r=        | Toggle LTR / RTL                |
+| =-= / ===  | Zoom out / in (scroll mode)     |
+| =?=        | Show keyboard shortcuts help    |
+| =Escape=   | Close sidebar or help dialog    |
 
 Click left/right halves of the page-turn viewer to navigate.
 
