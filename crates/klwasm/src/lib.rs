@@ -16,6 +16,7 @@
 //! walking, inflate, CRC verification — happens in `klparse`, the same code the
 //! native server runs.
 
+use klparse::comicinfo;
 use klparse::zip::{self, ZipEntry};
 use serde::Serialize;
 use wasm_bindgen::prelude::*;
@@ -118,50 +119,30 @@ pub fn max_central_directory_bytes() -> f64 {
   zip::MAX_CD_BYTES as f64
 }
 
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-struct Chapter {
-  name: String,
-  entries: Vec<ZipEntry>,
-}
-
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-struct Grouped {
-  /// The archive's common root directory, used as a fallback manga title.
-  common_root: Option<String>,
-  chapters: Vec<Chapter>,
-}
-
-/// Filters an archive's entries down to images, detects the chapter nesting
-/// depth, and groups pages into chapters.
-///
-/// This is the whole of what `src/lib/sources/upload.ts` used to do with
-/// `detectDepth` + `groupByChapter`, moved here so the browser and the server
-/// group chapters through the same code rather than two implementations that
-/// have to be kept in step.
+/// The image entries of a chapter archive, in reading order.
 #[wasm_bindgen]
-pub fn group_chapters(entries: JsValue) -> Result<JsValue, JsValue> {
+pub fn page_entries(entries: JsValue) -> Result<JsValue, JsValue> {
   let entries: Vec<ZipEntry> = serde_wasm_bindgen::from_value(entries).map_err(to_js_error)?;
+  to_js(&klparse::page_entries(entries))
+}
 
-  let image_entries: Vec<ZipEntry> = entries
-    .into_iter()
-    .filter(|e| klparse::is_image_name(&e.name))
-    .collect();
+/// Sorts names the way the server sorts chapters.
+#[wasm_bindgen]
+pub fn sort_names(names: Vec<String>) -> Vec<String> {
+  let mut names = names;
+  names.sort_by(|a, b| klparse::locale_cmp(a, b));
+  names
+}
 
-  let names: Vec<&str> = image_entries.iter().map(|e| e.name.as_str()).collect();
-  let depth = klparse::detect_depth(&names);
+/// Which archives to read `ComicInfo.xml` from, and which file is the cover.
+#[wasm_bindgen]
+pub fn meta_sources(names: Vec<String>) -> Result<JsValue, JsValue> {
+  to_js(&comicinfo::meta_sources(&names))
+}
 
-  let mut chapters: Vec<Chapter> =
-    klparse::group_by_chapter(image_entries, depth.depth, |e| &e.name)
-      .into_iter()
-      .map(|(name, entries)| Chapter { name, entries })
-      .collect();
-
-  chapters.sort_by(|a, b| klparse::locale_cmp(&a.name, &b.name));
-
-  to_js(&Grouped {
-    common_root: depth.common_root,
-    chapters,
-  })
+/// Parses each `ComicInfo.xml` text, in `meta_sources` order, into one result.
+#[wasm_bindgen]
+pub fn merge_comic_info(xmls: Vec<String>, cover: Option<String>) -> Result<JsValue, JsValue> {
+  let infos = xmls.iter().map(|x| comicinfo::parse_comic_info(x));
+  to_js(&comicinfo::merge_meta(infos, cover))
 }

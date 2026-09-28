@@ -17,8 +17,16 @@ export type ZipEntry = {
   crc32: number;
 };
 
-export type ZipChapter = { name: string; entries: ZipEntry[] };
-export type GroupedChapters = { commonRoot: string | null; chapters: ZipChapter[] };
+/// A manga folder's metadata, as `klparse::MangaMeta` serializes it. `cover` is
+/// the cover's file name within the folder.
+export type RawMangaMeta = {
+  title: string | null;
+  description: string | null;
+  year: number | null;
+  authors: string[];
+  tags: string[];
+  cover: string | null;
+};
 
 let ready: Promise<unknown> | null = null;
 
@@ -80,9 +88,37 @@ export async function extractEntry(file: File, entry: ZipEntry): Promise<Blob> {
   return new Blob([data as Uint8Array<ArrayBuffer>]);
 }
 
-/// Filters to image entries, detects the chapter nesting depth and groups
-/// pages — the same code path the server uses for a zip-backed manga.
-export async function groupChapters(entries: ZipEntry[]): Promise<GroupedChapters> {
+/// The image entries of a chapter archive, in reading order.
+export async function pageEntries(file: File): Promise<ZipEntry[]> {
+  const entries = await indexZip(file);
+  return wasm.page_entries(entries);
+}
+
+/// Sorts names the way the server sorts chapters.
+export async function sortNames(names: string[]): Promise<string[]> {
   await ensureReady();
-  return wasm.group_chapters(entries);
+  return wasm.sort_names(names);
+}
+
+async function comicInfoXml(file: File): Promise<string | null> {
+  const entries = await indexZip(file);
+  const entry = entries.find((e) => /(^|\/)comicinfo\.xml$/i.test(e.name));
+  if (!entry) return null;
+  return (await extractEntry(file, entry)).text();
+}
+
+/// ComicInfo metadata and cover of a manga folder, given its files.
+export async function mangaMeta(files: File[]): Promise<RawMangaMeta> {
+  await ensureReady();
+  const byName = new Map(files.map((f) => [f.name, f]));
+  const sources: { archives: string[]; cover: string | null } = wasm.meta_sources([
+    ...byName.keys()
+  ]);
+  const xmls: string[] = [];
+  for (const name of sources.archives) {
+    // A corrupt archive just contributes nothing.
+    const xml = await comicInfoXml(byName.get(name)!).catch(() => null);
+    if (xml) xmls.push(xml);
+  }
+  return wasm.merge_comic_info(xmls, sources.cover ?? undefined);
 }

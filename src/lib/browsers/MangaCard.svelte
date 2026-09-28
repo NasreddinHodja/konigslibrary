@@ -1,16 +1,19 @@
 <script lang="ts">
   import type { ComponentType, SvelteComponent } from 'svelte';
   import { FolderOpen, Cloud, CloudCheck, type IconProps } from 'lucide-svelte';
-  import { fetchMangaMeta } from './cover-queue';
+  import { queueMeta } from './cover-queue';
+  import type { MangaMeta } from '$lib/api/meta';
   import CoverThumbnail from '$lib/ui/CoverThumbnail.svelte';
 
   let {
     name,
+    loadMeta,
     badge,
     action,
     onopen
   }: {
     name: string;
+    loadMeta: () => Promise<MangaMeta | null>;
     badge: 'device' | 'server' | 'downloaded';
     action?: {
       icon: ComponentType<SvelteComponent<IconProps>>;
@@ -38,9 +41,9 @@
         if (!entry.isIntersecting || requested) return;
         requested = true;
         observer.disconnect();
-        fetchMangaMeta(name).then((meta) => {
-          cover = meta.coverUrl;
-          title = meta.title;
+        queueMeta(loadMeta).then((meta) => {
+          cover = meta?.coverUrl ?? null;
+          title = meta?.title ?? null;
           loading = false;
         });
       },

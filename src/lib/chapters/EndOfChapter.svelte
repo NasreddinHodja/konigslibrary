@@ -1,6 +1,7 @@
 <script lang="ts">
   import { ChevronRight } from 'lucide-svelte';
   import { getReaderContext } from '$lib/context';
+  import { chapterLabel } from '$lib/utils/chapters';
   import Button from '$lib/ui/Button.svelte';
 
   const reader = getReaderContext();
@@ -10,11 +11,11 @@
 </script>
 
 <div class="flex min-h-full w-full flex-col items-center justify-center gap-6 py-24">
-  <p class="text-lg opacity-50">End of {manga.selectedChapter}</p>
+  <p class="text-lg opacity-50">End of {chapterLabel(manga.selectedChapter ?? '')}</p>
   <div class="flex flex-col items-center gap-3">
     {#if nextChapter}
       <Button size="lg" variant="primary" onclick={() => reader.goToNextChapter()}>
-        {nextChapter}
+        {chapterLabel(nextChapter)}
         <ChevronRight size={16} />
       </Button>
     {:else}

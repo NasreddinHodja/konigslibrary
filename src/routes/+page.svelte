@@ -1,7 +1,7 @@
 <script lang="ts">
   import { fade } from 'svelte/transition';
   import { ANIM_DURATION, ANIM_EXIT_DURATION, ANIM_EASE, ANIM_EASE_IN } from '$lib/utils/constants';
-  import { ZipUploadProvider } from '$lib/sources';
+  import { droppedUpload, openUpload } from '$lib/sources/upload';
   import { resolveKey } from '$lib/keyboard/keybindings.svelte';
   import type { ViewerCommands } from '$lib/commands';
   import { getReaderContext } from '$lib/context';
@@ -41,10 +41,10 @@
   );
 
   const handleDrop = async (e: DragEvent) => {
-    const file = e.dataTransfer?.files[0];
-    if (!file || !/\.(zip|cbz)$/i.test(file.name)) return;
+    if (!e.dataTransfer) return;
     try {
-      await reader.setSource(new ZipUploadProvider(file));
+      const upload = await droppedUpload(e.dataTransfer);
+      if (upload) await openUpload(reader, upload);
     } catch (err) {
       showError(`Failed to open file: ${describeOpenFileError(err)}`);
     }

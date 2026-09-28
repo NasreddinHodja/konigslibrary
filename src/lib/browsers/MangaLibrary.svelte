@@ -1,14 +1,10 @@
 <script lang="ts">
-  import { invoke, convertFileSrc } from '@tauri-apps/api/core';
+  import { invoke } from '@tauri-apps/api/core';
   import { SvelteMap } from 'svelte/reactivity';
   import { getReaderContext } from '$lib/context';
-  import {
-    ZipUploadProvider,
-    NativeFilesystemProvider,
-    LocalFsProvider,
-    ServerLibraryProvider
-  } from '$lib/sources';
+  import { NativeFilesystemProvider, ServerLibraryProvider } from '$lib/sources';
   import { listNativeManga, listNativeChapters, getMangaDir } from '$lib/sources/native-library';
+  import { fetchNativeMeta, fetchServerMeta, type MangaMeta } from '$lib/api/meta';
   import { saveManga } from '$lib/sources/download.svelte';
   import type { LibraryEntry, ServerChapter } from '$lib/utils/types';
   import { apiUrl, isLocalServer, getServerUrl } from '$lib/utils/constants';
@@ -23,9 +19,10 @@
   type Row = {
     id: string;
     name: string;
-    device?: { path: string; type: 'directory' | 'zip' };
+    device?: { path: string };
     server?: { slug: string };
-    downloaded: boolean;
+    /// Path of the downloaded copy.
+    downloaded?: { path: string };
   };
 
   type Filter = 'all' | 'downloaded' | 'device' | 'server';
@@ -35,14 +32,14 @@
   const mangaDir = native ? getMangaDir() : '';
   const serverEnabled = isLocalServer || !!getServerUrl();
 
-  let deviceEntries: { name: string; type: 'directory' | 'zip'; path: string }[] = $state([]);
+  let deviceEntries: { name: string; path: string }[] = $state([]);
   let deviceLoading = $state(!!mangaDir);
   let deviceError: string | null = $state(null);
 
   let serverEntries: LibraryEntry[] = $state([]);
   let serverLoading = $state(serverEnabled);
 
-  let downloadedEntries: { slug: string; name: string }[] = $state([]);
+  let downloadedEntries: { slug: string; name: string; path: string }[] = $state([]);
 
   let selectedFilter: Filter = $state('all');
   let searchQuery = $state('');
@@ -85,7 +82,7 @@
 
   function loadDownloaded() {
     if (!native) return;
-    invoke<{ slug: string; name: string }[]>('list_offline_manga').then((list) => {
+    invoke<{ slug: string; name: string; path: string }[]>('list_offline_manga').then((list) => {
       downloadedEntries = list;
     });
   }
@@ -106,17 +103,17 @@
     const map = new SvelteMap<string, Row>();
     for (const e of deviceEntries) {
       const id = `device:${e.path}`;
-      map.set(id, { id, name: e.name, device: { path: e.path, type: e.type }, downloaded: false });
+      map.set(id, { id, name: e.name, device: { path: e.path } });
     }
     for (const e of serverEntries) {
-      map.set(e.slug, { id: e.slug, name: e.name, server: { slug: e.slug }, downloaded: false });
+      map.set(e.slug, { id: e.slug, name: e.name, server: { slug: e.slug } });
     }
     for (const d of downloadedEntries) {
       const existing = map.get(d.slug);
       if (existing) {
-        existing.downloaded = true;
+        existing.downloaded = { path: d.path };
       } else {
-        map.set(d.slug, { id: d.slug, name: d.name, downloaded: true });
+        map.set(d.slug, { id: d.slug, name: d.name, downloaded: { path: d.path } });
       }
     }
     return Array.from(map.values());
@@ -156,7 +153,7 @@
     if (q) list = list.filter((r) => r.name.toLowerCase().includes(q));
 
     return [...list].sort((a, b) => {
-      if (filter === 'all' && a.downloaded !== b.downloaded) return a.downloaded ? -1 : 1;
+      if (filter === 'all' && !a.downloaded !== !b.downloaded) return a.downloaded ? -1 : 1;
       return a.name.localeCompare(b.name);
     });
   });
@@ -182,27 +179,27 @@
     };
   }
 
+  /// The copy on this device, if there is one: the library folder or a download.
+  function localPath(row: Row): string | null {
+    return row.device?.path ?? row.downloaded?.path ?? null;
+  }
+
+  function metaLoader(row: Row): () => Promise<MangaMeta | null> {
+    const path = localPath(row);
+    if (path) return () => fetchNativeMeta(path);
+    const slug = row.server?.slug;
+    if (slug) return () => fetchServerMeta(slug);
+    return async () => null;
+  }
+
   async function openRow(row: Row) {
     try {
-      if (row.device) {
-        if (row.device.type === 'zip') {
-          const url = convertFileSrc(row.device.path);
-          const response = await fetch(url);
-          const blob = await response.blob();
-          const file = new File([blob], row.name + '.cbz', { type: 'application/zip' });
-          await setSource(new ZipUploadProvider(file));
-        } else {
-          const chapters = await listNativeChapters(row.device.path);
-          await setSource(new NativeFilesystemProvider(chapters, row.name));
-        }
-        return;
-      }
-
-      const slug = row.server?.slug ?? row.id;
-      if (row.downloaded) {
-        await setSource(new LocalFsProvider(slug, row.name));
-      } else {
-        await setSource(new ServerLibraryProvider(slug, row.name));
+      const path = localPath(row);
+      if (path) {
+        const chapters = await listNativeChapters(path);
+        await setSource(new NativeFilesystemProvider(chapters, row.name, path));
+      } else if (row.server) {
+        await setSource(new ServerLibraryProvider(row.server.slug, row.name));
       }
     } catch (err) {
       showError(describeOpenFileError(err));
@@ -267,7 +264,7 @@
 
 {#if pendingDelete}
   <ConfirmDialog
-    message={`Delete "${pendingDelete.name}"? This will remove all downloaded pages.`}
+    message={`Delete "${pendingDelete.name}"? This will remove all downloaded chapters.`}
     confirmLabel="Delete"
     onconfirm={confirmDelete}
     oncancel={() => (pendingDelete = null)}
@@ -359,6 +356,7 @@
           {@const action = rowAction(row)}
           <MangaCard
             name={row.name}
+            loadMeta={metaLoader(row)}
             badge={row.device ? 'device' : row.downloaded ? 'downloaded' : 'server'}
             {action}
             onopen={() => openRow(row)}

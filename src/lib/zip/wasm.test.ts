@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { indexZip, extractEntry, groupChapters, initParser } from './index';
+import { indexZip, extractEntry, pageEntries, sortNames, initParser } from './index';
 
 // Exercises the browser parser end to end: the same wasm module the reader
 // loads, driven through the same byte-range plumbing. The Rust unit tests in
@@ -65,33 +65,23 @@ describe('wasm zip parser', () => {
     await expect(indexZip(notAZip)).rejects.toThrow('Not a valid ZIP file');
   });
 
-  it('groups pages into chapters, stripping the redundant root', async () => {
-    const entries = await indexZip(fixture());
-    const { commonRoot, chapters } = await groupChapters(entries);
-
-    expect(commonRoot).toBe('Sample');
-    expect(chapters.map((c) => c.name)).toEqual(['ch01', 'ch02', 'ch10']);
-  });
-
-  it('counts only image entries as pages', async () => {
-    const entries = await indexZip(fixture());
-    const { chapters } = await groupChapters(entries);
+  it('lists only image entries as pages, ordered numerically', async () => {
+    const pages = (await pageEntries(fixture())).map((e) => e.name);
 
     // ch01 also holds ComicInfo.xml and notes.txt, which are not pages.
-    const ch01 = chapters.find((c) => c.name === 'ch01')!;
-    expect(ch01.entries).toHaveLength(3);
-    expect(ch01.entries.every((e) => e.name.endsWith('.png'))).toBe(true);
-  });
-
-  it('orders pages numerically rather than lexicographically', async () => {
-    const entries = await indexZip(fixture());
-    const { chapters } = await groupChapters(entries);
-
-    const ch01 = chapters.find((c) => c.name === 'ch01')!;
-    expect(ch01.entries.map((e) => e.name)).toEqual([
+    expect(pages.every((n) => n.endsWith('.png'))).toBe(true);
+    expect(pages.filter((n) => n.startsWith('Sample/ch01/'))).toEqual([
       'Sample/ch01/page1.png',
       'Sample/ch01/page2.png',
       'Sample/ch01/page10.png'
+    ]);
+  });
+
+  it("sorts chapter names with the server's collation", async () => {
+    expect(await sortNames(['chapter_0010', 'Chapter_0002', 'chapter_0001'])).toEqual([
+      'chapter_0001',
+      'Chapter_0002',
+      'chapter_0010'
     ]);
   });
 });

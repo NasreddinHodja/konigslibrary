@@ -414,6 +414,16 @@ pub fn extract_entry<R: ReadAt + ?Sized>(r: &R, entry: &ZipEntry) -> Result<Vec<
   decode_entry(&raw, entry.compression_method, entry.crc32, &entry.name)
 }
 
+/// The image entries of a chapter archive, in reading order.
+pub fn page_entries(entries: Vec<ZipEntry>) -> Vec<ZipEntry> {
+  let mut pages: Vec<ZipEntry> = entries
+    .into_iter()
+    .filter(|e| crate::is_image_name(&e.name))
+    .collect();
+  pages.sort_by(|a, b| crate::natural_cmp(&a.name, &b.name));
+  pages
+}
+
 #[cfg(test)]
 mod tests {
   use super::*;

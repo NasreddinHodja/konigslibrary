@@ -13,7 +13,8 @@
   <section class="space-y-3">
     <h2 class="text-lg font-bold opacity-80">Browser only</h2>
     <p class="text-sm leading-relaxed opacity-70">
-      Upload a ZIP or CBZ file and read it directly in your browser.
+      Open a manga folder (a cover image plus one .cbz per chapter) and read it directly in your
+      browser. Opening a single chapter .cbz goes straight to the reader.
     </p>
   </section>
 
@@ -24,8 +25,8 @@
       <a
         href="https://github.com/NasreddinHodja/konigslibrary/releases/latest/download/konigslibrary.apk"
         class="border-b border-fg/40 hover:border-fg/80">APK</a
-      >, install it, and read manga directly on your phone. Upload ZIPs or point it at a local
-      directory.
+      >, install it, and read manga directly on your phone. Open a chapter .cbz or download manga
+      from a server.
     </p>
   </section>
 

@@ -3,26 +3,34 @@
 //
 // Only this worker instantiates the wasm module, so there is exactly one copy
 // of it and one wasm heap per tab.
-import { indexZip, extractEntry, groupChapters } from './index';
+import { pageEntries, extractEntry, sortNames, mangaMeta } from './index';
 import type { ZipEntry } from './index';
 
-type ChaptersMsg = { id: number; type: 'chapters'; file: File };
-type ExtractMsg = { id: number; type: 'extract'; file: File; entry: ZipEntry };
-type WorkerMsg = ChaptersMsg | ExtractMsg;
+type WorkerMsg = { id: number } & (
+  | { type: 'pages'; file: File }
+  | { type: 'extract'; file: File; entry: ZipEntry }
+  | { type: 'sort'; names: string[] }
+  | { type: 'meta'; files: File[] }
+);
 
 self.onmessage = async (e: MessageEvent<WorkerMsg>) => {
-  const { id } = e.data;
+  const msg = e.data;
+  const post = (data: object, transfer: Transferable[] = []) =>
+    (self as unknown as Worker).postMessage({ id: msg.id, ...data }, transfer);
   try {
-    if (e.data.type === 'chapters') {
-      const entries = await indexZip(e.data.file);
-      const grouped = await groupChapters(entries);
-      (self as unknown as Worker).postMessage({ id, grouped });
-    } else {
-      const blob = await extractEntry(e.data.file, e.data.entry);
-      const buffer = await blob.arrayBuffer();
-      (self as unknown as Worker).postMessage({ id, buffer }, [buffer]);
+    switch (msg.type) {
+      case 'pages':
+        return post({ result: await pageEntries(msg.file) });
+      case 'extract': {
+        const buffer = await (await extractEntry(msg.file, msg.entry)).arrayBuffer();
+        return post({ result: buffer }, [buffer]);
+      }
+      case 'sort':
+        return post({ result: await sortNames(msg.names) });
+      case 'meta':
+        return post({ result: await mangaMeta(msg.files) });
     }
   } catch (err) {
-    (self as unknown as Worker).postMessage({ id, error: String(err) });
+    post({ error: String(err) });
   }
 };

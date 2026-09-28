@@ -30,8 +30,8 @@ pub struct AppState {
 
 pub type SharedState = Arc<AppState>;
 
-/// Pages are addressed by content-derived paths and never change in place, so
-/// they can be cached indefinitely.
+/// Pages inside a chapter archive never change in place, so they can be cached
+/// indefinitely.
 const IMMUTABLE: &str = "public, max-age=31536000, immutable";
 
 /// Whether a request came from this machine.
@@ -64,6 +64,7 @@ pub fn router(state: SharedState) -> Router {
   Router::new()
     .route("/api/library", get(get_library))
     .route("/api/library/{manga}/chapters", get(get_chapters))
+    .route("/api/library/{manga}/meta", get(get_meta))
     .route("/api/library/{manga}/{*path}", get(get_image))
     .route("/api/settings", get(get_settings).post(post_settings))
     .route("/api/settings/browse", get(get_browse))
@@ -114,6 +115,16 @@ async fn get_chapters(State(state): State<SharedState>, params: RawPathParams) -
   Json(library::list_chapters(&state.config, &state.cache, &manga)).into_response()
 }
 
+async fn get_meta(State(state): State<SharedState>, params: RawPathParams) -> Response {
+  let meta = raw_param(&params, "manga")
+    .and_then(decode_param)
+    .and_then(|manga| library::manga_meta(&state.config, &manga));
+  match meta {
+    Some(meta) => Json(meta).into_response(),
+    None => (StatusCode::NOT_FOUND, "Not found").into_response(),
+  }
+}
+
 async fn get_image(State(state): State<SharedState>, params: RawPathParams) -> Response {
   let not_found = || (StatusCode::NOT_FOUND, "Not found").into_response();
 
@@ -134,14 +145,15 @@ async fn get_image(State(state): State<SharedState>, params: RawPathParams) -> R
     return not_found();
   };
 
-  let result = if klparse::is_zip_name(&manga) {
-    library::get_image_from_zip(&state.config, &state.cache, &manga, &parts.join("/"))
-  } else {
-    library::get_image_from_dir(&state.config, &state.cache, &manga, &parts)
-  };
-
-  let Some(image) = result else {
+  let Some(image) = library::get_file(&state.config, &state.cache, &manga, &parts) else {
     return not_found();
+  };
+  // Covers and whole archives can be replaced by the downloader; only pages
+  // are addressed by paths that never change.
+  let cache_control = if parts.len() > 1 {
+    IMMUTABLE
+  } else {
+    "no-cache"
   };
 
   (
@@ -150,7 +162,10 @@ async fn get_image(State(state): State<SharedState>, params: RawPathParams) -> R
         header::CONTENT_TYPE,
         HeaderValue::from_static(klparse::content_type(&image.ext)),
       ),
-      (header::CACHE_CONTROL, HeaderValue::from_static(IMMUTABLE)),
+      (
+        header::CACHE_CONTROL,
+        HeaderValue::from_static(cache_control),
+      ),
     ],
     image.bytes,
   )
@@ -432,21 +447,24 @@ mod tests {
   async fn library_lists_the_configured_directory() {
     let h = harness();
     std::fs::create_dir_all(h.root.join("Berserk")).unwrap();
-    write_zip(&h.root, "Akira.cbz", &[("p.png", b"x")]);
+    std::fs::create_dir_all(h.root.join("Akira")).unwrap();
 
     let (status, body, _) = send(&h, get_from("/api/library", LAN)).await;
     assert_eq!(status, StatusCode::OK);
     let parsed: serde_json::Value = serde_json::from_slice(&body).unwrap();
     assert_eq!(parsed[0]["name"], "Akira");
-    assert_eq!(parsed[0]["type"], "zip");
     assert_eq!(parsed[1]["name"], "Berserk");
-    assert_eq!(parsed[1]["type"], "directory");
   }
 
   #[tokio::test]
   async fn chapters_are_served_for_a_percent_encoded_slug() {
     let h = harness();
-    touch(&h.root, "One Piece/ch01/page01.png", b"x");
+    std::fs::create_dir_all(h.root.join("One Piece")).unwrap();
+    write_zip(
+      &h.root.join("One Piece"),
+      "ch01.cbz",
+      &[("page01.png", b"x")],
+    );
 
     let (status, body, _) = send(&h, get_from("/api/library/One%20Piece/chapters", LAN)).await;
     assert_eq!(status, StatusCode::OK);
@@ -458,61 +476,98 @@ mod tests {
   #[tokio::test]
   async fn chapters_for_a_traversing_slug_return_an_empty_list() {
     let h = harness();
-    touch(
-      h.root.parent().unwrap(),
-      "secret/ch01/page01.png",
-      b"SECRET",
-    );
+    let secret = h.root.parent().unwrap().join("secret");
+    std::fs::create_dir_all(&secret).unwrap();
+    write_zip(&secret, "ch01.cbz", &[("page01.png", b"SECRET")]);
 
     let (status, body, _) = send(&h, get_from("/api/library/..%2Fsecret/chapters", LAN)).await;
     assert_eq!(status, StatusCode::OK);
     assert_eq!(String::from_utf8_lossy(&body), "[]");
   }
 
-  // --- images ---
+  // --- metadata ---
 
   #[tokio::test]
-  async fn image_from_a_directory_manga_has_the_right_headers() {
+  async fn meta_reads_comic_info_and_finds_the_cover() {
     let h = harness();
-    touch(&h.root, "Berserk/ch01/page01.png", b"PNGDATA");
+    touch(&h.root, "One Piece/cover.jpg", b"x");
+    std::fs::create_dir_all(h.root.join("One Piece")).unwrap();
+    write_zip(
+      &h.root.join("One Piece"),
+      "ch1.cbz",
+      &[
+        ("01.jpg", b"x"),
+        (
+          "ComicInfo.xml",
+          b"<ComicInfo><Series>One Piece</Series><Year>1997</Year></ComicInfo>",
+        ),
+      ],
+    );
 
-    let (status, body, res) = send(&h, get_from("/api/library/Berserk/ch01/page01.png", LAN)).await;
+    let (status, body, _) = send(&h, get_from("/api/library/One%20Piece/meta", LAN)).await;
     assert_eq!(status, StatusCode::OK);
-    assert_eq!(body, b"PNGDATA");
-    assert_eq!(res.headers()[header::CONTENT_TYPE], "image/png");
+    let parsed: serde_json::Value = serde_json::from_slice(&body).unwrap();
+    assert_eq!(parsed["title"], "One Piece");
+    assert_eq!(parsed["year"], 1997);
+    assert_eq!(parsed["cover"], "cover.jpg");
+  }
+
+  #[tokio::test]
+  async fn meta_for_a_traversing_slug_is_a_404() {
+    let h = harness();
+    std::fs::create_dir_all(h.root.parent().unwrap().join("secret")).unwrap();
+    let (status, _, _) = send(&h, get_from("/api/library/..%2Fsecret/meta", LAN)).await;
+    assert_eq!(status, StatusCode::NOT_FOUND);
+  }
+
+  // --- files ---
+
+  fn berserk(h: &Harness) -> PathBuf {
+    let dir = h.root.join("Berserk");
+    std::fs::create_dir_all(&dir).unwrap();
+    write_zip(&dir, "ch01.cbz", &[("ch01/page01.jpg", b"JPEGDATA")]);
+    touch(&dir, "cover.png", b"PNGDATA");
+    dir
+  }
+
+  #[tokio::test]
+  async fn a_page_is_extracted_from_its_chapter_archive() {
+    let h = harness();
+    berserk(&h);
+
+    let (status, body, res) = send(
+      &h,
+      get_from("/api/library/Berserk/ch01.cbz/ch01/page01.jpg", LAN),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(body, b"JPEGDATA");
+    assert_eq!(res.headers()[header::CONTENT_TYPE], "image/jpeg");
     assert_eq!(res.headers()[header::CACHE_CONTROL], IMMUTABLE);
   }
 
   #[tokio::test]
-  async fn image_from_an_archive_is_extracted_on_demand() {
+  async fn the_cover_and_whole_archives_are_served_uncached() {
     let h = harness();
-    write_zip(&h.root, "Akira.cbz", &[("ch01/page01.jpg", b"JPEGDATA")]);
+    let dir = berserk(&h);
 
-    let (status, body, res) =
-      send(&h, get_from("/api/library/Akira.cbz/ch01/page01.jpg", LAN)).await;
+    let (status, body, res) = send(&h, get_from("/api/library/Berserk/cover.png", LAN)).await;
     assert_eq!(status, StatusCode::OK);
-    assert_eq!(body, b"JPEGDATA");
-    assert_eq!(res.headers()[header::CONTENT_TYPE], "image/jpeg");
+    assert_eq!(body, b"PNGDATA");
+    assert_eq!(res.headers()[header::CONTENT_TYPE], "image/png");
+    assert_eq!(res.headers()[header::CACHE_CONTROL], "no-cache");
+
+    let (status, body, _) = send(&h, get_from("/api/library/Berserk/ch01.cbz", LAN)).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(body, std::fs::read(dir.join("ch01.cbz")).unwrap());
   }
 
   #[tokio::test]
-  async fn an_unknown_extension_falls_back_to_octet_stream() {
+  async fn a_missing_file_is_a_clean_404() {
     let h = harness();
-    // `.bmp` is in the allowlist but has no dedicated mapping check here;
-    // use a name the allowlist accepts and confirm the mapping table is used.
-    touch(&h.root, "Berserk/ch01/page01.bmp", b"BMPDATA");
-    let (_, _, res) = send(&h, get_from("/api/library/Berserk/ch01/page01.bmp", LAN)).await;
-    assert_eq!(res.headers()[header::CONTENT_TYPE], "image/bmp");
+    berserk(&h);
 
-    assert_eq!(klparse::content_type(".xyz"), "application/octet-stream");
-  }
-
-  #[tokio::test]
-  async fn a_missing_image_is_a_clean_404() {
-    let h = harness();
-    std::fs::create_dir_all(h.root.join("Berserk")).unwrap();
-
-    let (status, body, _) = send(&h, get_from("/api/library/Berserk/ch01/nope.png", LAN)).await;
+    let (status, body, _) = send(&h, get_from("/api/library/Berserk/nope.png", LAN)).await;
     assert_eq!(status, StatusCode::NOT_FOUND);
     assert_eq!(String::from_utf8_lossy(&body), "Not found");
   }
@@ -527,13 +582,15 @@ mod tests {
   }
 
   #[tokio::test]
-  async fn a_traversing_image_path_is_a_404() {
+  async fn a_traversing_path_is_a_404() {
     let h = harness();
+    berserk(&h);
     touch(h.root.parent().unwrap(), "secret.png", b"SECRET");
 
     for uri in [
       "/api/library/Berserk/..%2F..%2Fsecret.png",
       "/api/library/..%2F..%2Fsecret.png/x.png",
+      "/api/library/..%2F/secret.png",
     ] {
       let (status, body, _) = send(&h, get_from(uri, LAN)).await;
       assert_eq!(status, StatusCode::NOT_FOUND, "{uri} should not resolve");

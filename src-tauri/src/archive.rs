@@ -7,7 +7,8 @@ use std::path::Path;
 use std::sync::Mutex;
 
 use klparse::zip::{extract_entry, index_zip, ReadAt, ZipEntry, ZipError};
-use klparse::{collate::natural_cmp, is_image_name};
+use klparse::{is_image_name, is_zip_name, locale_cmp, page_entries, MangaMeta};
+use serde::Serialize;
 
 struct FileReader {
   file: Mutex<File>,
@@ -53,16 +54,47 @@ fn index(path: &Path) -> Result<(FileReader, Vec<ZipEntry>), String> {
   Ok((reader, entries))
 }
 
-/// Every image entry in the archive, sorted the way the server sorts them.
-pub fn list_pages(path: &Path) -> Result<Vec<String>, String> {
-  let (_, entries) = index(path)?;
-  let mut pages: Vec<String> = entries
-    .into_iter()
-    .map(|e| e.name)
-    .filter(|n| is_image_name(n))
-    .collect();
-  pages.sort_by(|a, b| natural_cmp(a, b));
-  Ok(pages)
+#[derive(Serialize)]
+pub struct Chapter {
+  name: String,
+  archive: String,
+  pages: Vec<String>,
+}
+
+fn file_names(dir: &Path) -> Result<Vec<String>, String> {
+  Ok(
+    std::fs::read_dir(dir)
+      .map_err(|e| e.to_string())?
+      .flatten()
+      .filter(|i| i.file_type().is_ok_and(|t| t.is_file()))
+      .map(|i| i.file_name().to_string_lossy().into_owned())
+      .collect(),
+  )
+}
+
+/// One chapter per archive in a manga folder, sorted the way the server sorts
+/// them. A corrupt archive is skipped rather than failing the whole manga.
+pub fn list_chapters(dir: &Path) -> Result<Vec<Chapter>, String> {
+  let mut chapters: Vec<Chapter> = Vec::new();
+  for file in file_names(dir)? {
+    if file.starts_with('.') || !is_zip_name(&file) {
+      continue;
+    }
+    let path = dir.join(&file);
+    let Ok((_, entries)) = index(&path) else {
+      continue;
+    };
+    let pages: Vec<String> = page_entries(entries).into_iter().map(|e| e.name).collect();
+    if !pages.is_empty() {
+      chapters.push(Chapter {
+        name: klparse::strip_zip_ext(&file).to_string(),
+        archive: path.to_string_lossy().into_owned(),
+        pages,
+      });
+    }
+  }
+  chapters.sort_by(|a, b| locale_cmp(&a.name, &b.name));
+  Ok(chapters)
 }
 
 pub fn read_page(path: &Path, entry_name: &str) -> Result<Vec<u8>, String> {
@@ -75,4 +107,11 @@ pub fn read_page(path: &Path, entry_name: &str) -> Result<Vec<u8>, String> {
     .find(|e| e.name == entry_name)
     .ok_or("entry not found in archive")?;
   extract_entry(&reader, entry).map_err(|e| format!("{e:?}"))
+}
+
+/// ComicInfo metadata and cover of a manga folder.
+pub fn manga_meta(dir: &Path) -> Result<MangaMeta, String> {
+  Ok(klparse::manga_meta(&file_names(dir)?, |name| {
+    FileReader::open(&dir.join(name)).ok()
+  }))
 }

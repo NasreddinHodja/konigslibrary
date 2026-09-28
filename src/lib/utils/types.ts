@@ -6,7 +6,6 @@ export type Chapter = {
 export type LibraryEntry = {
   name: string;
   slug: string;
-  type: 'directory' | 'zip';
 };
 
 export type ServerChapter = {

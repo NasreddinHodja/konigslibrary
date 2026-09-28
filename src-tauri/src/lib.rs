@@ -15,7 +15,15 @@ struct DirEntry {
   is_dir: bool,
 }
 
-struct MangaDirState(Mutex<Option<PathBuf>>);
+/// Directories the webview may read from: the configured manga directory, the
+/// downloads directory, and folders opened through the folder picker.
+#[derive(Default)]
+struct Roots {
+  manga: Option<PathBuf>,
+  others: Vec<PathBuf>,
+}
+
+struct MangaDirState(Mutex<Roots>);
 
 #[tauri::command]
 fn home_dir() -> Result<String, String> {
@@ -35,34 +43,43 @@ fn set_manga_dir(
     .asset_protocol_scope()
     .allow_directory(&canonical, true)
     .map_err(|e| e.to_string())?;
-  *state.0.lock().unwrap() = Some(canonical);
+  state.0.lock().unwrap().manga = Some(canonical);
   Ok(())
 }
 
-/// Canonicalizes `path`, rejecting anything outside the configured manga
-/// directory.
+/// Lets a folder picked in the folder dialog be read like the manga directory.
+/// The dialog has already added it to the asset scope.
+#[tauri::command]
+fn open_manga_folder(state: tauri::State<MangaDirState>, path: String) -> Result<(), String> {
+  let canonical = std::fs::canonicalize(&path).map_err(|e| e.to_string())?;
+  let mut roots = state.0.lock().unwrap();
+  if !roots.others.contains(&canonical) {
+    roots.others.push(canonical);
+  }
+  Ok(())
+}
+
+/// Canonicalizes `path`, rejecting anything outside the allowed roots.
 fn allowed_path(state: &MangaDirState, path: &str) -> Result<PathBuf, String> {
-  let allowed_root = state
-    .0
-    .lock()
-    .unwrap()
-    .clone()
-    .ok_or("manga directory not configured")?;
-
   let canonical = std::fs::canonicalize(path).map_err(|e| e.to_string())?;
-
-  if !canonical.starts_with(&allowed_root) {
-    return Err("path is outside the configured manga directory".to_string());
+  let roots = state.0.lock().unwrap();
+  let allowed = roots
+    .manga
+    .iter()
+    .chain(roots.others.iter())
+    .any(|root| canonical.starts_with(root));
+  if !allowed {
+    return Err("path is outside the manga directories".to_string());
   }
   Ok(canonical)
 }
 
 #[tauri::command]
-fn list_archive_pages(
+fn list_manga_chapters(
   state: tauri::State<MangaDirState>,
   path: String,
-) -> Result<Vec<String>, String> {
-  archive::list_pages(&allowed_path(&state, &path)?)
+) -> Result<Vec<archive::Chapter>, String> {
+  archive::list_chapters(&allowed_path(&state, &path)?)
 }
 
 #[tauri::command]
@@ -73,6 +90,14 @@ fn read_archive_page(
 ) -> Result<tauri::ipc::Response, String> {
   let bytes = archive::read_page(&allowed_path(&state, &path)?, &entry)?;
   Ok(tauri::ipc::Response::new(bytes))
+}
+
+#[tauri::command]
+fn read_manga_meta(
+  state: tauri::State<MangaDirState>,
+  path: String,
+) -> Result<klparse::MangaMeta, String> {
+  archive::manga_meta(&allowed_path(&state, &path)?)
 }
 
 #[tauri::command]
@@ -100,13 +125,23 @@ pub fn run() {
 
   tauri::Builder::default()
     .manage(download::DownloadState(Default::default()))
-    .manage(MangaDirState(Mutex::new(None)))
+    .manage(MangaDirState(Mutex::new(Roots::default())))
     .manage(lan_server::LanServerState::default())
     .plugin(immersive::init())
     .plugin(tauri_plugin_dialog::init())
     .plugin(tauri_plugin_opener::init())
     .plugin(tauri_plugin_deep_link::init())
     .setup(|app| {
+      let offline = offline::offline_dir(app.handle())?;
+      std::fs::create_dir_all(&offline)?;
+      app
+        .state::<MangaDirState>()
+        .0
+        .lock()
+        .unwrap()
+        .others
+        .push(std::fs::canonicalize(&offline)?);
+
       let log_level = if cfg!(debug_assertions) {
         log::LevelFilter::Info
       } else {
@@ -123,13 +158,13 @@ pub fn run() {
       home_dir,
       set_manga_dir,
       list_dir,
-      list_archive_pages,
+      open_manga_folder,
+      list_manga_chapters,
       read_archive_page,
-      download::download_chapter,
+      read_manga_meta,
+      download::download_file,
       download::cancel_download,
       offline::list_offline_manga,
-      offline::get_offline_manga,
-      offline::get_chapter_page_paths,
       offline::delete_offline_manga,
       lan_server::start_lan_server,
       lan_server::stop_lan_server,

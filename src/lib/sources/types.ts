@@ -1,4 +1,5 @@
 import type { Chapter } from '$lib/utils/types';
+import type { MangaMeta } from '$lib/api/meta';
 
 export type PageResult = { urls: string[]; revoke: boolean };
 
@@ -6,6 +7,7 @@ interface ProviderBase {
   readonly kind: string;
   readonly mangaName: string;
   loadChapters(): Promise<Chapter[]>;
+  loadMeta?(): Promise<MangaMeta | null>;
   dispose?(): void;
 }
 

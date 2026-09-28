@@ -1,10 +1,7 @@
-import type { GroupedChapters, ZipEntry } from './index';
+import type { RawMangaMeta, ZipEntry } from './index';
 
 type Resolver = { resolve: (v: unknown) => void; reject: (e: Error) => void };
-type WorkerResponse =
-  | { id: number; grouped: GroupedChapters }
-  | { id: number; buffer: ArrayBuffer }
-  | { id: number; error: string };
+type WorkerResponse = { id: number; result: unknown } | { id: number; error: string };
 
 let worker: Worker | null = null;
 let nextId = 0;
@@ -19,10 +16,8 @@ function getWorker(): Worker {
       pending.delete(e.data.id);
       if ('error' in e.data) {
         p.reject(new Error(e.data.error));
-      } else if ('grouped' in e.data) {
-        p.resolve(e.data.grouped);
       } else {
-        p.resolve(e.data.buffer);
+        p.resolve(e.data.result);
       }
     };
     worker.onerror = (e) => {
@@ -54,11 +49,19 @@ function dispatch<T>(msg: object, transfer?: Transferable[]): Promise<T> {
   });
 }
 
-export function loadChaptersWorker(file: File): Promise<GroupedChapters> {
-  return call<GroupedChapters>({ type: 'chapters', file });
+export function pageEntriesWorker(file: File): Promise<ZipEntry[]> {
+  return call<ZipEntry[]>({ type: 'pages', file });
 }
 
 export async function extractEntryWorker(file: File, entry: ZipEntry): Promise<Blob> {
   const buffer = await call<ArrayBuffer>({ type: 'extract', file, entry });
   return new Blob([buffer]);
+}
+
+export function sortNamesWorker(names: string[]): Promise<string[]> {
+  return call<string[]>({ type: 'sort', names });
+}
+
+export function mangaMetaWorker(files: File[]): Promise<RawMangaMeta> {
+  return call<RawMangaMeta>({ type: 'meta', files });
 }

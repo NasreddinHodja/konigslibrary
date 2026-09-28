@@ -1,27 +1,18 @@
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use std::path::{Component, Path, PathBuf};
 use tauri::{AppHandle, Manager};
 
-use crate::download::ServerChapter;
-
-fn validate_path_component(s: &str) -> Result<(), String> {
-  for component in Path::new(s).components() {
-    match component {
-      Component::Normal(_) => {}
-      _ => return Err(format!("Invalid path component: {s:?}")),
-    }
+pub fn validate_path_component(s: &str) -> Result<(), String> {
+  let mut components = Path::new(s).components();
+  match (components.next(), components.next()) {
+    (Some(Component::Normal(_)), None) => Ok(()),
+    _ => Err(format!("Invalid path component: {s:?}")),
   }
-  Ok(())
 }
 
-#[derive(Serialize, Deserialize, Clone)]
-pub struct MangaMeta {
-  pub slug: String,
-  pub name: String,
-  pub chapters: Vec<ServerChapter>,
-}
-
-fn offline_dir(app: &AppHandle) -> Result<PathBuf, String> {
+/// Where downloaded manga live, one folder per manga, laid out like the
+/// library they came from.
+pub fn offline_dir(app: &AppHandle) -> Result<PathBuf, String> {
   Ok(
     app
       .path()
@@ -31,104 +22,41 @@ fn offline_dir(app: &AppHandle) -> Result<PathBuf, String> {
   )
 }
 
-pub async fn save_chapter_meta(
-  app: &AppHandle,
-  slug: &str,
-  manga_name: &str,
-  chapter: &ServerChapter,
-) -> Result<(), String> {
-  validate_path_component(slug)?;
-  let dir = offline_dir(app)?.join(slug);
-  std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
-
-  let meta_path = dir.join("meta.json");
-  let mut meta: MangaMeta = if meta_path.exists() {
-    let data = std::fs::read_to_string(&meta_path).map_err(|e| e.to_string())?;
-    serde_json::from_str(&data).unwrap_or(MangaMeta {
-      slug: slug.to_string(),
-      name: manga_name.to_string(),
-      chapters: vec![],
-    })
-  } else {
-    MangaMeta {
-      slug: slug.to_string(),
-      name: manga_name.to_string(),
-      chapters: vec![],
-    }
-  };
-
-  if let Some(existing) = meta.chapters.iter_mut().find(|c| c.name == chapter.name) {
-    *existing = chapter.clone();
-  } else {
-    meta.chapters.push(chapter.clone());
-  }
-  meta.chapters.sort_by(|a, b| a.name.cmp(&b.name));
-
-  std::fs::write(
-    &meta_path,
-    serde_json::to_string(&meta).map_err(|e| e.to_string())?,
-  )
-  .map_err(|e| e.to_string())
+#[derive(Serialize)]
+pub struct OfflineManga {
+  /// The server slug the manga was downloaded under.
+  slug: String,
+  name: String,
+  path: String,
 }
 
+/// Every downloaded manga with at least one finished chapter.
 #[tauri::command]
-pub async fn list_offline_manga(app: AppHandle) -> Result<Vec<MangaMeta>, String> {
+pub async fn list_offline_manga(app: AppHandle) -> Result<Vec<OfflineManga>, String> {
   let dir = offline_dir(&app)?;
-  if !dir.exists() {
+  let Ok(read) = std::fs::read_dir(&dir) else {
     return Ok(vec![]);
-  }
+  };
 
   let mut results = vec![];
-  for entry in std::fs::read_dir(&dir).map_err(|e| e.to_string())? {
-    let entry = entry.map_err(|e| e.to_string())?;
-    let meta_path = entry.path().join("meta.json");
-    if meta_path.exists() {
-      if let Ok(data) = std::fs::read_to_string(&meta_path) {
-        if let Ok(meta) = serde_json::from_str::<MangaMeta>(&data) {
-          if !meta.chapters.is_empty() {
-            results.push(meta);
-          }
-        }
-      }
+  for entry in read.flatten() {
+    let path = entry.path();
+    let has_chapter = std::fs::read_dir(&path).is_ok_and(|mut files| {
+      files.any(|f| f.is_ok_and(|f| klparse::is_zip_name(&f.file_name().to_string_lossy())))
+    });
+    if !has_chapter {
+      continue;
     }
+    let slug = entry.file_name().to_string_lossy().into_owned();
+    results.push(OfflineManga {
+      name: klparse::decode_uri_component(&slug).unwrap_or_else(|| slug.clone()),
+      path: path.to_string_lossy().into_owned(),
+      slug,
+    });
   }
 
   results.sort_by(|a, b| a.name.cmp(&b.name));
   Ok(results)
-}
-
-#[tauri::command]
-pub async fn get_offline_manga(app: AppHandle, slug: String) -> Result<Option<MangaMeta>, String> {
-  validate_path_component(&slug)?;
-  let meta_path = offline_dir(&app)?.join(&slug).join("meta.json");
-  if !meta_path.exists() {
-    return Ok(None);
-  }
-  let data = std::fs::read_to_string(&meta_path).map_err(|e| e.to_string())?;
-  Ok(Some(
-    serde_json::from_str(&data).map_err(|e| e.to_string())?,
-  ))
-}
-
-#[tauri::command]
-pub async fn get_chapter_page_paths(
-  app: AppHandle,
-  slug: String,
-  chapter_name: String,
-  filenames: Vec<String>,
-) -> Result<Vec<String>, String> {
-  validate_path_component(&slug)?;
-  validate_path_component(&chapter_name)?;
-  for f in &filenames {
-    validate_path_component(f)?;
-  }
-  let base = offline_dir(&app)?.join(&slug).join(&chapter_name);
-  Ok(
-    filenames
-      .iter()
-      .map(|f| base.join(f).to_string_lossy().to_string())
-      .collect(),
-  )
 }
 
 #[tauri::command]

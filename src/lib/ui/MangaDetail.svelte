@@ -1,19 +1,23 @@
 <script lang="ts">
   import { tick } from 'svelte';
   import { fade } from 'svelte/transition';
-  import { ANIM_DURATION, ANIM_EXIT_DURATION, ANIM_EASE, ANIM_EASE_IN } from '$lib/utils/constants';
-  import { Search, X } from 'lucide-svelte';
+  import { ANIM_DURATION, ANIM_EASE } from '$lib/utils/constants';
+  import { Download, Search, X } from 'lucide-svelte';
   import Skeleton from '$lib/ui/Skeleton.svelte';
-  import Loader from '$lib/ui/Loader.svelte';
   import Button from '$lib/ui/Button.svelte';
   import PageContainer from '$lib/ui/PageContainer.svelte';
   import BackLink from '$lib/ui/BackLink.svelte';
   import { getReaderContext } from '$lib/context';
-  import { searchManga, searchMangaMultiple, RateLimitError } from '$lib/api/anilist';
-  import type { MangaMeta } from '$lib/api/anilist';
-  import { fetchLatestChapter } from '$lib/api/mangadex';
+  import type { MangaMeta } from '$lib/api/meta';
   import { isNative } from '$lib/utils/platform';
+  import { chapterLabel, chapterNumber } from '$lib/utils/chapters';
   import { isLocalServer } from '$lib/utils/constants';
+  import { invoke } from '@tauri-apps/api/core';
+  import { ServerLibraryProvider } from '$lib/sources';
+  import { saveManga } from '$lib/sources/download.svelte';
+  import ConfirmDialog from '$lib/ui/ConfirmDialog.svelte';
+  import ChapterTile from '$lib/chapters/ChapterTile.svelte';
+  import VirtualGrid from '$lib/ui/virtual/VirtualGrid.svelte';
 
   const reader = getReaderContext();
   const { state: manga } = reader;
@@ -26,7 +30,6 @@
 
   let meta: MangaMeta | null = $state(null);
   let metaError = $state(false);
-  let metaRateLimited = $state(false);
   let coverFailed = $state(false);
   let search = $state('');
 
@@ -79,56 +82,13 @@
     el.style.transition = '';
   }
 
-  let pickerOpen = $state(false);
-  let pickerQuery = $state('');
-  let pickerLoading = $state(false);
-  let pickerResults: MangaMeta[] = $state([]);
-  let pickerError = $state(false);
-
-  async function runPickerSearch() {
-    if (!pickerQuery.trim()) return;
-    pickerLoading = true;
-    pickerError = false;
-    pickerResults = [];
-    try {
-      pickerResults = await searchMangaMultiple(pickerQuery.trim(), 6);
-      if (!pickerResults.length) pickerError = true;
-    } catch {
-      pickerError = true;
-    } finally {
-      pickerLoading = false;
-    }
-  }
-
-  function selectFromPicker(result: MangaMeta) {
-    meta = result;
-    metaError = false;
-    pickerOpen = false;
-    pickerQuery = '';
-    pickerResults = [];
-  }
-
-  function openPicker() {
-    pickerOpen = true;
-    pickerQuery = mangaName;
-    pickerResults = [];
-    pickerError = false;
-  }
-
-  $effect(() => {
-    if (!pickerOpen) return;
-    const query = pickerQuery.trim();
-    if (!query) {
-      pickerResults = [];
-      return;
-    }
-    const t = setTimeout(() => runPickerSearch(), 350);
-    return () => clearTimeout(t);
-  });
-
   const filteredChapters = $derived(
     search.trim()
-      ? chapters.filter((c) => c.name.toLowerCase().includes(search.toLowerCase()))
+      ? chapters.filter((c) =>
+          [c.name, chapterNumber(c.name) ?? ''].some((s) =>
+            s.toLowerCase().includes(search.trim().toLowerCase())
+          )
+        )
       : chapters
   );
 
@@ -150,38 +110,48 @@
     if (!mangaName) return;
     meta = null;
     metaError = false;
-    metaRateLimited = false;
     coverFailed = false;
     tagsExpanded = false;
-    loadMeta(mangaName);
+    loadMeta();
   });
 
-  async function loadMeta(name: string) {
-    try {
-      const result = await searchManga(name);
-      if (!result) {
-        metaError = true;
-        return;
-      }
-      meta = result;
-      if (result.status === 'ongoing' && result.mangadexId) {
-        const latest = await fetchLatestChapter(result.mangadexId);
-        if (latest && meta) {
-          meta = { ...meta, latestChapter: latest.chapter, latestChapterDate: latest.publishAt };
-        }
-      }
-    } catch (err) {
-      if (err instanceof RateLimitError) {
-        metaRateLimited = true;
-      }
-      metaError = true;
-    }
+  async function loadMeta() {
+    const result = (await reader.provider?.loadMeta?.()) ?? null;
+    if (result) meta = result;
+    else metaError = true;
   }
 
-  function retryMeta() {
-    metaError = false;
-    metaRateLimited = false;
-    loadMeta(mangaName);
+  // A server manga with no copy on this device can be downloaded from here.
+  const serverSource = $derived(
+    isNative() && reader.provider instanceof ServerLibraryProvider ? reader.provider : null
+  );
+  let downloaded = $state(true);
+  let confirmingDownload = $state(false);
+  const canDownload = $derived(!!serverSource && !downloaded);
+
+  $effect(() => {
+    const source = serverSource;
+    if (!source) return;
+    downloaded = true;
+    const check = () =>
+      invoke<{ slug: string }[]>('list_offline_manga')
+        .then((list) => (downloaded = list.some((m) => m.slug === source.slug)))
+        .catch(() => {});
+    check();
+    const offComplete = reader.events.on('download:complete', check);
+    const offError = reader.events.on('download:error', check);
+    return () => {
+      offComplete();
+      offError();
+    };
+  });
+
+  function download() {
+    confirmingDownload = false;
+    if (!serverSource) return;
+    // Hidden while it runs; the toast shows progress.
+    downloaded = true;
+    saveManga(serverSource.slug, mangaName, serverSource.getServerChapters(), reader.events);
   }
 
   function resume() {
@@ -200,21 +170,6 @@
       manga.currentPage = 0;
     }
   }
-
-  function formatDate(iso: string) {
-    return new Date(iso).toLocaleDateString('en', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric'
-    });
-  }
-
-  const STATUS_LABEL: Record<string, string> = {
-    ongoing: 'ONGOING',
-    completed: 'COMPLETED',
-    hiatus: 'HIATUS',
-    cancelled: 'CANCELLED'
-  };
 </script>
 
 {#snippet tagsValue()}
@@ -253,13 +208,6 @@
         class="flex min-w-0 flex-1 flex-col items-start gap-1 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between sm:gap-3"
       >
         <span class="min-w-0 text-sm font-bold sm:truncate">{meta?.title || mangaName}</span>
-        <button
-          class="shrink-0 cursor-pointer text-xs underline opacity-50 hover:opacity-80 disabled:pointer-events-none disabled:opacity-0"
-          disabled={!meta}
-          onclick={() => (pickerOpen ? (pickerOpen = false) : openPicker())}
-        >
-          Not this manga?
-        </button>
       </div>
     </div>
     <div class="flex">
@@ -271,27 +219,6 @@
       <div class="min-w-0 flex-1 truncate px-3 py-2.5 text-sm opacity-50">{mangaName}</div>
     </div>
     {#if meta}
-      <div class="flex" in:fade={{ duration: ANIM_DURATION, easing: ANIM_EASE }}>
-        <div
-          class="w-24 shrink-0 border-r border-border/10 px-3 py-2.5 text-[0.65rem] font-bold tracking-widest opacity-45 sm:w-28"
-        >
-          STATUS
-        </div>
-        <div class="flex min-w-0 flex-1 items-center px-3 py-2.5">
-          {#if meta.status}
-            <span
-              class="border px-2 py-0.5 text-xs font-bold tracking-widest
-              {meta.status === 'ongoing'
-                ? 'border-success/50 text-success'
-                : 'border-border/20 opacity-50'}"
-            >
-              {STATUS_LABEL[meta.status] ?? meta.status.toUpperCase()}
-            </span>
-          {:else}
-            <span class="text-sm opacity-40">—</span>
-          {/if}
-        </div>
-      </div>
       <div class="flex" in:fade={{ duration: ANIM_DURATION, easing: ANIM_EASE }}>
         <div
           class="w-24 shrink-0 border-r border-border/10 px-3 py-2.5 text-[0.65rem] font-bold tracking-widest opacity-45 sm:w-28"
@@ -308,12 +235,7 @@
         </div>
         <div class="min-w-0 flex-1 px-3 py-2.5 text-sm">{meta.year ?? '—'}</div>
       </div>
-      <div
-        class="flex {meta.status === 'ongoing' && meta.latestChapter
-          ? 'border-b border-border/10'
-          : ''}"
-        in:fade={{ duration: ANIM_DURATION, easing: ANIM_EASE }}
-      >
+      <div class="flex" in:fade={{ duration: ANIM_DURATION, easing: ANIM_EASE }}>
         <div
           class="w-24 shrink-0 border-r border-border/10 px-3 py-2.5 text-[0.65rem] font-bold tracking-widest opacity-45 sm:w-28"
         >
@@ -326,33 +248,7 @@
           {@render tagsValue()}
         </div>
       </div>
-      {#if meta.status === 'ongoing' && meta.latestChapter}
-        <div class="flex" in:fade={{ duration: ANIM_DURATION, easing: ANIM_EASE }}>
-          <div
-            class="w-24 shrink-0 border-r border-border/10 px-3 py-2.5 text-[0.65rem] font-bold tracking-widest opacity-45 sm:w-28"
-          >
-            LATEST
-          </div>
-          <div class="min-w-0 flex-1 px-3 py-2.5 text-sm">
-            Ch. {meta.latestChapter}
-            {#if meta.latestChapterDate}
-              <span class="opacity-50"> · {formatDate(meta.latestChapterDate)}</span>
-            {/if}
-            <span class="opacity-40"> (MangaDex)</span>
-          </div>
-        </div>
-      {/if}
     {:else}
-      <div class="flex">
-        <div
-          class="w-24 shrink-0 border-r border-border/10 px-3 py-2.5 text-[0.65rem] font-bold tracking-widest opacity-45 sm:w-28"
-        >
-          STATUS
-        </div>
-        <div class="flex min-w-0 flex-1 items-center px-3 py-2.5">
-          <Skeleton class="h-[18px] w-20" />
-        </div>
-      </div>
       <div class="flex">
         <div
           class="w-24 shrink-0 border-r border-border/10 px-3 py-2.5 text-[0.65rem] font-bold tracking-widest opacity-45 sm:w-28"
@@ -420,20 +316,16 @@
 
 {#snippet chapterTile(chapter: (typeof filteredChapters)[number])}
   {@const isResume = savedProgress?.chapter === chapter.name}
-  {@const trueIndex = chapterIndex.get(chapter.name) ?? 0}
-  <button
-    class="flex aspect-square cursor-pointer flex-col items-center justify-center gap-0.5 border-2 text-center
-      {isResume ? 'border-fg bg-fg/5' : 'border-border/12 hover:border-border/40'}"
-    title="Chapter {trueIndex + 1} — {chapter.pageCount} pages{isResume
+  <ChapterTile
+    name={chapter.name}
+    number={chapterNumber(chapter.name) ?? String((chapterIndex.get(chapter.name) ?? 0) + 1)}
+    title="{chapterLabel(chapter.name)} — {chapter.pageCount} pages{isResume
       ? ` — resume at p.${savedProgress.page + 1}`
       : ''}"
+    pageCount={chapter.pageCount}
+    highlighted={isResume}
     onclick={() => readChapter(chapter.name)}
-  >
-    <span class="text-base font-bold tabular-nums md:text-sm {isResume ? '' : 'opacity-80'}"
-      >{trueIndex + 1}</span
-    >
-    <span class="text-xs tabular-nums opacity-45 md:text-[0.6rem]">{chapter.pageCount}p</span>
-  </button>
+  />
 {/snippet}
 
 {#snippet chapterGrid()}
@@ -445,12 +337,17 @@
       No chapters match "{search}"
     </p>
   {:else}
-    <div
-      class="grid grid-cols-[repeat(auto-fill,minmax(4rem,1fr))] gap-2.5 p-4 md:grid-cols-[repeat(auto-fill,minmax(3rem,1fr))] md:gap-2"
-    >
-      {#each filteredChapters as chapter (chapter.name)}
-        {@render chapterTile(chapter)}
-      {/each}
+    <div class="p-4">
+      <VirtualGrid
+        items={filteredChapters}
+        minItemWidth={isDesktop ? 80 : 88}
+        gap={isDesktop ? 8 : 10}
+        key={(c) => c.name}
+      >
+        {#snippet item(chapter)}
+          {@render chapterTile(chapter)}
+        {/snippet}
+      </VirtualGrid>
     </div>
   {/if}
 {/snippet}
@@ -469,18 +366,9 @@
     {#if metaError && !meta}
       <div class="flex shrink-0 flex-col gap-4">
         <h1 class="text-xl leading-tight font-bold">{mangaName}</h1>
-        {#if metaRateLimited}
-          <p class="text-xs opacity-60">AniList is rate-limiting requests.</p>
-          <button
-            class="cursor-pointer self-start text-xs underline opacity-50 hover:opacity-70"
-            onclick={retryMeta}
-          >
-            Retry
-          </button>
-        {/if}
         {#if savedProgress}
           <Button size="lg" variant="default" class="self-start" onclick={resume}>
-            RESUME: {savedProgress.chapter}, p.{savedProgress.page + 1}
+            RESUME: {chapterLabel(savedProgress.chapter)}, p.{savedProgress.page + 1}
           </Button>
         {/if}
       </div>
@@ -505,12 +393,25 @@
         </div>
       </div>
 
-      {#if savedProgress}
+      {#if savedProgress || canDownload}
         <!-- Actions -->
-        <div class="flex shrink-0 items-center justify-end">
-          <Button size="md" variant="default" onclick={resume}>
-            RESUME: {savedProgress.chapter}, p.{savedProgress.page + 1}
-          </Button>
+        <div class="flex shrink-0 items-center justify-end gap-3">
+          {#if canDownload}
+            <Button
+              size="md"
+              variant="default"
+              class="border-fg/40"
+              onclick={() => (confirmingDownload = true)}
+            >
+              <Download size={14} />
+              DOWNLOAD
+            </Button>
+          {/if}
+          {#if savedProgress}
+            <Button size="md" variant="default" onclick={resume}>
+              RESUME: {chapterLabel(savedProgress.chapter)}, p.{savedProgress.page + 1}
+            </Button>
+          {/if}
         </div>
       {/if}
     {/if}
@@ -543,7 +444,7 @@
           <h1 class="text-xl leading-tight font-bold">{mangaName}</h1>
           {#if savedProgress}
             <Button size="lg" variant="default" class="self-start" onclick={resume}>
-              RESUME: {savedProgress.chapter}, p.{savedProgress.page + 1}
+              RESUME: {chapterLabel(savedProgress.chapter)}, p.{savedProgress.page + 1}
             </Button>
           {/if}
         </div>
@@ -567,12 +468,25 @@
           {@render specTable()}
         </div>
 
-        {#if savedProgress}
+        {#if savedProgress || canDownload}
           <!-- Actions -->
-          <div class="mt-4">
-            <Button size="md" variant="default" class="w-full" onclick={resume}>
-              RESUME: {savedProgress.chapter}, p.{savedProgress.page + 1}
-            </Button>
+          <div class="mt-4 flex flex-col gap-3">
+            {#if savedProgress}
+              <Button size="md" variant="default" class="w-full" onclick={resume}>
+                RESUME: {chapterLabel(savedProgress.chapter)}, p.{savedProgress.page + 1}
+              </Button>
+            {/if}
+            {#if canDownload}
+              <Button
+                size="md"
+                variant="default"
+                class="w-full border-fg/40"
+                onclick={() => (confirmingDownload = true)}
+              >
+                <Download size={14} />
+                DOWNLOAD
+              </Button>
+            {/if}
           </div>
         {/if}
       {/if}
@@ -586,98 +500,11 @@
   >
 {/if}
 
-{#if pickerOpen}
-  <div
-    class="fixed inset-0 z-50 flex items-center justify-center px-4"
-    out:fade={{ duration: ANIM_EXIT_DURATION, easing: ANIM_EASE_IN }}
-  >
-    <button
-      class="absolute inset-0 bg-surface/50 backdrop-blur-xl"
-      onclick={() => (pickerOpen = false)}
-      aria-label="Close"
-    ></button>
-    <div
-      class="relative z-10 flex h-[420px] w-full max-w-sm flex-col border-2 border-border/35 bg-bg p-4"
-      in:fade={{ duration: ANIM_DURATION, easing: ANIM_EASE }}
-    >
-      <div class="mb-3 flex items-center justify-between">
-        <span class="text-xs font-bold tracking-widest opacity-50">SEARCH ANILIST</span>
-        <button
-          class="cursor-pointer opacity-50 hover:opacity-80"
-          onclick={() => (pickerOpen = false)}
-        >
-          <X size={12} />
-        </button>
-      </div>
-      <div class="flex items-center gap-2 border-2 border-border/15 px-3 py-1.5">
-        <Search size={12} class="shrink-0 opacity-50" />
-        <input
-          bind:value={pickerQuery}
-          placeholder="Search title…"
-          class="flex-1 bg-transparent text-sm outline-none placeholder:opacity-50"
-        />
-        {#if pickerLoading}
-          <span class="text-xs opacity-50">…</span>
-        {:else if pickerQuery}
-          <button
-            class="cursor-pointer opacity-50 hover:opacity-80"
-            onclick={() => {
-              pickerQuery = '';
-              pickerResults = [];
-              pickerError = false;
-            }}
-          >
-            <X size={12} />
-          </button>
-        {/if}
-      </div>
-      <div class="mt-3 flex min-h-0 flex-1 flex-col overflow-hidden">
-        {#if pickerLoading}
-          <div class="flex flex-1 items-center justify-center">
-            <Loader />
-          </div>
-        {:else if pickerError}
-          <p class="text-xs opacity-60">No results found.</p>
-        {:else if pickerResults.length}
-          <ul class="flex max-h-full flex-col gap-0 overflow-y-auto border border-border/10">
-            {#each pickerResults as result (result.id)}
-              <li class="border-b border-border/10 last:border-b-0">
-                <button
-                  class="flex w-full cursor-pointer items-center gap-3 px-3 py-2.5 text-left hover:bg-fg/5"
-                  onclick={() => selectFromPicker(result)}
-                >
-                  {#if result.coverUrl}
-                    <img
-                      src={result.coverUrl}
-                      alt={result.title}
-                      class="h-12 w-9 shrink-0 object-cover opacity-80"
-                    />
-                  {:else}
-                    <div
-                      class="flex h-12 w-9 shrink-0 items-center justify-center border border-border/10"
-                    >
-                      <span class="text-base opacity-20">∅</span>
-                    </div>
-                  {/if}
-                  <div class="min-w-0 flex-1">
-                    <p class="truncate text-sm font-bold">{result.title}</p>
-                    <div class="mt-0.5 flex items-center gap-2 text-xs opacity-60">
-                      {#if result.year}<span>{result.year}</span>{/if}
-                      {#if result.status}<span>{result.status.toUpperCase()}</span>{/if}
-                      {#if result.authors.length}<span class="truncate">{result.authors[0]}</span
-                        >{/if}
-                    </div>
-                  </div>
-                </button>
-              </li>
-            {/each}
-          </ul>
-        {:else}
-          <div class="flex flex-1 items-center justify-center">
-            <span class="text-4xl opacity-10">∅</span>
-          </div>
-        {/if}
-      </div>
-    </div>
-  </div>
+{#if confirmingDownload}
+  <ConfirmDialog
+    message={`Download "${mangaName}"? This may take a while depending on size.`}
+    confirmLabel="Download"
+    onconfirm={download}
+    oncancel={() => (confirmingDownload = false)}
+  />
 {/if}

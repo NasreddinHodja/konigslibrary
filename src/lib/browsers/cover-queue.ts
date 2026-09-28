@@ -1,6 +1,4 @@
-import { searchManga } from '$lib/api/anilist';
-
-export type CardMeta = { coverUrl: string | null; title: string | null };
+import type { MangaMeta } from '$lib/api/meta';
 
 const CONCURRENCY = 2;
 let active = 0;
@@ -14,14 +12,13 @@ function pump() {
   }
 }
 
-export function fetchMangaMeta(name: string): Promise<CardMeta> {
+export function queueMeta(load: () => Promise<MangaMeta | null>): Promise<MangaMeta | null> {
   return new Promise((resolve) => {
     queue.push(async () => {
       try {
-        const meta = await searchManga(name);
-        resolve({ coverUrl: meta?.coverUrl ?? null, title: meta?.title || null });
+        resolve(await load());
       } catch {
-        resolve({ coverUrl: null, title: null });
+        resolve(null);
       } finally {
         active--;
         pump();

@@ -3,6 +3,7 @@
   import { ANIM_DURATION, ANIM_EXIT_DURATION, ANIM_EASE, ANIM_EASE_IN } from '$lib/utils/constants';
   import { ArrowLeft, Minus, Plus, Settings } from 'lucide-svelte';
   import { getReaderContext } from '$lib/context';
+  import { chapterLabel } from '$lib/utils/chapters';
   import Toggle from '$lib/ui/Toggle.svelte';
   import PagePicker from '$lib/ui/PagePicker.svelte';
 
@@ -46,7 +47,7 @@
     <span class="shrink-0 truncate text-sm font-bold">{mangaName}</span>
     {#if manga.selectedChapter}
       <span class="shrink-0 text-xs opacity-50">·</span>
-      <span class="truncate text-xs opacity-70">{manga.selectedChapter}</span>
+      <span class="truncate text-xs opacity-70">{chapterLabel(manga.selectedChapter)}</span>
     {/if}
   </div>
 

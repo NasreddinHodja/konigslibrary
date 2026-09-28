@@ -79,11 +79,19 @@
     };
   });
 
+  const nativeBridge = () =>
+    (window as unknown as { __kl?: { setImmersive(h: boolean): void } }).__kl;
+
   $effect(() => {
     if (!native) return;
-    (window as unknown as { __kl?: { setImmersive(h: boolean): void } }).__kl?.setImmersive(
-      !hudVisible
-    );
+    nativeBridge()?.setImmersive(!hudVisible);
+  });
+
+  // Immersive mode belongs to the reader only: leaving it always brings the
+  // system bars back for the library and detail pages.
+  $effect(() => {
+    if (!native) return;
+    return () => nativeBridge()?.setImmersive(false);
   });
 
   $effect(() => {

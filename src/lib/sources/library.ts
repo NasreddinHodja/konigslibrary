@@ -1,6 +1,7 @@
 import type { Chapter, ServerChapter } from '$lib/utils/types';
 import { apiUrl } from '$lib/utils/constants';
 import type { BulkPageProvider, PageResult } from './types';
+import { fetchServerMeta, type MangaMeta } from '$lib/api/meta';
 
 export class ServerLibraryProvider implements BulkPageProvider {
   readonly kind = 'library';
@@ -21,20 +22,20 @@ export class ServerLibraryProvider implements BulkPageProvider {
     return chapters.map((c) => ({ name: c.name, pageCount: c.pageCount }));
   }
 
+  loadMeta(): Promise<MangaMeta | null> {
+    return fetchServerMeta(this.slug);
+  }
+
   async getPageUrls(chapterName: string): Promise<PageResult> {
     const chapter = this.chapters.find((c) => c.name === chapterName);
     if (!chapter) return { urls: [], revoke: false };
 
-    const isZipManga = /\.(zip|cbz)$/i.test(decodeURIComponent(this.slug));
     const urls = chapter.pages.map((page) => {
       const encodedPage = page
         .split('/')
         .map((s) => encodeURIComponent(s))
         .join('/');
-      if (chapter.slug && !isZipManga) {
-        return apiUrl(`/api/library/${this.slug}/${chapter.slug}/${encodedPage}`);
-      }
-      return apiUrl(`/api/library/${this.slug}/${encodedPage}`);
+      return apiUrl(`/api/library/${this.slug}/${chapter.slug}/${encodedPage}`);
     });
     return { urls, revoke: false };
   }

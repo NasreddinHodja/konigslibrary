@@ -16,78 +16,18 @@ function getBridge(): NativeBridge | undefined {
   return (window as unknown as { __kl?: NativeBridge }).__kl;
 }
 
-function buildPageUrls(slug: string, chapter: ServerChapter): string[] {
-  const isZipManga = /\.(zip|cbz)$/i.test(decodeURIComponent(slug));
-  return chapter.pages.map((page) => {
-    const encodedPage = page
-      .split('/')
-      .map((s) => encodeURIComponent(s))
-      .join('/');
-    if (chapter.slug && !isZipManga) {
-      return apiUrl(`/api/library/${slug}/${chapter.slug}/${encodedPage}`);
-    }
-    return apiUrl(`/api/library/${slug}/${encodedPage}`);
-  });
+async function coverName(slug: string): Promise<string | null> {
+  try {
+    const res = await fetch(apiUrl(`/api/library/${slug}/meta`));
+    if (!res.ok) return null;
+    return ((await res.json()) as { cover: string | null }).cover;
+  } catch {
+    return null;
+  }
 }
 
-export function saveChapter(
-  slug: string,
-  mangaName: string,
-  chapter: ServerChapter,
-  events?: EventBus
-): { cancel: () => void } {
-  const id = `dl-${nextId++}`;
-  let cancelled = false;
-
-  const cancel = () => {
-    cancelled = true;
-    invoke('cancel_download', { id });
-    getBridge()?.releaseWakeLock();
-  };
-
-  const total = chapter.pages.length;
-  addToast({
-    id,
-    label: `${mangaName} - ${chapter.name}`,
-    current: 0,
-    total,
-    phase: 'fetching',
-    cancel
-  });
-  getBridge()?.acquireWakeLock(`${mangaName} — ${chapter.name}`, total);
-
-  const channel = new Channel<{ current: number; total: number }>();
-  channel.onmessage = ({ current }) => {
-    updateToast(id, { current });
-    getBridge()?.updateDownloadProgress(current, total);
-  };
-
-  invoke('download_chapter', {
-    id,
-    slug,
-    mangaName,
-    chapter,
-    pageUrls: buildPageUrls(slug, chapter),
-    channel
-  })
-    .then(() => {
-      if (cancelled) return;
-      events?.emit('download:complete', { slug, chapterName: chapter.name });
-      updateToast(id, { phase: 'done', cancel: undefined });
-    })
-    .catch((err: unknown) => {
-      if (cancelled) return;
-      const message = String(err);
-      events?.emit('download:error', { slug, error: message });
-      updateToast(id, { phase: 'error', cancel: undefined, errorMessage: message });
-    })
-    .finally(() => {
-      getBridge()?.releaseWakeLock();
-    });
-
-  return { cancel };
-}
-
+/// Copies a manga's chapter archives and cover from the server into the
+/// downloads folder, as-is. Progress counts chapters.
 export function saveManga(
   slug: string,
   name: string,
@@ -96,42 +36,39 @@ export function saveManga(
 ): { cancel: () => void } {
   const id = `dl-${nextId++}`;
   let cancelled = false;
-  let currentChapterId = '';
+  let currentFileId = '';
 
   const cancel = () => {
     cancelled = true;
-    if (currentChapterId) invoke('cancel_download', { id: currentChapterId });
+    if (currentFileId) invoke('cancel_download', { id: currentFileId });
     getBridge()?.releaseWakeLock();
   };
 
-  const totalPages = chapters.reduce((sum, c) => sum + c.pages.length, 0);
-  addToast({ id, label: name, current: 0, total: totalPages, phase: 'fetching', cancel });
+  const total = chapters.length;
+  addToast({ id, label: name, current: 0, total, phase: 'fetching', cancel });
+  getBridge()?.acquireWakeLock(name, total);
 
-  getBridge()?.acquireWakeLock(name, totalPages);
+  const download = (fileName: string) => {
+    currentFileId = `${id}-${fileName}`;
+    return invoke('download_file', {
+      id: currentFileId,
+      slug,
+      fileName,
+      url: apiUrl(`/api/library/${slug}/${encodeURIComponent(fileName)}`),
+      channel: new Channel()
+    });
+  };
 
   const run = async () => {
-    let fetched = 0;
+    const cover = await coverName(slug);
+    if (cover && !cancelled) await download(cover);
 
+    let done = 0;
     for (const chapter of chapters) {
       if (cancelled) break;
-
-      const chapterId = `${id}-${chapter.name}`;
-      currentChapterId = chapterId;
-
-      const channel = new Channel<{ current: number; total: number }>();
-      channel.onmessage = () => {
-        updateToast(id, { current: ++fetched });
-        getBridge()?.updateDownloadProgress(fetched, totalPages);
-      };
-
-      await invoke('download_chapter', {
-        id: chapterId,
-        slug,
-        mangaName: name,
-        chapter,
-        pageUrls: buildPageUrls(slug, chapter),
-        channel
-      });
+      await download(decodeURIComponent(chapter.slug));
+      updateToast(id, { current: ++done });
+      getBridge()?.updateDownloadProgress(done, total);
     }
 
     if (!cancelled) {
