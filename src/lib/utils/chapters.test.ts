@@ -13,7 +13,7 @@ describe('chapterNumber', () => {
     expect(chapterNumber('chapter_0010-01')).toBe('10.1');
   });
 
-  it('is null for names not in mgdl format', () => {
+  it('is null for names not in chapter_<major>-<minor> format', () => {
     expect(chapterNumber('Vol 1 Ch 3')).toBeNull();
     expect(chapterNumber('chapter_12')).toBeNull();
   });

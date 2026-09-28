@@ -18,6 +18,7 @@ pub struct MangaMeta {
   pub year: Option<i32>,
   pub authors: Vec<String>,
   pub tags: Vec<String>,
+  pub status: Option<String>,
   /// File name of the cover image inside the manga folder.
   pub cover: Option<String>,
 }
@@ -39,6 +40,9 @@ impl MangaMeta {
     }
     if self.tags.is_empty() {
       self.tags = other.tags;
+    }
+    if self.status.is_none() {
+      self.status = other.status;
     }
   }
 }
@@ -90,6 +94,16 @@ fn decode_entities(s: &str) -> String {
   out
 }
 
+/// Archives without `<Status>` mark a complete series with `<Count>`.
+fn status(xml: &str) -> Option<String> {
+  element(xml, "Status").or_else(|| {
+    element(xml, "Count")
+      .and_then(|c| c.parse::<u32>().ok())
+      .filter(|c| *c > 0)
+      .map(|_| "Complete".to_string())
+  })
+}
+
 /// Comma-separated values from several elements, trimmed and deduplicated in
 /// order.
 fn list(xml: &str, tags: &[&str]) -> Vec<String> {
@@ -117,6 +131,7 @@ pub fn parse_comic_info(xml: &str) -> MangaMeta {
       .filter(|y| *y > 0),
     authors: list(xml, &["Writer", "Penciller"]),
     tags: list(xml, &["Genre", "Tags"]),
+    status: status(xml),
     cover: None,
   }
 }
@@ -215,10 +230,12 @@ mod tests {
   <Number>1</Number>
   <Summary>Luffy &amp; the search for &quot;One Piece&quot;&#8230;</Summary>
   <Year>1997</Year>
+  <Count>1100</Count>
   <Writer>ODA Eiichiro</Writer>
   <Penciller>ODA Eiichiro</Penciller>
   <Genre>Action, Adventure</Genre>
   <Tags>Pirate/s, Adventure, Ocean</Tags>
+  <Status>Ongoing</Status>
 </ComicInfo>"#;
 
   const SPARSE: &str = r#"<ComicInfo>
@@ -239,6 +256,13 @@ mod tests {
     assert_eq!(m.year, Some(1997));
     assert_eq!(m.authors, ["ODA Eiichiro"]);
     assert_eq!(m.tags, ["Action", "Adventure", "Pirate/s", "Ocean"]);
+    assert_eq!(m.status.as_deref(), Some("Ongoing"));
+  }
+
+  #[test]
+  fn a_count_without_a_status_means_complete() {
+    let m = parse_comic_info("<ComicInfo><Count>18</Count></ComicInfo>");
+    assert_eq!(m.status.as_deref(), Some("Complete"));
   }
 
   #[test]
@@ -247,6 +271,7 @@ mod tests {
     assert_eq!(m.description, None);
     assert_eq!(m.year, None);
     assert!(m.tags.is_empty());
+    assert_eq!(m.status, None);
   }
 
   #[test]
@@ -283,6 +308,7 @@ mod tests {
     assert_eq!(m.title.as_deref(), Some("One Piece (other)"));
     assert_eq!(m.authors, ["Someone Else"]);
     assert_eq!(m.year, Some(1997));
+    assert_eq!(m.status.as_deref(), Some("Ongoing"));
     assert!(m.description.is_some());
     assert_eq!(m.cover.as_deref(), Some("cover.jpg"));
   }

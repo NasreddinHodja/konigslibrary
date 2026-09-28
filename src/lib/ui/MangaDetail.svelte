@@ -213,6 +213,27 @@
         <div
           class="w-24 shrink-0 border-r border-border/10 px-3 py-2.5 text-[0.65rem] font-bold tracking-widest opacity-45 sm:w-28"
         >
+          STATUS
+        </div>
+        <div class="flex min-w-0 flex-1 items-center px-3 py-2.5">
+          {#if meta.status}
+            <span
+              class="border px-2 py-0.5 text-xs font-bold tracking-widest uppercase {meta.status.toLowerCase() ===
+              'ongoing'
+                ? 'border-success/50 text-success'
+                : 'border-border/20 opacity-50'}"
+            >
+              {meta.status}
+            </span>
+          {:else}
+            <span class="text-sm opacity-40">—</span>
+          {/if}
+        </div>
+      </div>
+      <div class="flex" in:fade={{ duration: ANIM_DURATION, easing: ANIM_EASE }}>
+        <div
+          class="w-24 shrink-0 border-r border-border/10 px-3 py-2.5 text-[0.65rem] font-bold tracking-widest opacity-45 sm:w-28"
+        >
           AUTHOR
         </div>
         <div class="min-w-0 flex-1 px-3 py-2.5 text-sm">{meta.authors.join(', ') || '—'}</div>

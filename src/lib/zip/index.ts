@@ -25,6 +25,7 @@ export type RawMangaMeta = {
   year: number | null;
   authors: string[];
   tags: string[];
+  status: string | null;
   cover: string | null;
 };
 

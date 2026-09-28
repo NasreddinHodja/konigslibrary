@@ -227,18 +227,16 @@
         </p>
         <div class="flex flex-wrap gap-3">
           <a
-            href="/download/konigslibrary.sh"
-            download
-            class="border-2 border-fg/30 px-4 py-2 text-sm hover:border-fg hover:bg-fg/10"
-          >
-            Linux / Mac
-          </a>
-          <a
-            href="/download/konigslibrary.bat"
-            download
+            href="https://github.com/NasreddinHodja/konigslibrary/releases/latest"
             class="border-2 border-fg/30 px-4 py-2 text-sm hover:border-fg hover:bg-fg/10"
           >
             Windows
+          </a>
+          <a
+            href="https://github.com/NasreddinHodja/konigslibrary/releases/latest"
+            class="border-2 border-fg/30 px-4 py-2 text-sm hover:border-fg hover:bg-fg/10"
+          >
+            Linux
           </a>
           <a
             href="https://github.com/NasreddinHodja/konigslibrary/releases/latest/download/konigslibrary.apk"

@@ -1,0 +1,80 @@
+name: Release Linux
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to build, e.g. v0.8.0'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            file \
+            libssl-dev \
+            libxdo-dev \
+            libwebkit2gtk-4.1-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            xdg-utils
+
+      - uses: oven-sh/setup-bun@v2
+
+      # The archive parser is a Rust crate compiled to wasm, so the frontend
+      # cannot be built without a Rust toolchain, same as ci.yml.
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: crates
+
+      # Must match the wasm-bindgen version pinned in crates/klwasm/Cargo.toml;
+      # the two refuse to work together across versions. Cached by rust-cache.
+      - run: cargo install -f wasm-bindgen-cli --version 0.2.99
+
+      - run: bun install --frozen-lockfile
+
+      - run: bun run build:desktop:host
+
+      # See scripts/build-appimage.js.
+      - name: Repack AppImage without host libraries
+        id: appimage
+        env:
+          ARCH: x86_64
+          APPIMAGE_EXTRACT_AND_RUN: 1
+        run: |
+          wget -qO appimagetool \
+            https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage
+          chmod +x appimagetool
+          appdir=$(ls -d src-tauri/target/release/bundle/appimage/*.AppDir | head -1)
+          name=$(basename "$(ls src-tauri/target/release/bundle/appimage/*.AppImage | head -1)")
+          rm -f "$appdir"/usr/lib/libwayland-*
+          mkdir -p dist
+          ./appimagetool --comp xz "$appdir" "dist/$name"
+          echo "path=dist/$name" >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ inputs.tag || github.ref_name }}
+          files: ${{ steps.appimage.outputs.path }}
+          generate_release_notes: true

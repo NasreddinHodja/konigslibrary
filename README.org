@@ -3,7 +3,7 @@
 
 Manga reader that opens ZIP and CBZ archives. Runs in the browser, as a desktop/mobile app (Tauri), or as a self-hosted server for LAN access. No accounts required.
 
-#+html: <p align="center"><img src=".github/readme/home-mobile.jpeg" alt="Mobile home" width="260">&nbsp;&nbsp;<img src=".github/readme/manga-mobile.jpeg" alt="Mobile manga detail" width="260">&nbsp;&nbsp;<img src=".github/readme/reader-mobile.jpeg" alt="Mobile reader" width="260"></p>
+#+html: <p align="center"><img src="static/help/home-mobile.jpeg" alt="Mobile home" width="260">&nbsp;&nbsp;<img src="static/help/manga-mobile.jpeg" alt="Mobile manga detail" width="260">&nbsp;&nbsp;<img src="static/help/reader-mobile.jpeg" alt="Mobile reader" width="260"></p>
 
 * Features
 
@@ -11,7 +11,8 @@ Manga reader that opens ZIP and CBZ archives. Runs in the browser, as a desktop/
 - RTL reading support
 - Hold =z= to zoom to cursor in page-turn mode
 - Chapter and page progress saved to localStorage
-- Offline downloads via IndexedDB
+- Download manga from a server to read offline (desktop and Android apps)
+- Title, summary, authors, tags and status from =ComicInfo.xml=
 - Rebindable keyboard shortcuts
 - Native Tauri 2 desktop app with file dialog
 - Self-hosted server mode (native binary, no runtime to install) for LAN access
@@ -69,7 +70,8 @@ tail, its central directory, and the page on screen.
 
 ** Browser
 
-Visit the deployed site and drop a ZIP or CBZ file.
+Visit the deployed site and open a manga folder (see [[Library Structure]]), or drop a
+single chapter =.cbz= to read it right away.
 
 ** Self-hosted server
 
@@ -78,24 +80,8 @@ The easiest way to share your library with a phone on the same network: open the
 phone's camera app (the mobile app must already be installed). No separate
 install or script needed.
 
-For a headless/always-on setup (NAS, homelab box, no GUI), download and run the
-starter script instead:
-
-*** Linux / macOS
-
-#+begin_src sh
-curl -fSL https://github.com/NasreddinHodja/konigslibrary/raw/main/static/download/konigslibrary.sh -o konigslibrary.sh
-chmod +x konigslibrary.sh
-./konigslibrary.sh
-#+end_src
-
-*** Windows
-
-Download =konigslibrary.bat= from =static/download/= and run it.
-
-The script installs Bun if needed, builds the app, and starts a server on =http://localhost:3000=. LAN addresses are printed so other devices can connect.
-
-*** Manual (Bun and Rust required)
+For a headless/always-on setup (NAS, homelab box, no GUI), build and run the
+server yourself:
 
 #+begin_src sh
 bun install
@@ -125,9 +111,15 @@ Or configure it through Settings in the UI (saved to =konigslibrary.json=).
 
 ** Desktop App (Tauri)
 
+The [[https://github.com/NasreddinHodja/konigslibrary/releases/latest][latest GitHub release]] has a Windows installer (=-setup.exe=) and a Linux
+AppImage.
+
+To build it yourself:
+
 #+begin_src sh
 bun run tauri:local          # dev mode
 bun tauri build              # release build
+bun run build:desktop        # Linux AppImage, built in Docker, lands in dist/
 #+end_src
 
 ** Android
@@ -145,54 +137,61 @@ A signed APK is available on the [[https://github.com/NasreddinHodja/konigslibra
 
 * Library Structure
 
-Chapter detection is based on directory structure, not naming conventions.
-
-** Local server / Tauri (directories)
+A manga is a folder holding one =.cbz= (or =.zip=) per chapter and, optionally,
+a cover image named =cover.*=.
 
 #+begin_src
 MANGA_DIR/
-├── One Piece/              # manga, subfolders are chapters
-│   ├── ch01/               # chapter, any folder name works
-│   │   ├── 001.jpg
-│   │   └── 002.jpg
-│   ├── ch02/
-│   │   └── 001.jpg
-│   └── extras/             # also a chapter (every subfolder counts)
-│       └── cover.png
-├── Berserk/                # manga, images only = single chapter
-│   ├── page01.png
-│   └── page02.png
-└── Naruto.cbz              # manga, ZIP with chapters from internal folders
+├── One Piece/
+│   ├── cover.jpg
+│   ├── chapter_0001-00.cbz
+│   ├── chapter_0002-00.cbz
+│   └── chapter_0002-05.cbz
+└── Berserk/
+    ├── cover.png
+    ├── 001.cbz
+    └── 002.cbz
 #+end_src
 
-- Each top-level entry in =MANGA_DIR= is one manga (directory or ZIP/CBZ)
-- If a manga directory has subdirectories, each subdirectory is a chapter
-- If it has only images at the root, it's treated as a single chapter
+- Each subdirectory of =MANGA_DIR= is one manga
+- Each =.cbz=/=.zip= directly inside it is one chapter; every image in the
+  archive is a page, whatever folders it is nested under
+- Loose images, subfolders and other files in a manga folder are ignored
 - Hidden files/folders (starting with =.=) are ignored
 
-** ZIP/CBZ files (uploaded or on server)
+In the browser, open a manga folder with the same layout, or a single chapter
+archive.
 
-The parser finds the longest common directory prefix shared by all images, then groups by the next directory level:
+** Metadata
 
-#+begin_src
-manga.cbz
-└── manga/                  # common root (auto-detected, stripped)
-    ├── chapter_01/         # chapter
-    │   ├── 01.png
-    │   └── 02.png
-    └── chapter_02/
-        └── 01.png
-#+end_src
+Title, summary, authors, tags and status come from =ComicInfo.xml= inside the
+chapter archives. Only the first and last chapters are read: the first one's
+values win, and the last one fills whatever the first lacks. Without it, the
+folder name is the title.
 
-If the ZIP has no subdirectories, it's treated as a single chapter.
+| Element                 | Shown as                              |
+|-------------------------+---------------------------------------|
+| =Series=                | Title                                 |
+| =Summary=               | Description                           |
+| =Year=                  | Year                                  |
+| =Writer=, =Penciller=   | Authors (comma-separated)             |
+| =Genre=, =Tags=         | Tags (comma-separated)                |
+| =Status=                | Status badge, shown as written        |
+
+=Status= is not in the ComicInfo v2.1 schema; it is an extension. An archive
+with =Count= but no =Status= is shown as complete.
 
 ** Sorting
 
-Chapters sort lexicographically. Zero-pad folder names to get correct numeric order:
+Chapters sort lexicographically. Zero-pad file names to get correct numeric order:
 
 | Wrong           | Right            |
 |-----------------+------------------|
 | =ch1=, =ch10=, =ch2= | =ch01=, =ch02=, =ch10= |
+
+Archives named =chapter_<major>-<minor>= are shown
+as chapter numbers: =chapter_0044-00= is "Ch. 44" and =chapter_0044-05= is
+"Ch. 44.5". Any other name is shown as is.
 
 ** Supported image formats
 

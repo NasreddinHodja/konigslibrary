@@ -1,12 +1,8 @@
-// Chapter archives are named by mgdl as `chapter_<major>-<minor>`: minor 00 is
-// a whole chapter, anything else is its decimal part (`chapter_0044-05` is
-// 44.5). Same rule as mgdl's `Chapter::display_number`.
-const MGDL_NAME = /^chapter_(\d+)-(\d+)$/;
+// chapter_0044-00 is 44, chapter_0044-05 is 44.5.
+const NUMBERED_NAME = /^chapter_(\d+)-(\d+)$/;
 
-/// The chapter number encoded in an mgdl chapter name, or `null` for any other
-/// name.
 export function chapterNumber(name: string): string | null {
-  const match = MGDL_NAME.exec(name);
+  const match = NUMBERED_NAME.exec(name);
   if (!match) return null;
   const major = Number(match[1]);
   const minor = Number(match[2]);
