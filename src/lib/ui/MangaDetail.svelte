@@ -8,7 +8,6 @@
   import PageContainer from '$lib/ui/PageContainer.svelte';
   import BackLink from '$lib/ui/BackLink.svelte';
   import { getReaderContext } from '$lib/context';
-  import type { MangaMeta } from '$lib/api/meta';
   import { isNative } from '$lib/utils/platform';
   import { chapterLabel, chapterNumber } from '$lib/utils/chapters';
   import { isLocalServer } from '$lib/utils/constants';
@@ -28,8 +27,8 @@
   const chapters = $derived(reader.chapters);
   const savedProgress = $derived(reader.getSavedProgress());
 
-  let meta: MangaMeta | null = $state(null);
-  let metaError = $state(false);
+  const meta = $derived(reader.meta);
+  const metaError = $derived(reader.metaState === 'missing');
   let coverFailed = $state(false);
   let search = $state('');
 
@@ -107,19 +106,10 @@
   const TAGS_COLLAPSED = 4;
 
   $effect(() => {
-    if (!mangaName) return;
-    meta = null;
-    metaError = false;
+    void mangaName;
     coverFailed = false;
     tagsExpanded = false;
-    loadMeta();
   });
-
-  async function loadMeta() {
-    const result = (await reader.provider?.loadMeta?.()) ?? null;
-    if (result) meta = result;
-    else metaError = true;
-  }
 
   // A server manga with no copy on this device can be downloaded from here.
   const serverSource = $derived(
@@ -151,7 +141,7 @@
     if (!serverSource) return;
     // Hidden while it runs; the toast shows progress.
     downloaded = true;
-    saveManga(serverSource.slug, mangaName, serverSource.getServerChapters(), reader.events);
+    saveManga(serverSource.slug, reader.title, serverSource.getServerChapters(), reader.events);
   }
 
   function resume() {
@@ -502,7 +492,7 @@
 
 {#if confirmingDownload}
   <ConfirmDialog
-    message={`Download "${mangaName}"? This may take a while depending on size.`}
+    message={`Download "${reader.title}"? This may take a while depending on size.`}
     confirmLabel="Download"
     onconfirm={download}
     oncancel={() => (confirmingDownload = false)}

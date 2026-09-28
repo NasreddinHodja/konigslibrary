@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { invoke } from '@tauri-apps/api/core';
+  import { invoke, Channel } from '@tauri-apps/api/core';
   import { SvelteMap } from 'svelte/reactivity';
   import { getReaderContext } from '$lib/context';
   import { NativeFilesystemProvider, ServerLibraryProvider } from '$lib/sources';
@@ -44,6 +44,10 @@
   let selectedFilter: Filter = $state('all');
   let searchQuery = $state('');
   let downloadingSlug: string | null = $state(null);
+  // Metadata titles, reported by the cards as they load.
+  const titles = new SvelteMap<string, string>();
+  const displayName = (row: Row) => titles.get(row.id) ?? row.name;
+
   let pendingDelete: { slug: string; name: string } | null = $state(null);
   let pendingDownload: { slug: string; name: string } | null = $state(null);
 
@@ -168,14 +172,14 @@
         icon: Trash2,
         label: 'Delete',
         loading: false,
-        onclick: () => (pendingDelete = { slug: row.server!.slug, name: row.name })
+        onclick: () => (pendingDelete = { slug: row.server!.slug, name: displayName(row) })
       };
     }
     return {
       icon: Download,
       label: 'Download',
       loading: downloadingSlug === row.server.slug,
-      onclick: () => (pendingDownload = { slug: row.server!.slug, name: row.name })
+      onclick: () => (pendingDownload = { slug: row.server!.slug, name: displayName(row) })
     };
   }
 
@@ -235,7 +239,9 @@
     addToast({ id, label: name, current: 0, total: 0, phase: 'deleting' });
 
     try {
-      await invoke('delete_offline_manga', { slug });
+      const channel = new Channel<{ current: number; total: number }>();
+      channel.onmessage = ({ current, total }) => updateToast(id, { current, total });
+      await invoke('delete_offline_manga', { slug, channel });
       events.emit('download:deleted', { slug });
       updateToast(id, { phase: 'done' });
     } catch (err) {
@@ -356,6 +362,7 @@
           {@const action = rowAction(row)}
           <MangaCard
             name={row.name}
+            ontitle={(t) => titles.set(row.id, t)}
             loadMeta={metaLoader(row)}
             badge={row.device ? 'device' : row.downloaded ? 'downloaded' : 'server'}
             {action}

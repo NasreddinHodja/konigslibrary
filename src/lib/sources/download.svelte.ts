@@ -16,14 +16,14 @@ function getBridge(): NativeBridge | undefined {
   return (window as unknown as { __kl?: NativeBridge }).__kl;
 }
 
-async function coverName(slug: string): Promise<string | null> {
+async function serverMeta(slug: string): Promise<{ title: string | null; cover: string | null }> {
   try {
     const res = await fetch(apiUrl(`/api/library/${slug}/meta`));
-    if (!res.ok) return null;
-    return ((await res.json()) as { cover: string | null }).cover;
+    if (res.ok) return await res.json();
   } catch {
-    return null;
+    /* falls back to no title or cover */
   }
+  return { title: null, cover: null };
 }
 
 /// Copies a manga's chapter archives and cover from the server into the
@@ -60,7 +60,12 @@ export function saveManga(
   };
 
   const run = async () => {
-    const cover = await coverName(slug);
+    const { title, cover } = await serverMeta(slug);
+    // Callers pass the best name they have; the metadata title wins.
+    if (title && title !== name && !cancelled) {
+      updateToast(id, { label: title });
+      getBridge()?.acquireWakeLock(title, total);
+    }
     if (cover && !cancelled) await download(cover);
 
     let done = 0;

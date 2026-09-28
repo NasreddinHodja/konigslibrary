@@ -4,6 +4,7 @@ type EventMap = {
   'download:error': { slug: string; error: string };
   'chapter:changed': { from: string | null; to: string | null };
   'source:loaded': { kind: string; mangaName: string };
+  'meta:loaded': { title: string };
   'source:cleared': void;
   'progress:saved': { chapter: string; page: number };
 };

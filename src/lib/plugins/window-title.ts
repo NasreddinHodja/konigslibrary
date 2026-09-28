@@ -17,6 +17,9 @@ export const windowTitlePlugin: Plugin = {
     reader.events.on('source:cleared', () => {
       setTitle(DEFAULT_TITLE);
     });
+    reader.events.on('meta:loaded', ({ title }) => {
+      setTitle(`${title} - ${DEFAULT_TITLE}`);
+    });
   },
 
   onSourceLoaded(mangaName: string) {

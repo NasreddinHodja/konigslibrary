@@ -87,12 +87,7 @@
     <span class="text-[0.6rem] font-bold tracking-wide uppercase">Library</span>
   </button>
 
-  <div class="flex flex-1 flex-col items-center gap-1">
-    <div class="-mt-5">
-      <UploadButton {isDragOver} iconOnly />
-    </div>
-    <span class="text-[0.6rem] font-bold tracking-wide uppercase opacity-50">Upload</span>
-  </div>
+  <UploadButton {isDragOver} tab />
 
   <a
     href="/settings"

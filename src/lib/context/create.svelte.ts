@@ -1,5 +1,6 @@
 import type { Chapter } from '$lib/utils/types';
 import type { SourceProvider } from '$lib/sources';
+import type { MangaMeta } from '$lib/api/meta';
 import { LS_SCROLL_MODE, LS_RTL, LS_PROGRESS_PREFIX } from '$lib/utils/constants';
 import { createDefaultRegistry } from '$lib/commands';
 import { createEventBus } from '$lib/events';
@@ -13,6 +14,17 @@ const browser = typeof localStorage !== 'undefined';
 export function createReader(): Reader {
   let _chapters: Chapter[] = $state([]);
   let _provider: SourceProvider | null = $state(null);
+  let _meta: MangaMeta | null = $state(null);
+  let _metaState: 'loading' | 'loaded' | 'missing' = $state('loading');
+
+  async function loadMeta(provider: SourceProvider) {
+    const meta = (await provider.loadMeta?.().catch(() => null)) ?? null;
+    // A different manga may have been opened in the meantime.
+    if (_provider !== provider) return;
+    _meta = meta;
+    _metaState = meta ? 'loaded' : 'missing';
+    if (meta?.title) events.emit('meta:loaded', { title: meta.title });
+  }
 
   const state = $state({
     selectedChapter: null as string | null,
@@ -54,6 +66,8 @@ export function createReader(): Reader {
     state.shouldScroll = false;
 
     _provider = provider;
+    _meta = null;
+    _metaState = 'loading';
 
     try {
       _chapters = await provider.loadChapters();
@@ -64,6 +78,7 @@ export function createReader(): Reader {
     }
 
     events.emit('source:loaded', { kind: provider.kind, mangaName: provider.mangaName });
+    loadMeta(provider);
 
     state.selectedChapter = null;
   }
@@ -76,6 +91,8 @@ export function createReader(): Reader {
     state.pageUrls = [];
     _chapters = [];
     _provider = null;
+    _meta = null;
+    _metaState = 'loading';
     events.emit('source:cleared', undefined as void);
   }
 
@@ -160,6 +177,15 @@ export function createReader(): Reader {
     },
     get chapters() {
       return _chapters;
+    },
+    get meta() {
+      return _meta;
+    },
+    get metaState() {
+      return _metaState;
+    },
+    get title() {
+      return _meta?.title || _provider?.mangaName || '';
     },
     commands,
     events,

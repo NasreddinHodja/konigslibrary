@@ -7,12 +7,14 @@
   import { showError } from '$lib/ui/toast.svelte';
   import { isAndroid, isNative } from '$lib/utils/platform';
   import { describeOpenFileError } from '$lib/utils/errors';
+  import { Upload } from 'lucide-svelte';
 
   let {
     isDragOver = false,
     compact = false,
-    iconOnly = false
-  }: { isDragOver?: boolean; compact?: boolean; iconOnly?: boolean } = $props();
+    iconOnly = false,
+    tab = false
+  }: { isDragOver?: boolean; compact?: boolean; iconOnly?: boolean; tab?: boolean } = $props();
 
   const reader = getReaderContext();
   // The dialog plugin has no folder picker on mobile, so Android opens a single
@@ -74,7 +76,19 @@
   onchange={handleFolderChange}
   class="hidden"
 />
-{#if iconOnly}
+{#if tab}
+  <!-- An entry in the mobile tab bar, styled like its neighbours. -->
+  <button
+    type="button"
+    onclick={handleClick}
+    class="flex flex-1 cursor-pointer flex-col items-center gap-1 {isDragOver
+      ? ''
+      : 'opacity-50 hover:opacity-90'}"
+  >
+    <Upload size={16} />
+    <span class="text-[0.6rem] font-bold tracking-wide uppercase">Upload</span>
+  </button>
+{:else if iconOnly}
   <button
     type="button"
     onclick={handleClick}

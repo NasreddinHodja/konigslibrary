@@ -1,6 +1,9 @@
 use serde::Serialize;
 use std::path::{Component, Path, PathBuf};
+use tauri::ipc::Channel;
 use tauri::{AppHandle, Manager};
+
+use crate::download::DownloadProgress;
 
 pub fn validate_path_component(s: &str) -> Result<(), String> {
   let mut components = Path::new(s).components();
@@ -59,12 +62,31 @@ pub async fn list_offline_manga(app: AppHandle) -> Result<Vec<OfflineManga>, Str
   Ok(results)
 }
 
+/// Deletes a downloaded manga one file at a time, reporting how many are gone.
 #[tauri::command]
-pub async fn delete_offline_manga(app: AppHandle, slug: String) -> Result<(), String> {
+pub async fn delete_offline_manga(
+  app: AppHandle,
+  slug: String,
+  channel: Channel<DownloadProgress>,
+) -> Result<(), String> {
   validate_path_component(&slug)?;
   let dir = offline_dir(&app)?.join(&slug);
-  if dir.exists() {
-    std::fs::remove_dir_all(&dir).map_err(|e| e.to_string())?;
+  let Ok(read) = std::fs::read_dir(&dir) else {
+    return Ok(());
+  };
+  let files: Vec<PathBuf> = read
+    .flatten()
+    .filter(|e| e.file_type().is_ok_and(|t| t.is_file()))
+    .map(|e| e.path())
+    .collect();
+
+  let total = files.len() as u64;
+  for (i, file) in files.iter().enumerate() {
+    std::fs::remove_file(file).map_err(|e| e.to_string())?;
+    let _ = channel.send(DownloadProgress {
+      current: i as u64 + 1,
+      total,
+    });
   }
-  Ok(())
+  std::fs::remove_dir_all(&dir).map_err(|e| e.to_string())
 }

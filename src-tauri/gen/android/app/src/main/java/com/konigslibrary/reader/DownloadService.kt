@@ -16,7 +16,7 @@ import android.os.PowerManager
 class DownloadService : Service() {
   private var wakeLock: PowerManager.WakeLock? = null
   private lateinit var notificationManager: NotificationManager
-  private var currentLabel: String = "Downloading…"
+  private var currentLabel: String = "manga"
   private var pendingCurrent: Int = 0
   private var pendingTotal: Int = 0
   private var updateScheduled = false
@@ -67,7 +67,7 @@ class DownloadService : Service() {
   override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
     when (intent?.action) {
       ACTION_START -> {
-        currentLabel = intent.getStringExtra(EXTRA_LABEL) ?: "Downloading…"
+        currentLabel = intent.getStringExtra(EXTRA_LABEL) ?: "manga"
         pendingTotal = intent.getIntExtra(EXTRA_TOTAL, 0)
         pendingCurrent = 0
         handler.removeCallbacks(flushNotification)
@@ -93,20 +93,22 @@ class DownloadService : Service() {
     )
 
     val builder = Notification.Builder(this, CHANNEL_ID)
-      .setContentTitle(label)
+      .setContentTitle("Downloading $label")
       .setSmallIcon(android.R.drawable.stat_sys_download)
       .setContentIntent(tapPending)
       .setOnlyAlertOnce(true)
       .setOngoing(true)
+      // Download progress is not sensitive; show it on the lock screen too.
+      .setVisibility(Notification.VISIBILITY_PUBLIC)
 
     if (total > 0) {
       val pct = current * 100 / total
       builder
-        .setContentText("$current / $total pages · $pct%")
+        .setContentText("$current / $total chapters · $pct%")
         .setProgress(total, current, false)
     } else {
       builder
-        .setContentText("Downloading…")
+        .setContentText("Starting…")
         .setProgress(0, 0, true)
     }
 

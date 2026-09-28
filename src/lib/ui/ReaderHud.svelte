@@ -18,7 +18,7 @@
   const reader = getReaderContext();
   const { state: manga, toggleScrollMode, toggleRtl, zoomIn, zoomOut } = reader;
 
-  const mangaName = $derived(reader.provider?.mangaName ?? '');
+  const mangaName = $derived(reader.title);
   const chapters = $derived(reader.chapters);
   const totalPages = $derived(
     chapters.find((c) => c.name === manga.selectedChapter)?.pageCount ?? 0

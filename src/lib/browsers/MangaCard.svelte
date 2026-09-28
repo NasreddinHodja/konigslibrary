@@ -8,12 +8,14 @@
   let {
     name,
     loadMeta,
+    ontitle,
     badge,
     action,
     onopen
   }: {
     name: string;
     loadMeta: () => Promise<MangaMeta | null>;
+    ontitle?: (title: string) => void;
     badge: 'device' | 'server' | 'downloaded';
     action?: {
       icon: ComponentType<SvelteComponent<IconProps>>;
@@ -44,6 +46,7 @@
         queueMeta(loadMeta).then((meta) => {
           cover = meta?.coverUrl ?? null;
           title = meta?.title ?? null;
+          if (title) ontitle?.(title);
           loading = false;
         });
       },
