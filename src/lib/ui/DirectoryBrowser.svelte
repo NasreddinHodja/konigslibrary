@@ -72,7 +72,7 @@
   aria-label="Browse for manga directory"
 >
   <div
-    class="pointer-events-auto my-8 flex max-h-[80vh] w-full max-w-lg flex-col border-2 bg-bg"
+    class="pointer-events-auto my-8 flex h-[60vh] w-full max-w-lg flex-col border-2 bg-bg"
     in:fly={{ y: 10, duration: ANIM_DURATION, easing: ANIM_EASE }}
     out:fade={{ duration: ANIM_EXIT_DURATION, easing: ANIM_EASE_IN }}
   >
