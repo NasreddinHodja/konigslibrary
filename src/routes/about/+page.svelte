@@ -1,7 +1,18 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import { ArrowLeft } from 'lucide-svelte';
+  import { fetchDownloadLinks, RELEASES_URL, type DownloadLinks } from '$lib/utils/update';
 
-  const RELEASES = 'https://github.com/NasreddinHodja/konigslibrary/releases/latest';
+  let downloads = $state<DownloadLinks>({
+    windows: RELEASES_URL,
+    linux: RELEASES_URL,
+    android: RELEASES_URL
+  });
+
+  onMount(async () => {
+    downloads = await fetchDownloadLinks();
+  });
+
   const README = 'https://github.com/NasreddinHodja/konigslibrary#self-hosted-server';
 
   const folder = `My Manga/
@@ -54,10 +65,7 @@
     <h3 class="text-lg font-bold opacity-80">On your Android phone</h3>
     <p class="text-sm leading-relaxed opacity-70">
       Download the
-      <a
-        href="{RELEASES}/download/konigslibrary.apk"
-        class="border-b border-fg/40 hover:border-fg/80">Android app</a
-      >
+      <a href={downloads.android} class="border-b border-fg/40 hover:border-fg/80">Android app</a>
       and install it. Open a chapter <code>.cbz</code> from your phone, or download manga from your computer
       (see "From your computer to your phone").
     </p>
@@ -79,11 +87,14 @@
   <section class="space-y-3">
     <h3 class="text-lg font-bold opacity-80">On your computer</h3>
     <p class="text-sm leading-relaxed opacity-70">
-      Download the
-      <a href={RELEASES} class="border-b border-fg/40 hover:border-fg/80">desktop app</a>: the
-      <code>-setup.exe</code> file on Windows and install it, or the <code>.AppImage</code> file on Linux,
-      make it executable and run it. In Settings, pick your library folder. All your manga show up on
-      the home screen.
+      Download the desktop app: the
+      <a href={downloads.windows} class="border-b border-fg/40 hover:border-fg/80"
+        >Windows installer</a
+      >
+      and install it, or the
+      <a href={downloads.linux} class="border-b border-fg/40 hover:border-fg/80">Linux AppImage</a>,
+      make it executable and run it. In Settings, pick your library folder. All your manga show up
+      on the home screen.
     </p>
     <div class="space-y-3">
       <img src="/help/home-desktop.png" alt="The library in the desktop app" class="w-full" />

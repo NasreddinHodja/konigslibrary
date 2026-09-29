@@ -54,3 +54,28 @@ export async function checkForUpdate(): Promise<UpdateInfo | null> {
 export function dismissUpdate(version: string) {
   localStorage.setItem(LS_DISMISSED, version);
 }
+
+export const RELEASES_URL = `https://github.com/${GITHUB_REPO}/releases/latest`;
+
+export type DownloadLinks = { windows: string; linux: string; android: string };
+
+// Direct links to the latest release's assets, matched by extension since the
+// file names carry the version. Falls back to the releases page.
+export async function fetchDownloadLinks(): Promise<DownloadLinks> {
+  const links = { windows: RELEASES_URL, linux: RELEASES_URL, android: RELEASES_URL };
+  try {
+    const res = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/releases/latest`);
+    if (!res.ok) return links;
+    const data = await res.json();
+    const assets = (data.assets ?? []) as { name: string; browser_download_url: string }[];
+    const find = (ext: string) =>
+      assets.find((a) => a.name.toLowerCase().endsWith(ext))?.browser_download_url;
+    return {
+      windows: find('.exe') ?? links.windows,
+      linux: find('.appimage') ?? links.linux,
+      android: find('.apk') ?? links.android
+    };
+  } catch {
+    return links;
+  }
+}

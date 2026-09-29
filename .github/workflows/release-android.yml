@@ -62,5 +62,6 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: konigslibrary.apk
+          files: konigslibrary_*.apk
+          fail_on_unmatched_files: true
           generate_release_notes: true

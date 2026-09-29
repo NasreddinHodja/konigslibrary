@@ -47,7 +47,7 @@ CLAUDE.md
 notes.org
 
 # builds
-konigslibrary.apk*
+konigslibrary*.apk*
 src-tauri/binaries/*
 
 # rust

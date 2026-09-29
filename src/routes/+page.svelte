@@ -21,6 +21,8 @@
   import UpdateBanner from '$lib/ui/UpdateBanner.svelte';
   import { showError } from '$lib/ui/toast.svelte';
   import { describeOpenFileError } from '$lib/utils/errors';
+  import { fetchDownloadLinks, RELEASES_URL, type DownloadLinks } from '$lib/utils/update';
+  import { onMount } from 'svelte';
 
   const reader = getReaderContext();
 
@@ -31,6 +33,16 @@
   let helpOpen = $state(false);
   let viewerCommands: ViewerCommands | null = $state(null);
   let readerEl: HTMLDivElement | undefined = $state();
+
+  let downloads = $state<DownloadLinks>({
+    windows: RELEASES_URL,
+    linux: RELEASES_URL,
+    android: RELEASES_URL
+  });
+
+  onMount(async () => {
+    if (!native && !isLocalServer) downloads = await fetchDownloadLinks();
+  });
 
   let dragCount = $state(0);
   const isDragOver = $derived(dragCount > 0 && chapters.length === 0);
@@ -232,19 +244,19 @@
         </p>
         <div class="flex flex-wrap gap-3">
           <a
-            href="https://github.com/NasreddinHodja/konigslibrary/releases/latest"
+            href={downloads.windows}
             class="border-2 border-fg/30 px-4 py-2 text-sm hover:border-fg hover:bg-fg/10"
           >
             Windows
           </a>
           <a
-            href="https://github.com/NasreddinHodja/konigslibrary/releases/latest"
+            href={downloads.linux}
             class="border-2 border-fg/30 px-4 py-2 text-sm hover:border-fg hover:bg-fg/10"
           >
             Linux
           </a>
           <a
-            href="https://github.com/NasreddinHodja/konigslibrary/releases/latest/download/konigslibrary.apk"
+            href={downloads.android}
             class="border-2 border-fg/30 px-4 py-2 text-sm hover:border-fg hover:bg-fg/10"
           >
             Android
