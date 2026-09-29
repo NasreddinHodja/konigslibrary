@@ -277,7 +277,7 @@
   />
 {/if}
 
-<div class="w-full min-w-0 border-2 border-border/15">
+<div class="w-full min-w-0 flex-1 border-2 border-border/15">
   {#if mangaDir || serverEnabled || rows.length > 0}
     <div
       class="flex flex-col gap-3 border-b border-border/15 px-4 py-3 sm:flex-row sm:items-center sm:gap-4"

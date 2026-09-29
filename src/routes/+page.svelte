@@ -175,9 +175,14 @@
         out:fade={{ duration: ANIM_EXIT_DURATION, easing: ANIM_EASE_IN }}
         in:fade={{ duration: ANIM_DURATION, delay: ANIM_EXIT_DURATION, easing: ANIM_EASE }}
       >
-        <div class="min-h-0 flex-1 overflow-y-auto pb-[calc(5.25rem_+_var(--safe-bottom))] md:pb-8">
-          <PageContainer maxWidth="max-w-6xl">
-            <div class="space-y-6 md:space-y-8" style="padding-top: calc(2rem + var(--safe-top))">
+        <div
+          class="flex min-h-0 flex-1 flex-col overflow-y-auto pb-[calc(5.25rem_+_var(--safe-bottom))] md:pb-8"
+        >
+          <PageContainer maxWidth="max-w-4xl" class="flex flex-1 flex-col">
+            <div
+              class="flex flex-1 flex-col space-y-6 md:space-y-8"
+              style="padding-top: calc(2rem + var(--safe-top))"
+            >
               <h1 class="text-center text-4xl font-bold tracking-widest md:text-left">
                 KONIGSLIBRARY
               </h1>
