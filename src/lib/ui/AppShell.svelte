@@ -29,7 +29,7 @@
   virtualizer) - pages just reserve space for the chrome via padding.
 -->
 <nav
-  class="fixed top-0 bottom-0 left-0 z-20 hidden w-14 flex-col items-center border-r border-border/10 bg-bg py-4 md:flex"
+  class="nav-rail fixed top-0 bottom-0 left-0 z-20 hidden w-14 flex-col items-center border-r border-border/10 bg-bg py-4 md:flex"
   style="padding-top: calc(1rem + var(--safe-top)); padding-bottom: calc(1rem + var(--safe-bottom))"
 >
   <button
@@ -73,7 +73,7 @@
 </nav>
 
 <nav
-  class="fixed inset-x-0 bottom-0 z-20 flex items-center border-t border-border/10 bg-bg px-2 md:hidden"
+  class="nav-tabs fixed inset-x-0 bottom-0 z-20 flex items-center border-t border-border/10 bg-bg px-2 md:hidden"
   style="height: calc(3.75rem + var(--safe-bottom)); padding-bottom: var(--safe-bottom)"
 >
   <button

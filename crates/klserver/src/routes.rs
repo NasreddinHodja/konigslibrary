@@ -62,6 +62,7 @@ pub fn router(state: SharedState) -> Router {
   let static_files = ServeDir::new(&state.static_dir).fallback(ServeFile::new(index));
 
   Router::new()
+    .route("/api/ping", get(get_ping))
     .route("/api/library", get(get_library))
     .route("/api/library/{manga}/chapters", get(get_chapters))
     .route("/api/library/{manga}/meta", get(get_meta))
@@ -88,6 +89,12 @@ fn cors() -> CorsLayer {
     .allow_origin(Any)
     .allow_methods([Method::GET, Method::POST])
     .allow_headers(Any)
+}
+
+/// Reachability probe: the client polls this while offline, so it must stay
+/// cheaper than `/api/library`, which lists the whole manga directory.
+async fn get_ping() -> StatusCode {
+  StatusCode::NO_CONTENT
 }
 
 async fn get_library(State(state): State<SharedState>) -> Response {
@@ -442,6 +449,13 @@ mod tests {
   }
 
   // --- library and chapters ---
+
+  #[tokio::test]
+  async fn ping_answers_a_lan_client() {
+    let h = harness();
+    let (status, _, _) = send(&h, get_from("/api/ping", LAN)).await;
+    assert_eq!(status, StatusCode::NO_CONTENT);
+  }
 
   #[tokio::test]
   async fn library_lists_the_configured_directory() {

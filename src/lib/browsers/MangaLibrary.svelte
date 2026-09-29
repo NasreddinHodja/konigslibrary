@@ -1,11 +1,18 @@
 <script lang="ts">
   import { invoke, Channel } from '@tauri-apps/api/core';
+  import { untrack } from 'svelte';
   import { SvelteMap } from 'svelte/reactivity';
   import { getReaderContext } from '$lib/context';
   import { NativeFilesystemProvider, ServerLibraryProvider } from '$lib/sources';
   import { listNativeManga, listNativeChapters, getMangaDir } from '$lib/sources/native-library';
   import { fetchNativeMeta, fetchServerMeta, type MangaMeta } from '$lib/api/meta';
   import { saveManga } from '$lib/sources/download.svelte';
+  import {
+    serverStatus,
+    watchServer,
+    checkServer,
+    reportServerFailure
+  } from '$lib/sources/connection.svelte';
   import type { LibraryEntry, ServerChapter } from '$lib/utils/types';
   import { apiUrl, isLocalServer, getServerUrl } from '$lib/utils/constants';
   import { isNative } from '$lib/utils/platform';
@@ -37,13 +44,14 @@
   let deviceError: string | null = $state(null);
 
   let serverEntries: LibraryEntry[] = $state([]);
-  let serverLoading = $state(serverEnabled);
+  let serverLoading = $state(false);
 
   let downloadedEntries: { slug: string; name: string; path: string }[] = $state([]);
 
   let selectedFilter: Filter = $state('all');
   let searchQuery = $state('');
   let downloadingSlug: string | null = $state(null);
+  let refreshing = $state(false);
   // Metadata titles, reported by the cards as they load.
   const titles = new SvelteMap<string, string>();
   const displayName = (row: Row) => titles.get(row.id) ?? row.name;
@@ -69,7 +77,7 @@
     const url = apiUrl('/api/library');
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 8000);
-    fetch(url, { signal: controller.signal })
+    return fetch(url, { signal: controller.signal })
       .then((r) => {
         if (!r.ok) throw new Error(`${r.status}`);
         return r.json();
@@ -80,27 +88,42 @@
       })
       .catch(() => {
         serverLoading = false;
+        reportServerFailure();
       })
       .finally(() => clearTimeout(timer));
   }
 
   function loadDownloaded() {
     if (!native) return;
-    invoke<{ slug: string; name: string; path: string }[]>('list_offline_manga').then((list) => {
-      downloadedEntries = list;
-    });
+    return invoke<{ slug: string; name: string; path: string }[]>('list_offline_manga').then(
+      (list) => {
+        downloadedEntries = list;
+      }
+    );
   }
 
   $effect(() => {
     loadDevice();
-    loadServer();
     loadDownloaded();
+    const unwatch = serverEnabled ? watchServer() : () => {};
     const unsubComplete = events.on('download:complete', () => loadDownloaded());
     const unsubDeleted = events.on('download:deleted', () => loadDownloaded());
     return () => {
+      unwatch();
       unsubComplete();
       unsubDeleted();
     };
+  });
+
+  // Offline, server-only manga are dropped rather than kept around greyed out:
+  // they can't be opened or downloaded, and the server may never come back.
+  $effect(() => {
+    if (!serverEnabled) return;
+    const s = serverStatus();
+    untrack(() => {
+      if (s === 'online') loadServer();
+      else if (s === 'offline') serverEntries = [];
+    });
   });
 
   const rows = $derived.by(() => {
@@ -162,7 +185,12 @@
     });
   });
 
-  const loading = $derived(deviceLoading || serverLoading);
+  // Local manga render as soon as they're listed; the server only holds the
+  // grid back when there is nothing else to show yet.
+  const loading = $derived(
+    deviceLoading ||
+      (rows.length === 0 && serverEnabled && (serverStatus() === 'checking' || serverLoading))
+  );
   const errors = $derived(deviceError ? [deviceError] : []);
 
   function rowAction(row: Row) {
@@ -225,6 +253,7 @@
       saveManga(slug, name, chapters, events);
     } catch {
       showError(`Could not reach server to download "${name}"`);
+      reportServerFailure();
     } finally {
       downloadingSlug = null;
     }
@@ -252,10 +281,27 @@
     }
   }
 
-  function refresh() {
-    loadDevice();
-    loadServer();
-    loadDownloaded();
+  async function reloadServer() {
+    if (!serverEnabled) return;
+    // A transition to online already reloads the list through the effect.
+    const wasOnline = serverStatus() === 'online';
+    if ((await checkServer()) && wasOnline) await loadServer();
+  }
+
+  async function refresh() {
+    if (refreshing) return;
+    refreshing = true;
+    // Local loads finish in milliseconds; the floor keeps the spin visible.
+    try {
+      await Promise.all([
+        loadDevice(),
+        loadDownloaded(),
+        reloadServer(),
+        new Promise((r) => setTimeout(r, 600))
+      ]);
+    } finally {
+      refreshing = false;
+    }
   }
 </script>
 
@@ -283,15 +329,38 @@
       class="flex flex-col gap-3 border-b border-border/15 px-4 py-3 sm:flex-row sm:items-center sm:gap-4"
     >
       <div class="flex shrink-0 items-center justify-between gap-3">
-        <span class="text-xs font-bold tracking-widest opacity-50">
-          LIBRARY ({rows.length})
+        <span class="flex items-center gap-2">
+          <span class="text-xs font-bold tracking-widest opacity-50">
+            LIBRARY ({rows.length})
+          </span>
+          {#if serverEnabled}
+            {@const status = serverStatus()}
+            <button
+              class="flex cursor-pointer items-center gap-1.5 p-1 text-[10px] font-bold tracking-widest opacity-60 hover:opacity-100"
+              onclick={refresh}
+              title={status === 'online'
+                ? 'Server connected'
+                : status === 'offline'
+                  ? 'Server unreachable - tap to retry'
+                  : 'Checking server'}
+            >
+              <span
+                class="size-2 rounded-full {status === 'online'
+                  ? 'bg-success'
+                  : status === 'offline'
+                    ? 'bg-muted'
+                    : 'animate-pulse bg-muted'}"
+              ></span>
+              {#if status === 'offline'}OFFLINE{/if}
+            </button>
+          {/if}
         </span>
         <button
           class="cursor-pointer p-1.5 opacity-40 hover:bg-fg/10 hover:opacity-90 sm:hidden"
           onclick={refresh}
           aria-label="Refresh"
         >
-          <RefreshCw size={13} />
+          <RefreshCw size={13} class={refreshing ? 'animate-spin' : ''} />
         </button>
       </div>
 
@@ -332,7 +401,7 @@
           onclick={refresh}
           aria-label="Refresh"
         >
-          <RefreshCw size={13} />
+          <RefreshCw size={13} class={refreshing ? 'animate-spin' : ''} />
         </button>
       </div>
     </div>
@@ -380,6 +449,8 @@
             >
           {:else if searchQuery.trim()}
             No results for "{searchQuery.trim()}"
+          {:else if serverEnabled && serverStatus() === 'offline'}
+            Server unreachable
           {:else}
             No manga found
           {/if}

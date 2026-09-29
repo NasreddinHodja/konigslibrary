@@ -53,6 +53,21 @@ textarea:focus-visible {
   border-color: white;
 }
 
+/* Page crossfade from onNavigate in +layout.svelte; the nav chrome is named
+   so it holds still while only the page content fades. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: var(--duration-anim);
+}
+
+.nav-rail {
+  view-transition-name: nav-rail;
+}
+
+.nav-tabs {
+  view-transition-name: nav-tabs;
+}
+
 @keyframes skeleton-shimmer {
   0% {
     background-position: -400% 0;

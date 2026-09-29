@@ -8,7 +8,7 @@
   import { isNative } from '$lib/utils/platform';
   import { showSuccess, showError } from '$lib/ui/toast.svelte';
   import { validateAndConnect } from '$lib/sources/server-connect';
-  import { goto } from '$app/navigation';
+  import { goto, onNavigate } from '$app/navigation';
 
   let { children } = $props();
 
@@ -18,6 +18,17 @@
 
   $effect(() => {
     initTheme();
+  });
+
+  // Crossfades between pages. Browsers without view transitions just navigate.
+  onNavigate((navigation) => {
+    if (!document.startViewTransition) return;
+    return new Promise((resolve) => {
+      document.startViewTransition(async () => {
+        resolve();
+        await navigation.complete;
+      });
+    });
   });
 
   function parseConnectUrl(raw: string): string | null {
