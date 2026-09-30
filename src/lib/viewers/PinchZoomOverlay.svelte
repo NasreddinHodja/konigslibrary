@@ -46,7 +46,7 @@
 <div
   class="fixed inset-0 z-50 overflow-hidden"
   style:pointer-events="none"
-  style:background="rgba(0,0,0,{bgOpacity})"
+  style:background="color-mix(in oklab, var(--color-reader-bg) {bgOpacity * 100}%, transparent)"
 >
   <img
     {src}

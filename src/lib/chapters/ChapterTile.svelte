@@ -52,8 +52,8 @@
     <img {src} alt="" class="absolute inset-0 h-full w-full object-cover object-top" />
   {/if}
   <div
-    class="relative flex items-baseline justify-between gap-1 px-1.5 pt-4 pb-1
-      {src ? 'bg-gradient-to-t from-bg via-bg/80 to-transparent' : ''}"
+    class="relative flex items-baseline justify-between gap-1 px-1.5 py-1
+      {src ? 'bg-bg/80' : ''}"
   >
     <span class="text-sm font-bold tabular-nums {highlighted ? '' : 'opacity-90'}">{number}</span>
     <span class="text-[0.6rem] tabular-nums opacity-60">{pageCount}p</span>

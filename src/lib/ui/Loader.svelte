@@ -16,7 +16,7 @@
   .bars span {
     width: 3px;
     height: 20px;
-    background: white;
+    background: var(--color-fg);
     animation: bar-pulse 1s var(--ease-anim, ease-in-out) infinite;
   }
 

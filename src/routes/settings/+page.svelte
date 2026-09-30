@@ -18,9 +18,9 @@
   import { goto } from '$app/navigation';
   import { showSuccess } from '$lib/ui/toast.svelte';
   import { getMangaDir, setMangaDir, expandHome } from '$lib/sources/native-library';
-  import { validateAndConnect } from '$lib/sources/server-connect';
+  import { validateAndConnect, normalizeServerUrl, probeServer } from '$lib/sources/server-connect';
   import ShareLan from '$lib/ui/ShareLan.svelte';
-  import { FolderOpen } from 'lucide-svelte';
+  import { FolderOpen, X } from 'lucide-svelte';
   import Skeleton from '$lib/ui/Skeleton.svelte';
   import DirectoryBrowser from '$lib/ui/DirectoryBrowser.svelte';
   import { PRESETS, getTheme, setTheme } from '$lib/theme';
@@ -133,6 +133,38 @@
   let serverUrl = $state(getServerUrl());
   let connecting = $state(false);
   let connectError: string | null = $state(null);
+  let probeStatus: 'idle' | 'checking' | 'ok' | 'error' = $state('idle');
+  let serverUrlInput: HTMLInputElement | undefined = $state();
+
+  $effect(() => {
+    const url = normalizeServerUrl(serverUrl);
+    connectError = null;
+    if (!url) {
+      probeStatus = 'idle';
+      return;
+    }
+    probeStatus = 'checking';
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => {
+      probeServer(url, ctrl.signal).then(
+        () => (probeStatus = 'ok'),
+        (e) => {
+          if (ctrl.signal.aborted) return;
+          probeStatus = 'error';
+          connectError = e instanceof Error ? e.message : 'Could not reach server';
+        }
+      );
+    }, 450);
+    return () => {
+      clearTimeout(timer);
+      ctrl.abort();
+    };
+  });
+
+  function clearServerUrl() {
+    serverUrl = '';
+    serverUrlInput?.focus();
+  }
 
   async function connectServer() {
     if (!serverUrl.trim()) return;
@@ -423,13 +455,30 @@
 
         <div class="space-y-3">
           <h3 class="text-sm font-bold opacity-60">Server URL</h3>
-          <input
-            type="text"
-            bind:value={serverUrl}
-            placeholder="http://192.168.1.x:3000"
-            onkeydown={handleServerUrlKey}
-            class="w-full border-2 bg-bg px-3 py-2 text-sm text-fg placeholder:opacity-60"
-          />
+          <div class="relative">
+            <input
+              type="text"
+              bind:this={serverUrlInput}
+              bind:value={serverUrl}
+              placeholder="192.168.1.x:3000"
+              onkeydown={handleServerUrlKey}
+              class="w-full border-2 bg-bg py-2 pr-9 pl-3 text-sm text-fg placeholder:opacity-60"
+              style:border-color={probeStatus === 'ok'
+                ? 'color-mix(in oklab, var(--color-success) 60%, transparent)'
+                : probeStatus === 'error'
+                  ? 'color-mix(in oklab, var(--color-error) 60%, transparent)'
+                  : undefined}
+            />
+            {#if serverUrl}
+              <button
+                class="absolute inset-y-0 right-0 px-3 opacity-60 hover:opacity-100"
+                onclick={clearServerUrl}
+                aria-label="Clear"
+              >
+                <X size={16} />
+              </button>
+            {/if}
+          </div>
           <div class="flex items-center gap-3">
             <Button size="md" onclick={connectServer} disabled={connecting}>
               {connecting ? 'Connecting…' : 'Connect'}

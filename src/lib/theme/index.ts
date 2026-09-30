@@ -26,10 +26,10 @@ export const PRESETS: ThemePreset[] = [
     id: 'cloud',
     name: 'Cloud',
     bg: '#f6f7f9',
-    fg: '#485261',
+    fg: '#1f2630',
     surface: '#f0f2f5',
-    border: '#485261',
-    muted: '#6b7a8a',
+    border: '#1f2630',
+    muted: '#4a5563',
     readerBg: '#ffffff'
   },
   {

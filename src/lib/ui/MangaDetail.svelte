@@ -385,7 +385,7 @@
       </div>
     {:else}
       <!-- Cover + spec table -->
-      <div class="flex shrink-0 items-center gap-6">
+      <div class="flex shrink-0 items-start gap-6">
         <div class="relative h-56 w-40 shrink-0 border-2 border-border/15">
           {#if meta?.coverUrl && !coverFailed}
             <img

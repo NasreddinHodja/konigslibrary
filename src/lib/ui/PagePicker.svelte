@@ -43,8 +43,8 @@
 {#if visible}
   <!-- Backdrop -->
   <div
-    class="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
-    style="background: rgba(0,0,0,0.6); padding-bottom: calc(1rem + var(--safe-bottom, 0px))"
+    class="fixed inset-0 z-50 flex items-center justify-center bg-reader-bg/60 p-4 backdrop-blur-sm"
+    style="padding-bottom: calc(1rem + var(--safe-bottom, 0px))"
     role="presentation"
     onclick={onclose}
   >
