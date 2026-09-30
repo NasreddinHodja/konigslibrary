@@ -21,7 +21,25 @@
     reader.clearManga();
     goto('/');
   }
+
+  // Android pans the window under the keyboard (adjustPan), which would leave the
+  // fixed tab bar floating mid-screen - hide it while text entry has focus instead.
+  let typing = $state(false);
+
+  function isTextEntry(el: EventTarget | null): boolean {
+    if (el instanceof HTMLTextAreaElement) return true;
+    if (el instanceof HTMLElement && el.isContentEditable) return true;
+    if (!(el instanceof HTMLInputElement)) return false;
+    return !['checkbox', 'radio', 'range', 'button', 'submit', 'reset', 'file', 'color'].includes(
+      el.type
+    );
+  }
 </script>
+
+<svelte:document
+  onfocusin={(e) => (typing = isTextEntry(e.target))}
+  onfocusout={(e) => (typing = isTextEntry(e.relatedTarget))}
+/>
 
 <!--
   Rail/tab bar are fixed overlay chrome, not layout siblings, so each page keeps
@@ -73,7 +91,9 @@
 </nav>
 
 <nav
-  class="nav-tabs fixed inset-x-0 bottom-0 z-20 flex items-center border-t border-border/10 bg-bg px-2 md:hidden"
+  class="nav-tabs fixed inset-x-0 bottom-0 z-20 flex items-center border-t border-border/10 bg-bg px-2 md:hidden {typing
+    ? 'hidden'
+    : ''}"
   style="height: calc(3.75rem + var(--safe-bottom)); padding-bottom: var(--safe-bottom)"
 >
   <button
