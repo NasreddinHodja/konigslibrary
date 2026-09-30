@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <component type="desktop-application">
-  <id>com.konigslibrary.reader</id>
+  <id>nasreddinhodja.konigslibrary</id>
   <name>Konigslibrary</name>
   <summary>Read manga and comics from your local library</summary>
   <metadata_license>MIT</metadata_license>

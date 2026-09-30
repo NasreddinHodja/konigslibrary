@@ -1,4 +1,4 @@
-package com.konigslibrary.reader
+package nasreddinhodja.konigslibrary
 
 import android.app.Notification
 import android.app.NotificationChannel

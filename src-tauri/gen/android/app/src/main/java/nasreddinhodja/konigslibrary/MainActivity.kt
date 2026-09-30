@@ -1,4 +1,4 @@
-package com.konigslibrary.reader
+package nasreddinhodja.konigslibrary
 
 import android.Manifest
 import android.content.Intent

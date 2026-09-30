@@ -2,7 +2,7 @@
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "konigslibrary",
   "version": "0.8.4",
-  "identifier": "com.konigslibrary.reader",
+  "identifier": "nasreddinhodja.konigslibrary",
   "build": {
     "frontendDist": "../build",
     "devUrl": "http://localhost:5173",
@@ -70,7 +70,7 @@
     "linux": {
       "appimage": {
         "files": {
-          "usr/share/metainfo/com.konigslibrary.reader.metainfo.xml": "com.konigslibrary.reader.metainfo.xml"
+          "usr/share/metainfo/nasreddinhodja.konigslibrary.metainfo.xml": "nasreddinhodja.konigslibrary.metainfo.xml"
         }
       }
     }

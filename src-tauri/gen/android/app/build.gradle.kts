@@ -25,10 +25,10 @@ fun signingProp(name: String, env: String): String? = keyProperties.getProperty(
 
 android {
     compileSdk = 36
-    namespace = "com.konigslibrary.reader"
+    namespace = "nasreddinhodja.konigslibrary"
     defaultConfig {
         manifestPlaceholders["usesCleartextTraffic"] = "true"
-        applicationId = "io.github.nasreddinhodja.konigslibrary"
+        applicationId = "nasreddinhodja.konigslibrary"
         minSdk = 24
         targetSdk = 36
         versionCode = tauriProperties.getProperty("tauri.android.versionCode", "1").toInt()

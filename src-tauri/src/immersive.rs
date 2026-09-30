@@ -7,7 +7,7 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
   Builder::new("immersive")
     .setup(|_app, _api| {
       #[cfg(target_os = "android")]
-      _api.register_android_plugin("com.konigslibrary.reader", "ImmersivePlugin")?;
+      _api.register_android_plugin("nasreddinhodja.konigslibrary", "ImmersivePlugin")?;
       Ok(())
     })
     .build()
