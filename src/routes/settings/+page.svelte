@@ -18,7 +18,12 @@
   import { goto } from '$app/navigation';
   import { showSuccess } from '$lib/ui/toast.svelte';
   import { getMangaDir, setMangaDir, expandHome } from '$lib/sources/native-library';
-  import { validateAndConnect, normalizeServerUrl, probeServer } from '$lib/sources/server-connect';
+  import {
+    validateAndConnect,
+    normalizeServerUrl,
+    probeServer,
+    isProbeable
+  } from '$lib/sources/server-connect';
   import ShareLan from '$lib/ui/ShareLan.svelte';
   import { FolderOpen, X } from 'lucide-svelte';
   import Skeleton from '$lib/ui/Skeleton.svelte';
@@ -146,6 +151,10 @@
     probeStatus = 'checking';
     const ctrl = new AbortController();
     const timer = setTimeout(() => {
+      if (!isProbeable(url)) {
+        probeStatus = 'error';
+        return;
+      }
       probeServer(url, ctrl.signal).then(
         () => (probeStatus = 'ok'),
         (e) => {
