@@ -48,7 +48,9 @@ jobs:
         shell: bash
         run: |
           installer=$(ls src-tauri/target/release/bundle/nsis/*.exe | head -1)
-          echo "path=$installer" >> "$GITHUB_OUTPUT"
+          mkdir -p dist
+          cp "$installer" dist/
+          echo "path=dist/$(basename "$installer")" >> "$GITHUB_OUTPUT"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2

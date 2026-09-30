@@ -28,7 +28,7 @@ android {
     namespace = "com.konigslibrary.reader"
     defaultConfig {
         manifestPlaceholders["usesCleartextTraffic"] = "true"
-        applicationId = "com.konigslibrary.reader"
+        applicationId = "io.github.nasreddinhodja.konigslibrary"
         minSdk = 24
         targetSdk = 36
         versionCode = tauriProperties.getProperty("tauri.android.versionCode", "1").toInt()
