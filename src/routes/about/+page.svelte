@@ -37,7 +37,10 @@
 </script>
 
 <div class="mx-auto max-w-2xl space-y-10 p-8">
-  <a href="/" class="inline-flex items-center gap-2 text-sm opacity-60 hover:opacity-100">
+  <a
+    href="/"
+    class="hit relative inline-flex items-center gap-2 text-sm opacity-60 hover:opacity-100"
+  >
     <ArrowLeft size={16} />
     Back
   </a>

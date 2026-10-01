@@ -36,7 +36,7 @@
   style="padding-top: calc(0.75rem + var(--safe-top)); padding-bottom: 0.75rem;"
 >
   <button
-    class="shrink-0 cursor-pointer p-1 opacity-70 hover:opacity-100"
+    class="hit relative shrink-0 cursor-pointer p-1 opacity-70 hover:opacity-100"
     onclick={onback}
     aria-label="Back"
   >
@@ -52,7 +52,7 @@
   </div>
 
   <button
-    class="shrink-0 cursor-pointer text-xs tabular-nums hover:opacity-70"
+    class="hit relative shrink-0 cursor-pointer text-xs tabular-nums hover:opacity-70"
     onclick={() => (pickerOpen = true)}
     title="Jump to page"
   >
@@ -78,7 +78,7 @@
         <span class="text-xs font-bold tracking-widest">ZOOM</span>
         <div class="flex items-center gap-3">
           <button
-            class="cursor-pointer p-1 opacity-70 hover:opacity-100"
+            class="hit relative cursor-pointer p-1 opacity-70 hover:opacity-100"
             onclick={zoomOut}
             aria-label="Zoom out"
           >
@@ -86,7 +86,7 @@
           </button>
           <span class="w-10 text-center text-sm tabular-nums">{Math.round(manga.zoom * 100)}%</span>
           <button
-            class="cursor-pointer p-1 opacity-70 hover:opacity-100"
+            class="hit relative cursor-pointer p-1 opacity-70 hover:opacity-100"
             onclick={zoomIn}
             aria-label="Zoom in"
           >
@@ -110,7 +110,7 @@
 
     <a
       href="/settings"
-      class="flex items-center justify-center gap-1.5 pt-1 text-xs tracking-widest opacity-60 hover:opacity-100"
+      class="hit relative flex items-center justify-center gap-1.5 pt-1 text-xs tracking-widest opacity-60 hover:opacity-100"
     >
       <Settings size={12} />
       SETTINGS

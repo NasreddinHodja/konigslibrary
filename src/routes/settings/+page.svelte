@@ -256,7 +256,7 @@
     {#if !native}
       <a
         href="/about"
-        class="flex w-fit cursor-pointer items-center gap-1.5 text-xs tracking-widest opacity-50 hover:opacity-80"
+        class="hit relative flex w-fit cursor-pointer items-center gap-1.5 text-xs tracking-widest opacity-50 hover:opacity-80"
       >
         <CircleQuestionMark size={12} />
         HOW TO USE
@@ -268,21 +268,21 @@
     {#if isLocalServer}
       <a
         href="#settings-sources"
-        class="cursor-pointer border-2 border-border/20 px-3 py-1.5 text-xs font-bold tracking-wide whitespace-nowrap opacity-60 hover:border-border/50 hover:opacity-100"
+        class="cursor-pointer border-2 border-border/20 px-3 py-1.5 text-xs font-bold tracking-wide whitespace-nowrap opacity-60 hover:border-border/50 hover:opacity-100 pointer-coarse:py-3.5"
       >
         Sources
       </a>
     {/if}
     <a
       href="#settings-theme"
-      class="cursor-pointer border-2 border-border/20 px-3 py-1.5 text-xs font-bold tracking-wide whitespace-nowrap opacity-60 hover:border-border/50 hover:opacity-100"
+      class="cursor-pointer border-2 border-border/20 px-3 py-1.5 text-xs font-bold tracking-wide whitespace-nowrap opacity-60 hover:border-border/50 hover:opacity-100 pointer-coarse:py-3.5"
     >
       Theme
     </a>
     {#if !isMobile}
       <a
         href="#settings-shortcuts"
-        class="cursor-pointer border-2 border-border/20 px-3 py-1.5 text-xs font-bold tracking-wide whitespace-nowrap opacity-60 hover:border-border/50 hover:opacity-100"
+        class="cursor-pointer border-2 border-border/20 px-3 py-1.5 text-xs font-bold tracking-wide whitespace-nowrap opacity-60 hover:border-border/50 hover:opacity-100 pointer-coarse:py-3.5"
       >
         Shortcuts
       </a>
@@ -290,7 +290,7 @@
     {#if native}
       <a
         href="#settings-providers"
-        class="cursor-pointer border-2 border-border/20 px-3 py-1.5 text-xs font-bold tracking-wide whitespace-nowrap opacity-60 hover:border-border/50 hover:opacity-100"
+        class="cursor-pointer border-2 border-border/20 px-3 py-1.5 text-xs font-bold tracking-wide whitespace-nowrap opacity-60 hover:border-border/50 hover:opacity-100 pointer-coarse:py-3.5"
       >
         Providers
       </a>
@@ -313,7 +313,7 @@
               type="text"
               bind:value={mangaDir}
               placeholder="/path/to/manga"
-              class="flex-1 border-2 bg-bg px-3 py-2 text-sm text-fg placeholder:opacity-60"
+              class="flex-1 border-2 bg-bg px-3 py-2 text-sm text-fg placeholder:opacity-60 pointer-coarse:py-3"
             />
             <button
               class="border-2 px-3 opacity-60 hover:opacity-100"
@@ -350,7 +350,7 @@
           {#each PRESETS as preset (preset.id)}
             <button
               aria-label={preset.id}
-              class="flex cursor-pointer items-center justify-center border-2 px-3 py-2 text-xs {activePresetId ===
+              class="flex cursor-pointer items-center justify-center border-2 px-3 py-2 text-xs pointer-coarse:py-3.5 {activePresetId ===
               preset.id
                 ? 'border-fg'
                 : 'border-border/20 hover:border-border/50'}"
@@ -385,7 +385,7 @@
                 type="color"
                 value={theme[key]}
                 oninput={(e) => updateToken(key, (e.currentTarget as HTMLInputElement).value)}
-                class="h-7 w-12 cursor-pointer border-2 border-border/20 bg-transparent p-0.5"
+                class="h-7 w-12 cursor-pointer border-2 border-border/20 bg-transparent p-0.5 pointer-coarse:h-12 pointer-coarse:w-16"
               />
             </div>
           {/each}
@@ -410,7 +410,7 @@
                 <div class="flex items-center justify-between py-2">
                   <span class="text-sm opacity-80">{binding.label}</span>
                   <button
-                    class="flex min-w-[5rem] cursor-pointer justify-center gap-1 border-2 px-2 py-1 {listening ===
+                    class="flex min-w-[5rem] cursor-pointer justify-center gap-1 border-2 px-2 py-1 pointer-coarse:py-3 {listening ===
                     binding.action
                       ? 'border-fg'
                       : 'border-fg/20 hover:border-fg/50'}"
@@ -452,7 +452,7 @@
                 type="text"
                 bind:value={deviceDir}
                 placeholder="/home/user/Manga"
-                class="flex-1 border-2 bg-bg px-3 py-2 text-sm text-fg placeholder:opacity-60"
+                class="flex-1 border-2 bg-bg px-3 py-2 text-sm text-fg placeholder:opacity-60 pointer-coarse:py-3"
               />
               <button
                 class="border-2 px-3 opacity-60 hover:opacity-100"
@@ -477,7 +477,7 @@
               bind:value={serverUrl}
               placeholder="192.168.1.x:3000"
               onkeydown={handleServerUrlKey}
-              class="w-full border-2 bg-bg py-2 pr-9 pl-3 text-sm text-fg placeholder:opacity-60"
+              class="w-full border-2 bg-bg py-2 pr-9 pl-3 text-sm text-fg placeholder:opacity-60 pointer-coarse:py-3"
               style:border-color={probeStatus === 'ok'
                 ? 'color-mix(in oklab, var(--color-success) 60%, transparent)'
                 : probeStatus === 'error'

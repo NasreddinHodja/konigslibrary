@@ -66,13 +66,18 @@
             <span class="truncate text-xs opacity-40">{chapterName}</span>
           {/if}
         </div>
-        <button class="shrink-0 cursor-pointer p-1 opacity-60 hover:opacity-100" onclick={onclose}>
+        <button
+          class="hit relative shrink-0 cursor-pointer p-1 opacity-60 hover:opacity-100"
+          onclick={onclose}
+        >
           <X size={16} />
         </button>
       </div>
 
       <!-- Search bar -->
-      <div class="flex shrink-0 items-center gap-3 border-b border-border/10 px-4 py-3">
+      <div
+        class="flex shrink-0 items-center gap-3 border-b border-border/10 px-4 py-3 pointer-coarse:py-3.5"
+      >
         <Search size={14} class="shrink-0 opacity-50" />
         <input
           bind:this={searchEl}

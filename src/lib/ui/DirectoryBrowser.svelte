@@ -82,7 +82,7 @@
         Choose manga folder
       </div>
       <button
-        class="cursor-pointer opacity-50 hover:opacity-90"
+        class="hit relative cursor-pointer opacity-50 hover:opacity-90"
         onclick={oncancel}
         aria-label="Close"
       >
@@ -91,7 +91,7 @@
     </div>
 
     <div
-      class="flex shrink-0 items-center gap-1 overflow-x-auto px-5 py-3 text-xs whitespace-nowrap"
+      class="flex shrink-0 items-center gap-1 overflow-x-auto px-5 py-3 text-xs whitespace-nowrap pointer-coarse:py-0"
     >
       {#each segments as seg, i (seg.path)}
         {#if i > 0}<ChevronRight size={11} class="shrink-0 opacity-30" />{/if}
@@ -99,7 +99,7 @@
           <span class="shrink-0 font-bold opacity-90">{seg.name}</span>
         {:else}
           <button
-            class="shrink-0 cursor-pointer opacity-50 hover:text-fg hover:opacity-100"
+            class="shrink-0 cursor-pointer opacity-50 hover:text-fg hover:opacity-100 pointer-coarse:py-4"
             onclick={() => load(seg.path)}
           >
             {seg.name}
@@ -123,7 +123,7 @@
         <div class="py-1">
           {#each entries as entry (entry.path)}
             <button
-              class="flex w-full cursor-pointer items-center gap-2.5 px-3 py-2.5 text-left text-sm hover:bg-fg/5"
+              class="flex w-full cursor-pointer items-center gap-2.5 px-3 py-2.5 text-left text-sm hover:bg-fg/5 pointer-coarse:py-3.5"
               onclick={() => load(entry.path)}
             >
               <Folder size={15} class="shrink-0 opacity-40" />
@@ -140,7 +140,7 @@
       <p class="min-w-0 truncate text-xs opacity-40" title={path}>{path}</p>
       <div class="flex shrink-0 gap-3">
         <button
-          class="cursor-pointer border-2 px-4 py-2 text-sm opacity-60 hover:opacity-100"
+          class="hit relative cursor-pointer border-2 px-4 py-2 text-sm opacity-60 hover:opacity-100"
           onclick={oncancel}
         >
           Cancel

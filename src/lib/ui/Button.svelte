@@ -39,7 +39,7 @@
 
 {#if as === 'span'}
   <span
-    class="inline-flex cursor-pointer items-center gap-2 {variantClass} {sizeClass} {className}"
+    class="hit relative inline-flex cursor-pointer items-center gap-2 {variantClass} {sizeClass} {className}"
     tabindex="0"
     role="button"
     onkeydown={(e: KeyboardEvent) => {
@@ -53,7 +53,7 @@
   </span>
 {:else}
   <button
-    class="inline-flex items-center gap-2 {variantClass} {sizeClass} {className} {disabled
+    class="hit relative inline-flex items-center gap-2 {variantClass} {sizeClass} {className} {disabled
       ? 'cursor-not-allowed opacity-60'
       : 'cursor-pointer'}"
     {onclick}

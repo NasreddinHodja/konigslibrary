@@ -62,13 +62,13 @@
     <p class="mb-5 text-sm leading-relaxed">{message}</p>
     <div class="flex justify-end gap-3">
       <button
-        class="cursor-pointer border-2 px-4 py-2 text-sm opacity-60 hover:opacity-100"
+        class="hit relative cursor-pointer border-2 px-4 py-2 text-sm opacity-60 hover:opacity-100"
         onclick={oncancel}
       >
         Cancel
       </button>
       <button
-        class="cursor-pointer border-2 bg-fg px-4 py-2 text-sm text-bg hover:bg-fg/80"
+        class="hit relative cursor-pointer border-2 bg-fg px-4 py-2 text-sm text-bg hover:bg-fg/80"
         onclick={onconfirm}
       >
         {confirmLabel}

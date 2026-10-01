@@ -28,13 +28,13 @@
   >
     <span class="font-mono text-sm text-fg">Update available: v{update.version}</span>
     <button
-      class="ml-auto flex items-center gap-1 border-2 border-border px-2 py-1 font-mono text-xs font-bold tracking-widest text-fg hover:bg-fg hover:text-bg"
+      class="hit relative ml-auto flex items-center gap-1 border-2 border-border px-2 py-1 font-mono text-xs font-bold tracking-widest text-fg hover:bg-fg hover:text-bg"
       onclick={download}
     >
       <Download size={12} />
       DOWNLOAD
     </button>
-    <button class="text-fg hover:text-muted" onclick={dismiss} aria-label="Dismiss">
+    <button class="hit relative text-fg hover:text-muted" onclick={dismiss} aria-label="Dismiss">
       <X size={16} />
     </button>
   </div>

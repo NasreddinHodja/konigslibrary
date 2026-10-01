@@ -99,24 +99,26 @@
   <button
     type="button"
     onclick={goLibrary}
-    class="flex flex-1 cursor-pointer flex-col items-center gap-1 {active === 'library'
+    class="flex flex-1 cursor-pointer flex-col items-center justify-center gap-1 self-stretch {active ===
+    'library'
       ? ''
       : 'opacity-50 hover:opacity-90'}"
   >
     <LibraryBig size={16} />
-    <span class="text-[0.6rem] font-bold tracking-wide uppercase">Library</span>
+    <span class="text-[11px] font-bold tracking-wide uppercase">Library</span>
   </button>
 
   <UploadButton {isDragOver} tab />
 
   <a
     href="/settings"
-    class="flex flex-1 flex-col items-center gap-1 {active === 'settings'
+    class="flex flex-1 flex-col items-center justify-center gap-1 self-stretch {active ===
+    'settings'
       ? ''
       : 'opacity-50 hover:opacity-90'}"
   >
     <Settings size={16} />
-    <span class="text-[0.6rem] font-bold tracking-wide uppercase">Settings</span>
+    <span class="text-[11px] font-bold tracking-wide uppercase">Settings</span>
   </a>
 </nav>
 

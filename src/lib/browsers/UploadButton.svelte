@@ -105,12 +105,12 @@
   <button
     type="button"
     onclick={handleClick}
-    class="flex flex-1 cursor-pointer flex-col items-center gap-1 {isDragOver
+    class="flex flex-1 cursor-pointer flex-col items-center justify-center gap-1 self-stretch {isDragOver
       ? ''
       : 'opacity-50 hover:opacity-90'}"
   >
     <Upload size={16} />
-    <span class="text-[0.6rem] font-bold tracking-wide uppercase">Upload</span>
+    <span class="text-[11px] font-bold tracking-wide uppercase">Upload</span>
   </button>
 {:else if iconOnly}
   <button
@@ -140,7 +140,7 @@
   <button
     type="button"
     onclick={handleClick}
-    class="flex cursor-pointer items-center gap-1.5 text-xs tracking-widest transition-opacity {isDragOver
+    class="hit relative flex cursor-pointer items-center gap-1.5 text-xs tracking-widest transition-opacity {isDragOver
       ? 'opacity-90'
       : 'opacity-40 hover:opacity-70'}"
   >

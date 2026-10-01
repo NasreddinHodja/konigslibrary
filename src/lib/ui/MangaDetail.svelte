@@ -174,12 +174,12 @@
         <span class="border border-border/30 px-2 py-0.5 text-xs opacity-50">{tag}</span>
       {/each}
       <button
-        class="cursor-pointer border border-border/15 px-2 py-0.5 text-xs opacity-60 hover:opacity-100"
+        class="hit relative cursor-pointer border border-border/15 px-2 py-0.5 text-xs opacity-60 hover:opacity-100"
         onclick={collapseTags}>less</button
       >
     {:else if meta.tags.length > TAGS_COLLAPSED}
       <button
-        class="cursor-pointer border border-border/15 px-2 py-0.5 text-xs opacity-60 hover:opacity-100"
+        class="hit relative cursor-pointer border border-border/15 px-2 py-0.5 text-xs opacity-60 hover:opacity-100"
         onclick={expandTags}>more</button
       >
     {/if}
@@ -192,19 +192,7 @@
   <div class="w-full divide-y divide-border/10 border-2 border-border/15">
     <div class="flex">
       <div
-        class="w-24 shrink-0 border-r border-border/10 px-3 py-2.5 text-[0.65rem] font-bold tracking-widest opacity-45 sm:w-28"
-      >
-        TITLE
-      </div>
-      <div
-        class="flex min-w-0 flex-1 flex-col items-start gap-1 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between sm:gap-3"
-      >
-        <span class="min-w-0 text-sm font-bold sm:truncate">{meta?.title || mangaName}</span>
-      </div>
-    </div>
-    <div class="flex">
-      <div
-        class="w-24 shrink-0 border-r border-border/10 px-3 py-2.5 text-[0.65rem] font-bold tracking-widest opacity-45 sm:w-28"
+        class="w-24 shrink-0 border-r border-border/10 px-3 py-2.5 text-[11px] font-bold tracking-widest opacity-45 sm:w-28"
       >
         FILENAME
       </div>
@@ -213,7 +201,7 @@
     {#if meta}
       <div class="flex" in:fade={{ duration: ANIM_DURATION, easing: ANIM_EASE }}>
         <div
-          class="w-24 shrink-0 border-r border-border/10 px-3 py-2.5 text-[0.65rem] font-bold tracking-widest opacity-45 sm:w-28"
+          class="w-24 shrink-0 border-r border-border/10 px-3 py-2.5 text-[11px] font-bold tracking-widest opacity-45 sm:w-28"
         >
           STATUS
         </div>
@@ -234,7 +222,7 @@
       </div>
       <div class="flex" in:fade={{ duration: ANIM_DURATION, easing: ANIM_EASE }}>
         <div
-          class="w-24 shrink-0 border-r border-border/10 px-3 py-2.5 text-[0.65rem] font-bold tracking-widest opacity-45 sm:w-28"
+          class="w-24 shrink-0 border-r border-border/10 px-3 py-2.5 text-[11px] font-bold tracking-widest opacity-45 sm:w-28"
         >
           AUTHOR
         </div>
@@ -242,7 +230,7 @@
       </div>
       <div class="flex" in:fade={{ duration: ANIM_DURATION, easing: ANIM_EASE }}>
         <div
-          class="w-24 shrink-0 border-r border-border/10 px-3 py-2.5 text-[0.65rem] font-bold tracking-widest opacity-45 sm:w-28"
+          class="w-24 shrink-0 border-r border-border/10 px-3 py-2.5 text-[11px] font-bold tracking-widest opacity-45 sm:w-28"
         >
           YEAR
         </div>
@@ -250,7 +238,7 @@
       </div>
       <div class="flex" in:fade={{ duration: ANIM_DURATION, easing: ANIM_EASE }}>
         <div
-          class="w-24 shrink-0 border-r border-border/10 px-3 py-2.5 text-[0.65rem] font-bold tracking-widest opacity-45 sm:w-28"
+          class="w-24 shrink-0 border-r border-border/10 px-3 py-2.5 text-[11px] font-bold tracking-widest opacity-45 sm:w-28"
         >
           TAGS
         </div>
@@ -264,7 +252,7 @@
     {:else}
       <div class="flex">
         <div
-          class="w-24 shrink-0 border-r border-border/10 px-3 py-2.5 text-[0.65rem] font-bold tracking-widest opacity-45 sm:w-28"
+          class="w-24 shrink-0 border-r border-border/10 px-3 py-2.5 text-[11px] font-bold tracking-widest opacity-45 sm:w-28"
         >
           AUTHOR
         </div>
@@ -274,7 +262,7 @@
       </div>
       <div class="flex">
         <div
-          class="w-24 shrink-0 border-r border-border/10 px-3 py-2.5 text-[0.65rem] font-bold tracking-widest opacity-45 sm:w-28"
+          class="w-24 shrink-0 border-r border-border/10 px-3 py-2.5 text-[11px] font-bold tracking-widest opacity-45 sm:w-28"
         >
           YEAR
         </div>
@@ -284,7 +272,7 @@
       </div>
       <div class="flex">
         <div
-          class="w-24 shrink-0 border-r border-border/10 px-3 py-2.5 text-[0.65rem] font-bold tracking-widest opacity-45 sm:w-28"
+          class="w-24 shrink-0 border-r border-border/10 px-3 py-2.5 text-[11px] font-bold tracking-widest opacity-45 sm:w-28"
         >
           TAGS
         </div>
@@ -365,15 +353,14 @@
     <div class="flex flex-col gap-6 pt-8">
       <BackLink label="LIBRARY" onclick={reader.clearManga} />
 
+      <h1 class="text-2xl leading-tight font-bold">{meta?.title || mangaName}</h1>
+
       {#if metaError && !meta}
-        <div class="flex flex-col gap-4">
-          <h1 class="text-xl leading-tight font-bold">{mangaName}</h1>
-          {#if savedProgress}
-            <Button size="lg" variant="default" class="self-start" onclick={resume}>
-              RESUME: {chapterLabel(savedProgress.chapter)}, p.{savedProgress.page + 1}
-            </Button>
-          {/if}
-        </div>
+        {#if savedProgress}
+          <Button size="lg" variant="default" class="self-start" onclick={resume}>
+            RESUME: {chapterLabel(savedProgress.chapter)}, p.{savedProgress.page + 1}
+          </Button>
+        {/if}
       {:else if isDesktop}
         <div class="flex items-start gap-6">
           {@render cover('h-56 w-40')}

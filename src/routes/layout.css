@@ -5,6 +5,24 @@
   flex-shrink: 0;
 }
 
+/* On touch screens, a tap area of at least 48×48 (Android's recommended
+   touch target) centred on the control, whatever size it's drawn at. The
+   control must be positioned (relative or absolute) for the area to sit on
+   it. */
+@utility hit {
+  @media (pointer: coarse) {
+    &::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: max(100%, 48px);
+      height: max(100%, 48px);
+      transform: translate(-50%, -50%);
+    }
+  }
+}
+
 @theme {
   --ease-anim: cubic-bezier(0, 0, 0.2, 1);
   --ease-in-anim: cubic-bezier(0.4, 0, 1, 1);

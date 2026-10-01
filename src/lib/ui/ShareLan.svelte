@@ -97,7 +97,7 @@
         <div class="flex items-center gap-2">
           <code class="border-2 bg-bg px-2 py-1 text-xs">{url}</code>
           <button
-            class="border-2 p-1.5 opacity-60 hover:opacity-100"
+            class="hit relative border-2 p-1.5 opacity-60 hover:opacity-100"
             onclick={copyUrl}
             aria-label="Copy server URL"
           >

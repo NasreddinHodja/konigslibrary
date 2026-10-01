@@ -1,6 +1,7 @@
 <script lang="ts">
   import { invoke, Channel } from '@tauri-apps/api/core';
   import { untrack } from 'svelte';
+  import { fade } from 'svelte/transition';
   import { SvelteMap } from 'svelte/reactivity';
   import { getReaderContext } from '$lib/context';
   import { NativeFilesystemProvider, ServerLibraryProvider } from '$lib/sources';
@@ -20,7 +21,13 @@
     reportServerFailure
   } from '$lib/sources/connection.svelte';
   import type { ServerChapter } from '$lib/utils/types';
-  import { apiUrl, isLocalServer, getServerUrl } from '$lib/utils/constants';
+  import {
+    apiUrl,
+    isLocalServer,
+    getServerUrl,
+    ANIM_DURATION,
+    ANIM_EASE
+  } from '$lib/utils/constants';
   import { isNative } from '$lib/utils/platform';
   import { showError, addToast, updateToast } from '$lib/ui/toast.svelte';
   import { describeOpenFileError } from '$lib/utils/errors';
@@ -408,12 +415,12 @@
 {/if}
 
 <!-- The server's connection, shown on what it is about: the SERVER tab, or
-     next to the label when the server is the only source. Not a control of its
+     next to the title when the server is the only source. Not a control of its
      own — refresh retries — since it sits inside the tab's button. -->
 {#snippet serverDot()}
   {@const status = serverStatus()}
   <span
-    class="flex items-center gap-1.5 text-[10px] font-bold tracking-widest"
+    class="flex items-center gap-1.5 text-[11px] font-bold tracking-widest"
     title={status === 'online'
       ? 'Server connected'
       : status === 'offline'
@@ -433,7 +440,7 @@
 
 {#snippet refreshButton()}
   <button
-    class="flex size-7 cursor-pointer items-center justify-center opacity-40 hover:bg-fg/10 hover:opacity-90"
+    class="hit relative flex size-7 cursor-pointer items-center justify-center opacity-40 hover:bg-fg/10 hover:opacity-90"
     onclick={refresh}
     aria-label="Refresh"
   >
@@ -493,6 +500,17 @@
   {/if}
 {/snippet}
 
+<div class="flex min-h-7 shrink-0 items-center gap-3 px-4 pt-8 pb-2">
+  <h1 class="text-2xl font-bold">Library</h1>
+  {#if tabs.length === 1 && serverEnabled}{@render serverDot()}{/if}
+  <!-- Comes and goes with the tab (no refresh for an unset device folder). -->
+  {#if tab && !(tab === 'device' && !mangaDir)}
+    <span class="ml-auto" transition:fade={{ duration: ANIM_DURATION, easing: ANIM_EASE }}
+      >{@render refreshButton()}</span
+    >
+  {/if}
+</div>
+
 {#if tabs.length > 0}
   <ListPanel
     tabs={tabs.map((t) =>
@@ -500,9 +518,6 @@
     )}
     activeTab={tab}
     ontab={(key) => selectTab(key as Tab)}
-    label="LIBRARY"
-    status={tabs.length === 1 && serverEnabled ? serverDot : undefined}
-    actions={tab === 'device' && !mangaDir ? undefined : refreshButton}
     bind:search={searchQuery}
     placeholder="Search library"
     fill

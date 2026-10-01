@@ -222,7 +222,7 @@
   >
     <a
       href="/about"
-      class="fixed z-10 opacity-60 hover:opacity-100"
+      class="hit fixed z-10 opacity-60 hover:opacity-100"
       style="top: calc(1rem + var(--safe-top)); right: calc(1rem + var(--safe-right))"
       aria-label="How to use"
     >
@@ -246,19 +246,19 @@
         <div class="flex flex-wrap gap-3">
           <a
             href={downloads.windows}
-            class="border-2 border-fg/30 px-4 py-2 text-sm hover:border-fg hover:bg-fg/10"
+            class="hit relative border-2 border-fg/30 px-4 py-2 text-sm hover:border-fg hover:bg-fg/10"
           >
             Windows
           </a>
           <a
             href={downloads.linux}
-            class="border-2 border-fg/30 px-4 py-2 text-sm hover:border-fg hover:bg-fg/10"
+            class="hit relative border-2 border-fg/30 px-4 py-2 text-sm hover:border-fg hover:bg-fg/10"
           >
             Linux
           </a>
           <a
             href={downloads.android}
-            class="border-2 border-fg/30 px-4 py-2 text-sm hover:border-fg hover:bg-fg/10"
+            class="hit relative border-2 border-fg/30 px-4 py-2 text-sm hover:border-fg hover:bg-fg/10"
           >
             Android
           </a>

@@ -56,6 +56,6 @@
       {src ? 'bg-bg/80' : ''}"
   >
     <span class="text-sm font-bold tabular-nums {highlighted ? '' : 'opacity-90'}">{number}</span>
-    <span class="text-[0.6rem] tabular-nums opacity-60">{pageCount}p</span>
+    <span class="text-[11px] tabular-nums opacity-60">{pageCount}p</span>
   </div>
 </button>

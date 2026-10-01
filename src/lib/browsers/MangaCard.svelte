@@ -96,7 +96,7 @@
 
       {#if action}
         <button
-          class="absolute top-1.5 right-1.5 flex h-7 w-7 items-center justify-center bg-bg/75 backdrop-blur-sm {action.loading
+          class="hit absolute top-1.5 right-1.5 flex h-7 w-7 items-center justify-center bg-bg/75 backdrop-blur-sm {action.loading
             ? 'animate-pulse cursor-wait opacity-40'
             : 'cursor-pointer opacity-80 hover:bg-fg/20 hover:opacity-100'}"
           onclick={(e) => {
