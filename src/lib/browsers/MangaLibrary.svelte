@@ -2,7 +2,7 @@
   import { invoke, Channel } from '@tauri-apps/api/core';
   import { untrack } from 'svelte';
   import { fade } from 'svelte/transition';
-  import { SvelteMap } from 'svelte/reactivity';
+  import { SvelteMap, SvelteSet } from 'svelte/reactivity';
   import { getReaderContext } from '$lib/context';
   import { NativeFilesystemProvider, ServerLibraryProvider } from '$lib/sources';
   import { fetchLibraryPage } from '$lib/sources/library';
@@ -13,28 +13,28 @@
     type Origin
   } from '$lib/sources/native-library';
   import { fetchNativeMeta, fetchServerMeta, serverCoverUrl, type CardMeta } from '$lib/api/meta';
-  import { saveManga } from '$lib/sources/download.svelte';
+  import {
+    startDownload,
+    saveMangas,
+    cancelDownload,
+    downloadProgress,
+    downloadsDiscarding
+  } from '$lib/sources/download.svelte';
   import {
     serverStatus,
     watchServer,
     checkServer,
     reportServerFailure
   } from '$lib/sources/connection.svelte';
-  import type { ServerChapter } from '$lib/utils/types';
-  import {
-    apiUrl,
-    isLocalServer,
-    getServerUrl,
-    ANIM_DURATION,
-    ANIM_EASE
-  } from '$lib/utils/constants';
+  import { isLocalServer, getServerUrl, ANIM_DURATION, ANIM_EASE } from '$lib/utils/constants';
   import { isNative } from '$lib/utils/platform';
   import { showError, addToast, updateToast } from '$lib/ui/toast.svelte';
   import { describeOpenFileError } from '$lib/utils/errors';
-  import { Download, Trash2, RefreshCw, LibraryBig } from 'lucide-svelte';
+  import { Download, Trash2, RefreshCw, LibraryBig, ListChecks, X } from 'lucide-svelte';
   import ListPanel from '$lib/ui/ListPanel.svelte';
   import Skeleton from '$lib/ui/Skeleton.svelte';
   import ConfirmDialog from '$lib/ui/ConfirmDialog.svelte';
+  import Button from '$lib/ui/Button.svelte';
   import MangaCard from './MangaCard.svelte';
   import { TILE_GRID_CLASS } from '$lib/ui/tile-grid';
   import LoadMore from './LoadMore.svelte';
@@ -98,15 +98,14 @@
   }
   let searchQuery = $state('');
   let query = $state('');
-  let downloadingSlug: string | null = $state(null);
   let refreshing = $state(false);
   // Metadata titles, reported by the cards as they load.
   const titles = new SvelteMap<string, string>();
   const displayName = (row: Row) => titles.get(row.id) ?? row.name;
 
   // A download is deleted by its server slug, an import by its folder name.
-  let pendingDelete: { slug: string; name: string } | { folder: string; name: string } | null =
-    $state(null);
+  type DeleteTarget = { slug: string; name: string } | { folder: string; name: string };
+  let pendingDelete: DeleteTarget | null = $state(null);
   let pendingDownload: { slug: string; name: string } | null = $state(null);
 
   const tabs = $derived.by(() => {
@@ -205,15 +204,26 @@
     loadDownloads();
     const unwatch = serverEnabled ? watchServer() : () => {};
     // Downloads are listed in the Device tab.
+    // Rows already shown stay up while the list reloads, so nothing flashes.
     const onChange = () => {
       loadDownloads();
-      reset('device');
+      reset('device', true);
     };
+    // Gone from disk: dropped from the list now, not when it reloads, so the
+    // card doesn't show it as downloaded in between.
+    const onDeleted = ({ slug }: { slug: string }) => {
+      downloads.delete(slug);
+      onChange();
+    };
+    // A download shows in the Device tab from its first file, with its
+    // progress bar; it's only counted as downloaded once complete.
+    const unsubStarted = events.on('download:started', () => reset('device', true));
     const unsubComplete = events.on('download:complete', onChange);
-    const unsubDeleted = events.on('download:deleted', onChange);
+    const unsubDeleted = events.on('download:deleted', onDeleted);
     const unsubImported = events.on('import:complete', () => reset('device'));
     return () => {
       unwatch();
+      unsubStarted();
       unsubComplete();
       unsubDeleted();
       unsubImported();
@@ -256,14 +266,44 @@
     }
   });
 
+  /// Downloads the Device tab doesn't list yet: a folder only lists once it
+  /// holds a finished chapter. Shown first, so a download appears there as soon
+  /// as it starts; its real row takes over when it lists.
+  const pendingDownloads: Row[] = $derived.by(() => {
+    if (!native) return [];
+    const listed = lists.device.rows;
+    const q = query.toLowerCase();
+    return [...downloadProgress]
+      .filter(
+        ([slug, p]) => !listed.some((r) => r.slug === slug) && p.name.toLowerCase().includes(q)
+      )
+      .map(([slug, p]) => ({
+        id: `device:pending:${slug}`,
+        name: p.name,
+        path: null,
+        slug,
+        origin: 'download',
+        known: null
+      }));
+  });
+
+  function visibleRows(t: Tab): Row[] {
+    return t === 'device' ? [...pendingDownloads, ...lists.device.rows] : lists[t].rows;
+  }
+
   /// The copy on this device, if there is one: a device folder or a download.
   function localPath(row: Row): string | null {
     return row.path ?? (row.slug ? (downloads.get(row.slug) ?? null) : null);
   }
 
-  function badge(row: Row): 'device' | 'downloaded' | 'server' {
-    if (row.slug && downloads.has(row.slug)) return 'downloaded';
-    return row.path ? 'device' : 'server';
+  /// A finished download: the downloads list also has ones still copying.
+  function isDownloaded(row: Row): boolean {
+    return !!row.slug && downloads.has(row.slug) && !busy(row.slug);
+  }
+
+  /// Downloading, queued, or cancelled with its files still being deleted.
+  function busy(slug: string): boolean {
+    return downloadProgress.has(slug) || downloadsDiscarding.has(slug);
   }
 
   function rowAction(row: Row) {
@@ -279,6 +319,17 @@
     }
     if (!row.slug) return null;
     const slug = row.slug;
+    // While it downloads (or waits to), the button cancels, at once; in the
+    // Device tab too, where it lists from its first file.
+    if (busy(slug)) {
+      return {
+        icon: X,
+        label: 'Cancel download of',
+        // Already cancelled: pulses until its files are gone.
+        loading: !downloadProgress.has(slug),
+        onclick: () => cancelDownload(slug)
+      };
+    }
     if (downloads.has(slug)) {
       return {
         icon: Trash2,
@@ -291,7 +342,7 @@
     return {
       icon: Download,
       label: 'Download',
-      loading: downloadingSlug === slug,
+      loading: false,
       onclick: () => (pendingDownload = { slug, name: displayName(row) })
     };
   }
@@ -331,20 +382,34 @@
     if (!pendingDownload) return;
     const { slug, name } = pendingDownload;
     pendingDownload = null;
-    downloadingSlug = slug;
+    await downloadOne(slug, name);
+  }
+
+  /// One manga, with its own chapter-counting toast.
+  async function downloadOne(slug: string, name: string) {
     try {
-      const res = await fetch(apiUrl(`/api/library/${slug}/chapters`));
-      if (!res.ok) {
+      await startDownload(slug, name, events);
+    } catch (err) {
+      // fetch rejects with a TypeError when the server can't be reached.
+      if (err instanceof TypeError) {
+        showError(`Could not reach server to download "${name}"`);
+        reportServerFailure();
+      } else {
         showError(`Failed to fetch chapters for "${name}"`);
-        return;
       }
-      const chapters: ServerChapter[] = await res.json();
-      saveManga(slug, name, chapters, events);
-    } catch {
-      showError(`Could not reach server to download "${name}"`);
-      reportServerFailure();
-    } finally {
-      downloadingSlug = null;
+    }
+  }
+
+  async function deleteOne(
+    target: DeleteTarget,
+    channel = new Channel<{ current: number; total: number }>()
+  ) {
+    if ('slug' in target) {
+      await invoke('delete_offline_manga', { slug: target.slug, channel });
+      events.emit('download:deleted', { slug: target.slug });
+    } else {
+      await invoke('delete_imported_manga', { name: target.folder, channel });
+      reset('device');
     }
   }
 
@@ -360,13 +425,7 @@
     try {
       const channel = new Channel<{ current: number; total: number }>();
       channel.onmessage = ({ current, total }) => updateToast(id, { current, total });
-      if ('slug' in target) {
-        await invoke('delete_offline_manga', { slug: target.slug, channel });
-        events.emit('download:deleted', { slug: target.slug });
-      } else {
-        await invoke('delete_imported_manga', { name: target.folder, channel });
-        reset('device');
-      }
+      await deleteOne(target, channel);
       updateToast(id, { phase: 'done' });
     } catch (err) {
       updateToast(id, {
@@ -375,6 +434,114 @@
       });
     }
   }
+
+  // Selection mode: picked cards get downloaded (Server tab) or deleted (Device
+  // tab) together. Native only, as are the single-card actions.
+  let selecting = $state(false);
+  const selected = new SvelteSet<string>();
+  let pendingBulk: { kind: 'download' | 'delete'; rows: Row[] } | null = $state(null);
+
+  /// Whether the current tab's bulk action applies to the row.
+  function selectable(row: Row, t: Tab): boolean {
+    if (!native) return false;
+    if (t === 'device') return row.origin === 'import' || isDownloaded(row);
+    return !!row.slug && !row.path && !downloads.has(row.slug) && !busy(row.slug);
+  }
+
+  const selectedRows = $derived(
+    tab ? lists[tab].rows.filter((r) => selected.has(r.id) && selectable(r, tab)) : []
+  );
+
+  function startSelecting(row: Row | null = null) {
+    selecting = true;
+    if (row && tab && selectable(row, tab)) selected.add(row.id);
+  }
+
+  function stopSelecting() {
+    selecting = false;
+    selected.clear();
+  }
+
+  function toggle(row: Row) {
+    if (!tab || !selectable(row, tab)) return;
+    if (selected.has(row.id)) selected.delete(row.id);
+    else selected.add(row.id);
+  }
+
+  function selectAll() {
+    if (!tab) return;
+    const pickable = lists[tab].rows.filter((r) => selectable(r, tab));
+    const all = pickable.every((r) => selected.has(r.id));
+    for (const r of pickable) {
+      if (all) selected.delete(r.id);
+      else selected.add(r.id);
+    }
+  }
+
+  function confirmBulk() {
+    if (!pendingBulk) return;
+    const { kind, rows } = pendingBulk;
+    pendingBulk = null;
+    stopSelecting();
+    if (kind === 'download' && rows.length === 1) {
+      downloadOne(rows[0].slug!, displayName(rows[0]));
+    } else if (kind === 'download') {
+      saveMangas(
+        rows.map((r) => ({ slug: r.slug!, name: displayName(r) })),
+        events
+      );
+    } else {
+      deleteMany(
+        rows.map((r) =>
+          r.origin === 'import'
+            ? { folder: r.name, name: displayName(r) }
+            : { slug: r.slug!, name: displayName(r) }
+        )
+      );
+    }
+  }
+
+  /// Deletes one after another under one toast, which counts manga.
+  async function deleteMany(targets: DeleteTarget[]) {
+    const id = `del-${Date.now()}`;
+    const total = targets.length;
+    addToast({ id, label: `Deleting ${total} manga`, current: 0, total, phase: 'deleting' });
+    let done = 0;
+    let failed = 0;
+    for (const target of targets) {
+      try {
+        await deleteOne(target);
+      } catch {
+        failed++;
+      }
+      updateToast(id, { current: ++done });
+    }
+    updateToast(
+      id,
+      failed ? { phase: 'error', errorMessage: `${failed} of ${total} failed` } : { phase: 'done' }
+    );
+  }
+
+  // Another tab's cards take other actions, so switching tabs ends selecting.
+  $effect(() => {
+    void tab;
+    untrack(stopSelecting);
+  });
+
+  // System back leaves selection mode before it leaves anything else.
+  $effect(() => {
+    if (!native) return;
+    const onNativeBack = (e: Event) => {
+      if (!selecting) return;
+      stopSelecting();
+      e.preventDefault();
+    };
+    window.addEventListener('nativeback', onNativeBack);
+    return () => window.removeEventListener('nativeback', onNativeBack);
+  });
+
+  /// A small title-row button, drawn as tall as the icon buttons on touch.
+  const TOUCH_BUTTON = 'pointer-coarse:h-10 pointer-coarse:px-4 pointer-coarse:text-sm';
 
   async function refresh() {
     if (refreshing) return;
@@ -402,6 +569,17 @@
     confirmLabel="Download"
     onconfirm={confirmDownload}
     oncancel={() => (pendingDownload = null)}
+  />
+{/if}
+
+{#if pendingBulk}
+  <ConfirmDialog
+    message={pendingBulk.kind === 'download'
+      ? `Download ${pendingBulk.rows.length} manga? This may take a while depending on size.`
+      : `Delete ${pendingBulk.rows.length} manga? This will remove all their chapters from this device.`}
+    confirmLabel={pendingBulk.kind === 'download' ? 'Download' : 'Delete'}
+    onconfirm={confirmBulk}
+    oncancel={() => (pendingBulk = null)}
   />
 {/if}
 
@@ -440,7 +618,7 @@
 
 {#snippet refreshButton()}
   <button
-    class="hit relative flex size-7 cursor-pointer items-center justify-center opacity-40 hover:bg-fg/10 hover:opacity-90"
+    class="hit relative flex size-7 cursor-pointer items-center justify-center opacity-40 hover:bg-fg/10 hover:opacity-90 pointer-coarse:size-10"
     onclick={refresh}
     aria-label="Refresh"
   >
@@ -462,18 +640,27 @@
         </div>
       {/each}
     </div>
-  {:else if t && lists[t].rows.length > 0}
+  {:else if t && visibleRows(t).length > 0}
     <div class={TILE_GRID_CLASS}>
-      {#each lists[t].rows as row (row.id)}
+      {#each visibleRows(t) as row (row.id)}
         {@const action = rowAction(row)}
         <MangaCard
           name={row.name}
           ontitle={(title) => titles.set(row.id, title)}
           metaKey={metaKey(row)}
           loadMeta={metaLoader(row)}
-          badge={badge(row)}
+          downloaded={t === 'server' && isDownloaded(row)}
           {action}
-          onopen={() => openRow(row)}
+          progress={row.slug ? (downloadProgress.get(row.slug) ?? null) : null}
+          selection={selecting
+            ? selectable(row, t)
+              ? selected.has(row.id)
+                ? 'selected'
+                : 'unselected'
+              : 'disabled'
+            : null}
+          onopen={() => (selecting ? toggle(row) : openRow(row))}
+          onlongpress={native ? () => (selecting ? toggle(row) : startSelecting(row)) : undefined}
         />
       {/each}
     </div>
@@ -502,14 +689,55 @@
   {/if}
 {/snippet}
 
-<div class="flex min-h-7 shrink-0 items-center gap-3 px-4 pt-8 pb-2">
-  <h1 class="text-2xl font-bold">Library</h1>
-  {#if tabs.length === 1 && serverEnabled}{@render serverDot()}{/if}
-  <!-- Comes and goes with the tab (no refresh for an unset device folder). -->
-  {#if tab && !(tab === 'device' && !mangaDir)}
-    <span class="ml-auto" transition:fade={{ duration: ANIM_DURATION, easing: ANIM_EASE }}
-      >{@render refreshButton()}</span
+<!-- One height in both modes, so the list doesn't jump. On touch screens its
+     controls are drawn 40px tall (48px to tap, via `hit`). -->
+<div class="box-content flex h-8 shrink-0 items-center gap-3 px-4 pt-8 pb-2 pointer-coarse:h-10">
+  {#if selecting && tab}
+    <button
+      class="hit relative flex size-7 cursor-pointer items-center justify-center opacity-60 hover:bg-fg/10 hover:opacity-100 pointer-coarse:size-10"
+      onclick={stopSelecting}
+      aria-label="Cancel selection"
     >
+      <X size={16} />
+    </button>
+    <span class="text-sm font-bold tabular-nums">{selectedRows.length} selected</span>
+    <span class="ml-auto flex items-center gap-2">
+      <Button size="sm" variant="ghost" class={TOUCH_BUTTON} onclick={selectAll}>All</Button>
+      <Button
+        size="sm"
+        variant="primary"
+        class={TOUCH_BUTTON}
+        disabled={selectedRows.length === 0}
+        onclick={() =>
+          (pendingBulk = {
+            kind: tab === 'server' ? 'download' : 'delete',
+            rows: selectedRows
+          })}
+      >
+        {#if tab === 'server'}<Download size={13} /> Download{:else}<Trash2 size={13} /> Delete{/if}
+      </Button>
+    </span>
+  {:else}
+    <h1 class="text-2xl font-bold">Library</h1>
+    {#if tabs.length === 1 && serverEnabled}{@render serverDot()}{/if}
+    <span class="ml-auto flex items-center gap-1">
+      {#if native && tab && lists[tab].rows.length > 0}
+        <button
+          class="hit relative flex size-7 cursor-pointer items-center justify-center opacity-40 hover:bg-fg/10 hover:opacity-90 pointer-coarse:size-10"
+          onclick={() => startSelecting()}
+          aria-label="Select"
+          transition:fade={{ duration: ANIM_DURATION, easing: ANIM_EASE }}
+        >
+          <ListChecks size={14} />
+        </button>
+      {/if}
+      <!-- Comes and goes with the tab (no refresh for an unset device folder). -->
+      {#if tab && !(tab === 'device' && !mangaDir)}
+        <span transition:fade={{ duration: ANIM_DURATION, easing: ANIM_EASE }}
+          >{@render refreshButton()}</span
+        >
+      {/if}
+    </span>
   {/if}
 </div>
 

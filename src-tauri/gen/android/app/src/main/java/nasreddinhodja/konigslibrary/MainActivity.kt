@@ -5,6 +5,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.view.HapticFeedbackConstants
 import android.webkit.JavascriptInterface
 import android.webkit.WebView
 import androidx.activity.OnBackPressedCallback
@@ -87,6 +88,14 @@ class MainActivity : TauriActivity() {
     /// starts, so the page can leave swipes there to the system.
     @JavascriptInterface
     fun systemGestureInsets(): String = gestureInsets
+
+    /// The page's own long presses (the WebView's haptics are off, see
+    /// onWebViewCreate). Played on the window, which still has them, and
+    /// skipped when the system's touch feedback setting is off.
+    @JavascriptInterface
+    fun hapticLongPress() {
+      runOnUiThread { window.decorView.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS) }
+    }
 
     @JavascriptInterface
     fun releaseWakeLock() {

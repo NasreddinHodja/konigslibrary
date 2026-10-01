@@ -338,9 +338,8 @@
   {/if}
 
   <section id="settings-theme" class="scroll-mt-[calc(1rem+var(--safe-top))]">
-    <div class="flex items-center justify-between gap-3 border-b border-border/15 py-3">
+    <div class="border-b border-border/15 py-3">
       <span class="text-xs font-bold tracking-widest opacity-50">THEME</span>
-      <Button size="sm" onclick={resetTheme}>Reset to default</Button>
     </div>
 
     <div class="flex flex-col gap-5 py-4">
@@ -381,7 +380,10 @@
       </div>
 
       <div>
-        <h3 class="mb-1 text-sm font-bold opacity-60">Customize</h3>
+        <div class="mb-1 flex items-center justify-between gap-3">
+          <h3 class="text-sm font-bold opacity-60">Customize</h3>
+          <Button size="sm" onclick={resetTheme}>Reset to default</Button>
+        </div>
         <div class="divide-y divide-border/10">
           {#each TOKEN_LABELS as [key, label] (key)}
             <div class="flex items-center justify-between py-2">

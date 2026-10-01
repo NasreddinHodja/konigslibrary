@@ -1,4 +1,6 @@
 type EventMap = {
+  /// A download's first file is on disk, so its folder now lists.
+  'download:started': { slug: string };
   'download:complete': { slug: string; chapterName?: string };
   'download:deleted': { slug: string };
   'download:error': { slug: string; error: string };
