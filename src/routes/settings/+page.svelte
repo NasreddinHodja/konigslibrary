@@ -249,7 +249,7 @@
 {#snippet settingsBody()}
   <BackLink label="LIBRARY" href="/" />
 
-  <p class="text-center text-4xl font-bold tracking-widest md:text-left">KONIGSLIBRARY</p>
+  <p class="py-12 text-center text-4xl font-bold tracking-widest md:text-left">KONIGSLIBRARY</p>
 
   <div class="flex items-center justify-between gap-3">
     <h1 class="text-2xl font-bold">Settings</h1>
@@ -349,27 +349,32 @@
         <div class="grid grid-cols-3 gap-2">
           {#each PRESETS as preset (preset.id)}
             <button
-              aria-label={preset.id}
-              class="flex cursor-pointer items-center justify-center border-2 px-3 py-2 text-xs pointer-coarse:py-3.5 {activePresetId ===
+              class="flex cursor-pointer flex-col gap-2 border-2 p-1.5 text-left {activePresetId ===
               preset.id
                 ? 'border-fg'
                 : 'border-border/20 hover:border-border/50'}"
               onclick={() => applyPreset(preset)}
             >
-              <div class="flex shrink-0 gap-0.5">
+              <!-- The library page in the preset's colours: title, search box, covers. -->
+              <div
+                class="flex aspect-[4/3] w-full flex-col gap-1.5 p-2 ring-1 ring-border/20"
+                style:background={preset.bg}
+              >
+                <div class="h-1.5 w-1/2" style:background={preset.fg}></div>
                 <div
-                  class="h-3 w-3 ring-1 ring-border/20 ring-inset"
-                  style="background:{preset.bg}"
+                  class="h-2.5 w-full border"
+                  style:border-color="color-mix(in oklab, {preset.border} 25%, transparent)"
                 ></div>
-                <div
-                  class="h-3 w-3 ring-1 ring-border/20 ring-inset"
-                  style="background:{preset.fg}"
-                ></div>
-                <div
-                  class="h-3 w-3 ring-1 ring-border/20 ring-inset"
-                  style="background:{preset.readerBg}"
-                ></div>
+                <div class="grid flex-1 grid-cols-3 gap-1">
+                  {#each { length: 6 }, i (i)}
+                    <div
+                      style:background="color-mix(in oklab, {preset.fg}
+                      {i === 0 ? 45 : 15}%, transparent)"
+                    ></div>
+                  {/each}
+                </div>
               </div>
+              <span class="px-0.5 text-xs">{preset.name}</span>
             </button>
           {/each}
         </div>

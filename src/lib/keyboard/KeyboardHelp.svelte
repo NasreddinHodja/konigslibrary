@@ -59,7 +59,7 @@
   aria-modal="true"
 >
   <div
-    class="max-h-[calc(100vh-2rem)] w-full max-w-lg overflow-y-auto border-2 bg-surface/75 p-6 shadow-xl backdrop-blur-2xl"
+    class="max-h-[calc(100vh-2rem)] w-full max-w-lg overflow-y-auto border-2 bg-surface/85 p-6 shadow-xl backdrop-blur-2xl"
     in:fly={{ y: 16, duration: ANIM_DURATION, easing: ANIM_EASE }}
     out:fade={{ duration: ANIM_EXIT_DURATION, easing: ANIM_EASE_IN }}
   >

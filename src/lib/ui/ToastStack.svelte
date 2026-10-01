@@ -14,7 +14,7 @@
   >
     {#each toasts as toast (toast.id)}
       <div
-        class="flex min-w-72 items-start gap-3 border-2 bg-surface/70 px-4 py-3 shadow-lg backdrop-blur-2xl"
+        class="flex min-w-72 items-start gap-3 border-2 bg-surface/85 px-4 py-3 shadow-lg backdrop-blur-2xl"
         in:fly={{ x: 100, duration: ANIM_DURATION, easing: ANIM_EASE }}
         out:fly={{ x: 100, duration: ANIM_EXIT_DURATION, easing: ANIM_EASE_IN }}
       >

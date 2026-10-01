@@ -31,7 +31,7 @@
 
 <!-- Top bar -->
 <div
-  class="fixed inset-x-0 top-0 z-40 flex items-center gap-4 border-b border-border/25 bg-surface/60 px-4 backdrop-blur-2xl transition-transform duration-200 ease-out
+  class="fixed inset-x-0 top-0 z-40 flex items-center gap-4 border-b border-border/25 bg-surface/85 px-4 backdrop-blur-2xl transition-transform duration-200 ease-out
     {shown ? 'pointer-events-auto translate-y-0' : 'pointer-events-none -translate-y-full'}"
   style="padding-top: calc(0.75rem + var(--safe-top)); padding-bottom: 0.75rem;"
 >
@@ -62,7 +62,7 @@
 
 <!-- Bottom controls island -->
 <div
-  class="fixed bottom-4 left-1/2 z-40 w-full max-w-xs -translate-x-1/2 border border-border/25 bg-surface/60 px-4 backdrop-blur-2xl transition-transform duration-200 ease-out
+  class="fixed bottom-4 left-1/2 z-40 w-full max-w-xs -translate-x-1/2 border border-border/25 bg-surface/85 px-4 backdrop-blur-2xl transition-transform duration-200 ease-out
       {shown
     ? 'pointer-events-auto translate-y-0'
     : 'pointer-events-none translate-y-[calc(100%+1rem)]'}"

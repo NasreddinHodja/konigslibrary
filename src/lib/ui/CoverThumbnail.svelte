@@ -64,7 +64,9 @@
     {@render overlay()}
   {/if}
 
-  <div class="pointer-events-none absolute inset-x-0 bottom-0 bg-bg/80 px-1.5 py-1">
+  <div
+    class="pointer-events-none absolute inset-x-0 bottom-0 bg-bg/75 px-1.5 py-1 backdrop-blur-sm"
+  >
     <p class="line-clamp-2 text-xs leading-snug font-medium text-fg">{caption}</p>
   </div>
 </div>

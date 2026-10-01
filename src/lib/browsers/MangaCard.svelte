@@ -78,7 +78,7 @@
   >
     {#snippet overlay()}
       <div
-        class="pointer-events-none absolute top-1.5 left-1.5 flex h-7 w-7 items-center justify-center bg-bg/75 backdrop-blur-sm"
+        class="pointer-events-none absolute top-1.5 left-1.5 flex h-7 w-7 items-center justify-center bg-bg/85 backdrop-blur-md"
         title={badge === 'device'
           ? 'Device folder'
           : badge === 'downloaded'
@@ -96,7 +96,7 @@
 
       {#if action}
         <button
-          class="hit absolute top-1.5 right-1.5 flex h-7 w-7 items-center justify-center bg-bg/75 backdrop-blur-sm {action.loading
+          class="hit absolute top-1.5 right-1.5 flex h-7 w-7 items-center justify-center bg-bg/85 backdrop-blur-md {action.loading
             ? 'animate-pulse cursor-wait opacity-40'
             : 'cursor-pointer opacity-80 hover:bg-fg/20 hover:opacity-100'}"
           onclick={(e) => {

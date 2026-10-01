@@ -53,7 +53,7 @@
   {/if}
   <div
     class="relative flex items-baseline justify-between gap-1 px-1.5 py-1
-      {src ? 'bg-bg/80' : ''}"
+      {src ? 'bg-bg/85 backdrop-blur-md' : ''}"
   >
     <span class="text-sm font-bold tabular-nums {highlighted ? '' : 'opacity-90'}">{number}</span>
     <span class="text-[11px] tabular-nums opacity-60">{pageCount}p</span>

@@ -33,14 +33,16 @@ export const PRESETS: ThemePreset[] = [
     readerBg: '#ffffff'
   },
   {
-    id: 'catppuccin',
-    name: 'Catppuccin',
-    bg: '#1e1e2e',
-    fg: '#cdd6f4',
-    surface: '#181825',
-    border: '#cdd6f4',
-    muted: '#6c7086',
-    readerBg: '#11111b'
+    // One Dark Pro's editor, sidebar and input backgrounds; its comment grey.
+    // Text is its foreground (#abb2bf) brightened a quarter of the way to white.
+    id: 'onedark',
+    name: 'One Bark',
+    bg: '#282c34',
+    fg: '#c0c5cf',
+    surface: '#21252b',
+    border: '#c0c5cf',
+    muted: '#7f848e',
+    readerBg: '#1d1f23'
   }
 ];
 
