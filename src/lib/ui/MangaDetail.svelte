@@ -410,21 +410,21 @@
         {@render specTable()}
 
         {#if savedProgress || canDownload}
-          <div class="flex flex-col gap-3">
-            {#if savedProgress}
-              <Button size="md" variant="default" class="w-full" onclick={resume}>
-                RESUME: {chapterLabel(savedProgress.chapter)}, p.{savedProgress.page + 1}
-              </Button>
-            {/if}
+          <div class="flex flex-wrap justify-end gap-3">
             {#if canDownload}
               <Button
                 size="md"
                 variant="default"
-                class="w-full border-fg/40"
+                class="border-fg/40"
                 onclick={() => (confirmingDownload = true)}
               >
                 <Download size={14} />
                 DOWNLOAD
+              </Button>
+            {/if}
+            {#if savedProgress}
+              <Button size="md" variant="default" onclick={resume}>
+                RESUME: {chapterLabel(savedProgress.chapter)}, p.{savedProgress.page + 1}
               </Button>
             {/if}
           </div>
@@ -433,7 +433,9 @@
     </div>
   </PageContainer>
 
-  <div class="mt-6 flex flex-1 flex-col">
+  <!-- Same width as the metadata above; ListPanel's own px-4 makes up the
+       rest of PageContainer's md:px-8, so the edges line up. -->
+  <div class="mx-auto mt-6 flex w-full max-w-4xl flex-1 flex-col md:px-4">
     <ListPanel label="CHAPTERS ({chapters.length})" bind:search placeholder="Search chapters…">
       {@render chapterGrid()}
     </ListPanel>

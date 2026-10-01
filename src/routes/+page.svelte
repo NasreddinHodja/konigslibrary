@@ -198,8 +198,8 @@
       >
         <!-- The library scrolls inside its own tab pages (ListPanel's fill
              layout), so this only gives it the height left under the status
-             bar. -->
-        <div class="flex min-h-0 flex-1 flex-col">
+             bar. Same column as the manga detail page. -->
+        <div class="mx-auto flex min-h-0 w-full max-w-4xl flex-1 flex-col md:px-4">
           <!-- The library fills the screen; the app's title lives in Settings. -->
           <MangaLibrary />
         </div>
