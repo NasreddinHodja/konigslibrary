@@ -34,6 +34,18 @@
       el.type
     );
   }
+
+  // Android only (MainActivity): the keyboard closed without its field losing
+  // focus, as with system back. Blurring it brings the tab bar back, and the
+  // next tap on the field focuses it again, so the bar hides again too.
+  $effect(() => {
+    const onIme = (e: Event) => {
+      const el = document.activeElement;
+      if (!(e as CustomEvent<boolean>).detail && isTextEntry(el)) (el as HTMLElement).blur();
+    };
+    window.addEventListener('nativeime', onIme);
+    return () => window.removeEventListener('nativeime', onIme);
+  });
 </script>
 
 <svelte:document

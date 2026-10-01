@@ -25,6 +25,8 @@ class MainActivity : TauriActivity() {
   /// JS bridge's thread, hence volatile.
   @Volatile private var gestureInsets = "0,0"
 
+  private var imeVisible = false
+
   private fun updateGestureInsets(view: WebView) {
     val insets = ViewCompat.getRootWindowInsets(view) ?: return
     val zones = insets.getInsets(WindowInsetsCompat.Type.systemGestures())
@@ -101,6 +103,19 @@ class MainActivity : TauriActivity() {
     webView.isHapticFeedbackEnabled = false
     webView.addJavascriptInterface(NativeBridge(), "__kl")
     webView.addOnLayoutChangeListener { v, _, _, _, _, _, _, _, _ -> updateGestureInsets(v as WebView) }
+    // The keyboard can close while its field keeps focus (system back), which
+    // the page can't see; it's told whenever the keyboard shows or hides.
+    ViewCompat.setOnApplyWindowInsetsListener(webView) { v, insets ->
+      val visible = insets.isVisible(WindowInsetsCompat.Type.ime())
+      if (visible != imeVisible) {
+        imeVisible = visible
+        (v as WebView).evaluateJavascript(
+          "window.dispatchEvent(new CustomEvent('nativeime',{detail:$visible}))", null
+        )
+      }
+      // The WebView's own handling, which feeds the page's safe-area insets.
+      ViewCompat.onApplyWindowInsets(v, insets)
+    }
 
     onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
       override fun handleOnBackPressed() {
