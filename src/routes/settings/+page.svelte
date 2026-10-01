@@ -13,7 +13,7 @@
     formatKey,
     DEFAULT_BINDINGS
   } from '$lib/keyboard/keybindings.svelte';
-  import { apiUrl, isLocalServer, getServerUrl } from '$lib/utils/constants';
+  import { apiUrl, isLocalServer, getServerUrl, reducedMotion } from '$lib/utils/constants';
   import { isAndroid, isNative } from '$lib/utils/platform';
   import { goto } from '$app/navigation';
   import { showSuccess } from '$lib/ui/toast.svelte';
@@ -242,6 +242,14 @@
     browsingDir = false;
     saveDir();
   }
+
+  // Section tags glide to their header rather than jumping, and leave the URL
+  // (and history) alone.
+  function jumpTo(e: MouseEvent) {
+    e.preventDefault();
+    const id = (e.currentTarget as HTMLAnchorElement).hash.slice(1);
+    document.getElementById(id)?.scrollIntoView({ behavior: reducedMotion ? 'auto' : 'smooth' });
+  }
 </script>
 
 <svelte:window onkeydown={handleKeyCapture} />
@@ -268,6 +276,7 @@
     {#if isLocalServer}
       <a
         href="#settings-sources"
+        onclick={jumpTo}
         class="cursor-pointer border-2 border-border/20 px-3 py-1.5 text-xs font-bold tracking-wide whitespace-nowrap opacity-60 hover:border-border/50 hover:opacity-100 pointer-coarse:py-3.5"
       >
         Sources
@@ -275,6 +284,7 @@
     {/if}
     <a
       href="#settings-theme"
+      onclick={jumpTo}
       class="cursor-pointer border-2 border-border/20 px-3 py-1.5 text-xs font-bold tracking-wide whitespace-nowrap opacity-60 hover:border-border/50 hover:opacity-100 pointer-coarse:py-3.5"
     >
       Theme
@@ -282,6 +292,7 @@
     {#if !isMobile}
       <a
         href="#settings-shortcuts"
+        onclick={jumpTo}
         class="cursor-pointer border-2 border-border/20 px-3 py-1.5 text-xs font-bold tracking-wide whitespace-nowrap opacity-60 hover:border-border/50 hover:opacity-100 pointer-coarse:py-3.5"
       >
         Shortcuts
@@ -290,6 +301,7 @@
     {#if native}
       <a
         href="#settings-providers"
+        onclick={jumpTo}
         class="cursor-pointer border-2 border-border/20 px-3 py-1.5 text-xs font-bold tracking-wide whitespace-nowrap opacity-60 hover:border-border/50 hover:opacity-100 pointer-coarse:py-3.5"
       >
         Providers

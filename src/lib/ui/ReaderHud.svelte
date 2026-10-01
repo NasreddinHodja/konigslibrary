@@ -31,7 +31,7 @@
 
 <!-- Top bar -->
 <div
-  class="fixed inset-x-0 top-0 z-40 flex items-center gap-4 border-b border-border/25 bg-surface/85 px-4 backdrop-blur-2xl transition-transform duration-200 ease-out
+  class="fixed inset-x-0 top-0 z-40 flex items-center gap-4 bg-surface/85 px-4 backdrop-blur-2xl transition-transform duration-200 ease-out
     {shown ? 'pointer-events-auto translate-y-0' : 'pointer-events-none -translate-y-full'}"
   style="padding-top: calc(0.75rem + var(--safe-top)); padding-bottom: 0.75rem;"
 >
@@ -58,6 +58,14 @@
   >
     {manga.currentPage + 1} / {totalPages}
   </button>
+
+  <!-- Chapter progress line -->
+  <div class="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-border/25">
+    <div
+      class="h-full bg-fg/65 transition-[width] duration-300 ease-out"
+      style="width: {progress}%"
+    ></div>
+  </div>
 </div>
 
 <!-- Bottom controls island -->
@@ -115,16 +123,6 @@
       <Settings size={12} />
       SETTINGS
     </a>
-  </div>
-</div>
-
-<!-- Bottom progress line -->
-<div class="pointer-events-none fixed inset-x-0 z-40" style="bottom: var(--safe-bottom, 0px)">
-  <div class="h-px bg-fg/10">
-    <div
-      class="h-full bg-fg transition-[width,opacity] duration-300 ease-out"
-      style="width: {progress}%; opacity: {shown ? 0.65 : 0.18}"
-    ></div>
   </div>
 </div>
 

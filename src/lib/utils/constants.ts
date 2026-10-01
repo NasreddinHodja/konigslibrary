@@ -1,4 +1,4 @@
-const reducedMotion =
+export const reducedMotion =
   typeof globalThis.matchMedia === 'function' &&
   globalThis.matchMedia('(prefers-reduced-motion: reduce)').matches;
 

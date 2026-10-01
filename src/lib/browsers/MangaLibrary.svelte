@@ -1,7 +1,7 @@
 <script lang="ts">
   import { invoke, Channel } from '@tauri-apps/api/core';
   import { untrack } from 'svelte';
-  import { fade } from 'svelte/transition';
+  import type { TransitionConfig } from 'svelte/transition';
   import { SvelteMap, SvelteSet } from 'svelte/reactivity';
   import { getReaderContext } from '$lib/context';
   import { NativeFilesystemProvider, ServerLibraryProvider } from '$lib/sources';
@@ -99,6 +99,9 @@
   let searchQuery = $state('');
   let query = $state('');
   let refreshing = $state(false);
+  /// Which tabs had rows when the running refresh emptied them: their Select
+  /// button holds still through the reload rather than leaving and returning.
+  let hadRows = $state<Record<Tab, boolean>>({ device: false, server: false });
   // Metadata titles, reported by the cards as they load.
   const titles = new SvelteMap<string, string>();
   const displayName = (row: Row) => titles.get(row.id) ?? row.name;
@@ -546,6 +549,7 @@
   async function refresh() {
     if (refreshing) return;
     refreshing = true;
+    hadRows = { device: lists.device.rows.length > 0, server: lists.server.rows.length > 0 };
     forgetMeta();
     // Emptied lists refetch through the effect once the server check settles.
     reset('device');
@@ -560,6 +564,24 @@
     } finally {
       refreshing = false;
     }
+  }
+
+  // Header buttons come and go by growing from and shrinking to nothing, the
+  // gap before them included, so a button that stays slides over instead of
+  // jumping when its neighbour leaves.
+  function grow(node: HTMLElement): TransitionConfig {
+    const width = node.offsetWidth;
+    const parent = node.parentElement;
+    const gap =
+      parent && parent.children.length > 1
+        ? parseFloat(getComputedStyle(parent).columnGap) || 0
+        : 0;
+    return {
+      duration: ANIM_DURATION,
+      easing: ANIM_EASE,
+      css: (t) =>
+        `width: ${t * width}px; margin-left: ${(t - 1) * gap}px; opacity: ${t}; overflow: hidden;`
+    };
   }
 </script>
 
@@ -721,21 +743,19 @@
     <h1 class="text-2xl font-bold">Library</h1>
     {#if tabs.length === 1 && serverEnabled}{@render serverDot()}{/if}
     <span class="ml-auto flex items-center gap-1">
-      {#if native && tab && lists[tab].rows.length > 0}
+      {#if native && tab && (lists[tab].rows.length > 0 || (refreshing && hadRows[tab]))}
         <button
           class="hit relative flex size-7 cursor-pointer items-center justify-center opacity-40 hover:bg-fg/10 hover:opacity-90 pointer-coarse:size-10"
           onclick={() => startSelecting()}
           aria-label="Select"
-          transition:fade={{ duration: ANIM_DURATION, easing: ANIM_EASE }}
+          transition:grow
         >
           <ListChecks size={14} />
         </button>
       {/if}
       <!-- Comes and goes with the tab (no refresh for an unset device folder). -->
       {#if tab && !(tab === 'device' && !mangaDir)}
-        <span transition:fade={{ duration: ANIM_DURATION, easing: ANIM_EASE }}
-          >{@render refreshButton()}</span
-        >
+        <span class="flex" transition:grow>{@render refreshButton()}</span>
       {/if}
     </span>
   {/if}

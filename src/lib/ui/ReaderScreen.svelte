@@ -128,10 +128,21 @@
   out:fade={{ duration: ANIM_EXIT_DURATION, easing: ANIM_EASE_IN }}
   in:fade={{ duration: ANIM_DURATION, delay: ANIM_EXIT_DURATION, easing: ANIM_EASE }}
 >
-  {#if activeViewer}
-    {@const Viewer = activeViewer.component}
-    <Viewer bind:commands={viewerCommands} ontap={toggleHud} />
-  {/if}
+  <!-- Switching mode crossfades the viewers: both sit in the one grid cell
+       while the old fades out and the new fades in after it. -->
+  <div class="grid min-w-0 flex-1 grid-cols-1 grid-rows-1">
+    {#key activeViewer}
+      <div
+        class="col-start-1 row-start-1 flex min-h-0 min-w-0"
+        in:fade={{ duration: ANIM_DURATION, delay: ANIM_EXIT_DURATION, easing: ANIM_EASE }}
+        out:fade={{ duration: ANIM_EXIT_DURATION, easing: ANIM_EASE_IN }}
+      >
+        {#if activeViewer}
+          <activeViewer.component bind:commands={viewerCommands} ontap={toggleHud} />
+        {/if}
+      </div>
+    {/key}
+  </div>
 
   <ReaderHud
     visible={hudVisible}

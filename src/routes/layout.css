@@ -68,6 +68,19 @@ body {
   }
 }
 
+/* Touch screens never get Tailwind's hover: styles, so anything tappable
+   dims while pressed instead. A filter, since opacity and transform are
+   already spoken for by the controls' own classes. :active also lands on
+   ancestors, so a card doesn't dim when it's the button inside that's
+   pressed. */
+@media (pointer: coarse) {
+  :is(a[href], button:not(:disabled), [role='button']):active:not(
+      :has(:is(a[href], button:not(:disabled), [role='button']):active)
+    ) {
+    filter: brightness(0.6);
+  }
+}
+
 * {
   scrollbar-width: none;
 }
