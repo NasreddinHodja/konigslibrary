@@ -8,7 +8,7 @@ export function usePreloader(
   getPageUrls: () => string[],
   getLoading: () => boolean,
   initialDecoded: () => Map<number, HTMLImageElement>,
-  ensurePageUrl?: (index: number) => void
+  getEnsurePageUrl: () => ((index: number) => void) | null
 ) {
   // eslint-disable-next-line svelte/prefer-svelte-reactivity
   const cache = new Map<number, HTMLImageElement>();
@@ -22,7 +22,10 @@ export function usePreloader(
 
   $effect(() => {
     const urls = getPageUrls();
-    if (getLoading() || urls.length === 0) return;
+    if (getLoading() || urls.length === 0) {
+      cache.clear();
+      return;
+    }
     const current = state.currentPage;
     const start = Math.max(0, current - PRELOAD_BEHIND);
     const end = Math.min(urls.length - 1, current + PRELOAD_AHEAD);
@@ -35,7 +38,7 @@ export function usePreloader(
           img.decode().catch(() => {});
           cache.set(i, img);
         } else {
-          ensurePageUrl?.(i);
+          getEnsurePageUrl()?.(i);
         }
       }
     }

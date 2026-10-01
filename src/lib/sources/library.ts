@@ -2,6 +2,7 @@ import type { Chapter, LibraryEntry, Page, ServerChapter } from '$lib/utils/type
 import { apiUrl } from '$lib/utils/constants';
 import type { BulkPageProvider, PageResult } from './types';
 import { fetchServerMeta, type MangaMeta } from '$lib/api/meta';
+import { fetchServerChapters } from '$lib/api/server';
 
 export class ServerLibraryProvider implements BulkPageProvider {
   readonly kind = 'library';
@@ -16,8 +17,7 @@ export class ServerLibraryProvider implements BulkPageProvider {
   }
 
   async loadChapters(): Promise<Chapter[]> {
-    const res = await fetch(apiUrl(`/api/library/${this.slug}/chapters`));
-    const chapters: ServerChapter[] = await res.json();
+    const chapters = await fetchServerChapters(this.slug);
     this.chapters = chapters;
     return chapters.map((c) => ({ name: c.name, pageCount: c.pageCount }));
   }

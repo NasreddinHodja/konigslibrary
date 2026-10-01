@@ -9,9 +9,11 @@
 
   let {
     visible,
+    pageUrls,
     onback
   }: {
     visible: boolean;
+    pageUrls: string[];
     onback: () => void;
   } = $props();
 
@@ -126,4 +128,4 @@
   </div>
 </div>
 
-<PagePicker visible={pickerOpen} onclose={() => (pickerOpen = false)} />
+<PagePicker visible={pickerOpen} {pageUrls} onclose={() => (pickerOpen = false)} />

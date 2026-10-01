@@ -31,6 +31,6 @@ self.onmessage = async (e: MessageEvent<WorkerMsg>) => {
         return post({ result: await mangaMeta(msg.files) });
     }
   } catch (err) {
-    post({ error: String(err) });
+    post({ error: err instanceof Error ? err.message : String(err) });
   }
 };

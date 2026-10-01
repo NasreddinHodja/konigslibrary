@@ -1,5 +1,5 @@
 import { invoke, convertFileSrc } from '@tauri-apps/api/core';
-import { apiUrl } from '$lib/utils/constants';
+import { fetchServerRawMeta, serverFileUrl } from './server';
 import type { RawMangaMeta } from '$lib/zip';
 
 // What the downloader leaves on disk: ComicInfo.xml inside the chapter archives
@@ -14,7 +14,7 @@ export type CardMeta = Pick<MangaMeta, 'title' | 'coverUrl'>;
 /// With a `version`, the server lets the image be cached for good: a replaced
 /// cover gets a new version, so a new URL.
 export function serverCoverUrl(slug: string, cover: string, version?: string | null): string {
-  const url = apiUrl(`/api/library/${slug}/${encodeURIComponent(cover)}`);
+  const url = serverFileUrl(slug, cover);
   return version ? `${url}?v=${encodeURIComponent(version)}` : url;
 }
 
@@ -28,15 +28,8 @@ export async function fetchNativeMeta(path: string): Promise<MangaMeta | null> {
 }
 
 export async function fetchServerMeta(slug: string): Promise<MangaMeta | null> {
-  try {
-    const res = await fetch(apiUrl(`/api/library/${slug}/meta`));
-    if (!res.ok) return null;
-    const { cover, ...rest }: RawMeta = await res.json();
-    return {
-      ...rest,
-      coverUrl: cover ? serverCoverUrl(slug, cover) : null
-    };
-  } catch {
-    return null;
-  }
+  const raw = await fetchServerRawMeta(slug);
+  if (!raw) return null;
+  const { cover, ...rest } = raw;
+  return { ...rest, coverUrl: cover ? serverCoverUrl(slug, cover) : null };
 }

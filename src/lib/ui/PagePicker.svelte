@@ -1,10 +1,15 @@
 <script lang="ts">
   import { X, Search } from 'lucide-svelte';
   import { getReaderContext } from '$lib/context';
-  import VirtualScroll from '$lib/ui/virtual/VirtualScroll.svelte';
+  import VirtualGrid from '$lib/ui/virtual/VirtualGrid.svelte';
   import CoverThumbnail from '$lib/ui/CoverThumbnail.svelte';
+  import { focusTrap } from '$lib/ui/focus-trap';
 
-  let { visible, onclose }: { visible: boolean; onclose: () => void } = $props();
+  let {
+    visible,
+    pageUrls,
+    onclose
+  }: { visible: boolean; pageUrls: string[]; onclose: () => void } = $props();
 
   const reader = getReaderContext();
   const { state: manga, goToPage } = reader;
@@ -12,7 +17,6 @@
   let query = $state('');
   let searchEl: HTMLInputElement | null = $state(null);
 
-  const pageUrls = $derived(manga.pageUrls);
   const totalPages = $derived(pageUrls.length);
   const chapterName = $derived(manga.selectedChapter ?? '');
 
@@ -57,6 +61,7 @@
       aria-label="Jump to page"
       onclick={(e) => e.stopPropagation()}
       onkeydown={onKeydown}
+      {@attach focusTrap}
     >
       <!-- Header -->
       <div class="flex shrink-0 items-center gap-3 border-b border-border/10 px-4 py-3">
@@ -94,26 +99,31 @@
       {#if filteredIndices.length === 0}
         <p class="flex-1 py-12 text-center text-sm opacity-50">No pages match</p>
       {:else}
-        <VirtualScroll items={filteredIndices} minItemWidth={100} gap={8} class="flex-1 p-3">
-          {#snippet item(i)}
-            {@const url = pageUrls[i]}
-            {@const isCurrent = i === manga.currentPage}
-            <CoverThumbnail
-              src={url || null}
-              caption={String(i + 1)}
-              alt="Go to page {i + 1}"
-              active={isCurrent}
-              objectPosition="top"
-              onclick={() => pick(i)}
-            >
-              {#snippet placeholder()}
-                <div class="flex h-full w-full items-center justify-center opacity-20">
-                  <span class="text-xs">{i + 1}</span>
-                </div>
+        <!-- Keyed so a new search starts back at the top. -->
+        {#key query}
+          <div class="flex-1 overflow-y-auto p-3">
+            <VirtualGrid items={filteredIndices} minItemWidth={100} gap={8} key={String}>
+              {#snippet item(i)}
+                {@const url = pageUrls[i]}
+                {@const isCurrent = i === manga.currentPage}
+                <CoverThumbnail
+                  src={url || null}
+                  caption={String(i + 1)}
+                  alt="Go to page {i + 1}"
+                  active={isCurrent}
+                  objectPosition="top"
+                  onclick={() => pick(i)}
+                >
+                  {#snippet placeholder()}
+                    <div class="flex h-full w-full items-center justify-center opacity-20">
+                      <span class="text-xs">{i + 1}</span>
+                    </div>
+                  {/snippet}
+                </CoverThumbnail>
               {/snippet}
-            </CoverThumbnail>
-          {/snippet}
-        </VirtualScroll>
+            </VirtualGrid>
+          </div>
+        {/key}
       {/if}
     </div>
   </div>

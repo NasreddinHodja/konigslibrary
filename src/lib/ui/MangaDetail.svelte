@@ -166,13 +166,10 @@
 
 {#snippet tagsValue()}
   {#if meta && meta.tags.length}
-    {#each meta.tags.slice(0, TAGS_COLLAPSED) as tag (tag)}
+    {#each meta.tags.slice(0, tagsExpanded ? 6 : TAGS_COLLAPSED) as tag (tag)}
       <span class="border border-border/30 px-2 py-0.5 text-xs opacity-50">{tag}</span>
     {/each}
     {#if tagsExpanded}
-      {#each meta.tags.slice(TAGS_COLLAPSED, 6) as tag (tag)}
-        <span class="border border-border/30 px-2 py-0.5 text-xs opacity-50">{tag}</span>
-      {/each}
       <button
         class="hit relative cursor-pointer border border-border/15 px-2 py-0.5 text-xs opacity-60 hover:opacity-100"
         onclick={collapseTags}>less</button
@@ -188,23 +185,46 @@
   {/if}
 {/snippet}
 
+{#snippet actions(layout: string)}
+  {#if savedProgress || canDownload}
+    <div class="flex {layout} justify-end gap-3">
+      {#if canDownload}
+        <Button
+          size="md"
+          variant="default"
+          class="border-fg/40"
+          onclick={() => (confirmingDownload = true)}
+        >
+          <Download size={14} />
+          DOWNLOAD
+        </Button>
+      {/if}
+      {#if savedProgress}
+        <Button size="md" variant="default" onclick={resume}>
+          RESUME: {chapterLabel(savedProgress.chapter)}, p.{savedProgress.page + 1}
+        </Button>
+      {/if}
+    </div>
+  {/if}
+{/snippet}
+
+{#snippet specKey(label: string)}
+  <div
+    class="w-24 shrink-0 border-r border-border/10 px-3 py-2.5 text-[11px] font-bold tracking-widest opacity-45 sm:w-28"
+  >
+    {label}
+  </div>
+{/snippet}
+
 {#snippet specTable()}
   <div class="w-full divide-y divide-border/10 border-2 border-border/15">
     <div class="flex">
-      <div
-        class="w-24 shrink-0 border-r border-border/10 px-3 py-2.5 text-[11px] font-bold tracking-widest opacity-45 sm:w-28"
-      >
-        FILENAME
-      </div>
+      {@render specKey('FILENAME')}
       <div class="min-w-0 flex-1 truncate px-3 py-2.5 text-sm opacity-50">{mangaName}</div>
     </div>
     {#if meta}
       <div class="flex" in:fade={{ duration: ANIM_DURATION, easing: ANIM_EASE }}>
-        <div
-          class="w-24 shrink-0 border-r border-border/10 px-3 py-2.5 text-[11px] font-bold tracking-widest opacity-45 sm:w-28"
-        >
-          STATUS
-        </div>
+        {@render specKey('STATUS')}
         <div class="flex min-w-0 flex-1 items-center px-3 py-2.5">
           {#if meta.status}
             <span
@@ -221,27 +241,15 @@
         </div>
       </div>
       <div class="flex" in:fade={{ duration: ANIM_DURATION, easing: ANIM_EASE }}>
-        <div
-          class="w-24 shrink-0 border-r border-border/10 px-3 py-2.5 text-[11px] font-bold tracking-widest opacity-45 sm:w-28"
-        >
-          AUTHOR
-        </div>
+        {@render specKey('AUTHOR')}
         <div class="min-w-0 flex-1 px-3 py-2.5 text-sm">{meta.authors.join(', ') || '—'}</div>
       </div>
       <div class="flex" in:fade={{ duration: ANIM_DURATION, easing: ANIM_EASE }}>
-        <div
-          class="w-24 shrink-0 border-r border-border/10 px-3 py-2.5 text-[11px] font-bold tracking-widest opacity-45 sm:w-28"
-        >
-          YEAR
-        </div>
+        {@render specKey('YEAR')}
         <div class="min-w-0 flex-1 px-3 py-2.5 text-sm">{meta.year ?? '—'}</div>
       </div>
       <div class="flex" in:fade={{ duration: ANIM_DURATION, easing: ANIM_EASE }}>
-        <div
-          class="w-24 shrink-0 border-r border-border/10 px-3 py-2.5 text-[11px] font-bold tracking-widest opacity-45 sm:w-28"
-        >
-          TAGS
-        </div>
+        {@render specKey('TAGS')}
         <div
           class="flex min-w-0 flex-1 flex-wrap items-center gap-1.5 px-3 py-2.5"
           bind:this={tagsEl}
@@ -251,31 +259,19 @@
       </div>
     {:else}
       <div class="flex">
-        <div
-          class="w-24 shrink-0 border-r border-border/10 px-3 py-2.5 text-[11px] font-bold tracking-widest opacity-45 sm:w-28"
-        >
-          AUTHOR
-        </div>
+        {@render specKey('AUTHOR')}
         <div class="flex min-w-0 flex-1 items-center px-3 py-2.5">
           <Skeleton class="h-4 w-32" />
         </div>
       </div>
       <div class="flex">
-        <div
-          class="w-24 shrink-0 border-r border-border/10 px-3 py-2.5 text-[11px] font-bold tracking-widest opacity-45 sm:w-28"
-        >
-          YEAR
-        </div>
+        {@render specKey('YEAR')}
         <div class="flex min-w-0 flex-1 items-center px-3 py-2.5">
           <Skeleton class="h-4 w-10" />
         </div>
       </div>
       <div class="flex">
-        <div
-          class="w-24 shrink-0 border-r border-border/10 px-3 py-2.5 text-[11px] font-bold tracking-widest opacity-45 sm:w-28"
-        >
-          TAGS
-        </div>
+        {@render specKey('TAGS')}
         <div class="flex min-w-0 flex-1 flex-wrap items-center gap-1.5 px-3 py-2.5">
           {#each [60, 52, 56, 48] as w (w)}
             <Skeleton class="h-[18px]" style="width: {w}px" />
@@ -369,26 +365,7 @@
           </div>
         </div>
 
-        {#if savedProgress || canDownload}
-          <div class="flex items-center justify-end gap-3">
-            {#if canDownload}
-              <Button
-                size="md"
-                variant="default"
-                class="border-fg/40"
-                onclick={() => (confirmingDownload = true)}
-              >
-                <Download size={14} />
-                DOWNLOAD
-              </Button>
-            {/if}
-            {#if savedProgress}
-              <Button size="md" variant="default" onclick={resume}>
-                RESUME: {chapterLabel(savedProgress.chapter)}, p.{savedProgress.page + 1}
-              </Button>
-            {/if}
-          </div>
-        {/if}
+        {@render actions('items-center')}
       {:else}
         <div class="mx-auto">
           {@render cover('h-64 w-44')}
@@ -396,26 +373,7 @@
 
         {@render specTable()}
 
-        {#if savedProgress || canDownload}
-          <div class="flex flex-wrap justify-end gap-3">
-            {#if canDownload}
-              <Button
-                size="md"
-                variant="default"
-                class="border-fg/40"
-                onclick={() => (confirmingDownload = true)}
-              >
-                <Download size={14} />
-                DOWNLOAD
-              </Button>
-            {/if}
-            {#if savedProgress}
-              <Button size="md" variant="default" onclick={resume}>
-                RESUME: {chapterLabel(savedProgress.chapter)}, p.{savedProgress.page + 1}
-              </Button>
-            {/if}
-          </div>
-        {/if}
+        {@render actions('flex-wrap')}
       {/if}
     </div>
   </PageContainer>

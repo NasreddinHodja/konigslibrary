@@ -1,6 +1,9 @@
 const ZIP_ERROR_PATTERNS: [RegExp, string][] = [
   [/^Not a valid ZIP file$/, "This doesn't look like a valid ZIP/CBZ file."],
-  [/^Central directory too large$/, 'This ZIP file is too large or malformed to read safely.'],
+  [
+    /^Central directory size \(\d+\) exceeds limit$/,
+    'This ZIP file is too large or malformed to read safely.'
+  ],
   [
     /^Entry ".*" uncompressed size \(\d+\) exceeds limit$/,
     'One of the pages in this file is too large to open.'

@@ -1,9 +1,9 @@
 <script lang="ts" generics="T">
   import type { Snippet } from 'svelte';
 
-  // A grid that only renders the rows near the viewport. Unlike VirtualScroll it
-  // has no scroll container of its own: it follows whatever ancestor scrolls,
-  // the page on mobile or a panel on desktop.
+  // A grid that only renders the rows near the viewport. It has no scroll
+  // container of its own: it follows whatever ancestor scrolls, the page on
+  // mobile or a panel on desktop.
   let {
     items,
     minItemWidth,

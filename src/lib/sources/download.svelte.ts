@@ -3,7 +3,7 @@ import { SvelteMap, SvelteSet } from 'svelte/reactivity';
 import { addToast, updateToast, removeToast } from '$lib/ui/toast.svelte';
 import type { ServerChapter } from '$lib/utils/types';
 import type { EventBus } from '$lib/events';
-import { apiUrl } from '$lib/utils/constants';
+import { fetchServerChapters, fetchServerRawMeta, serverFileUrl } from '$lib/api/server';
 
 let nextId = 0;
 
@@ -15,16 +15,6 @@ type NativeBridge = {
 
 function getBridge(): NativeBridge | undefined {
   return (window as unknown as { __kl?: NativeBridge }).__kl;
-}
-
-async function serverMeta(slug: string): Promise<{ title: string | null; cover: string | null }> {
-  try {
-    const res = await fetch(apiUrl(`/api/library/${slug}/meta`));
-    if (res.ok) return await res.json();
-  } catch {
-    /* falls back to no title or cover */
-  }
-  return { title: null, cover: null };
 }
 
 /// Manga being downloaded, or queued to be, by server slug: chapters copied
@@ -46,12 +36,6 @@ type Job = { cancelled: boolean; fileId: string };
 function cancelJob(job: Job) {
   job.cancelled = true;
   if (job.fileId) invoke('cancel_download', { id: job.fileId });
-}
-
-async function fetchChapters(slug: string): Promise<ServerChapter[]> {
-  const res = await fetch(apiUrl(`/api/library/${slug}/chapters`));
-  if (!res.ok) throw new Error(`Failed to fetch chapters (${res.status})`);
-  return res.json();
 }
 
 /// Cancelled downloads whose copied files are being deleted. Until they're
@@ -94,12 +78,12 @@ async function copyManga(
       id: job.fileId,
       slug,
       fileName,
-      url: apiUrl(`/api/library/${slug}/${encodeURIComponent(fileName)}`),
+      url: serverFileUrl(slug, fileName),
       channel: new Channel()
     });
   };
 
-  const { title, cover } = await serverMeta(slug);
+  const { title = null, cover = null } = (await fetchServerRawMeta(slug)) ?? {};
   if (title && !job.cancelled) on.title?.(title);
   if (cover && !job.cancelled) await download(cover);
 
@@ -139,12 +123,11 @@ export async function startDownload(slug: string, name: string, events?: EventBu
   });
   let chapters: ServerChapter[];
   try {
-    chapters = await fetchChapters(slug);
+    chapters = await fetchServerChapters(slug);
   } catch (err) {
-    if (!cancelled) {
-      cancellers.delete(slug);
-      downloadProgress.delete(slug);
-    }
+    if (cancelled) return;
+    cancellers.delete(slug);
+    downloadProgress.delete(slug);
     throw err;
   }
   if (cancelled) return;
@@ -263,7 +246,7 @@ export function saveMangas(
       const job: Job = { cancelled: false, fileId: '' };
       current = { slug, job };
       try {
-        await copyManga(id, slug, await fetchChapters(slug), job, events);
+        await copyManga(id, slug, await fetchServerChapters(slug), job, events);
         if (stopped) return;
         if (!job.cancelled) events?.emit('download:complete', { slug });
       } catch (err) {

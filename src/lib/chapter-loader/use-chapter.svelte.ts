@@ -52,8 +52,11 @@ export function useChapter(reader: Reader): ChapterState {
 
       const startPage = untrack(() => Math.max(0, Math.min(reader.state.currentPage, count - 1)));
 
+      // eslint-disable-next-line svelte/prefer-svelte-reactivity
+      const inflight = new Set<number>();
       const ensure = (index: number) => {
-        if (pageUrls[index] || controller.signal.aborted) return;
+        if (pageUrls[index] || inflight.has(index) || controller.signal.aborted) return;
+        inflight.add(index);
         provider
           .getPageUrl(ch, index)
           .then((url) => {
@@ -61,13 +64,15 @@ export function useChapter(reader: Reader): ChapterState {
               URL.revokeObjectURL(url);
             } else {
               pageUrls[index] = url;
+              ownedUrls.push(url);
             }
           })
           .catch((err) => {
             showError(
               `Failed to load page ${index + 1}: ${err instanceof Error ? err.message : String(err)}`
             );
-          });
+          })
+          .finally(() => inflight.delete(index));
       };
       ensurePageUrl = ensure;
 
@@ -111,7 +116,17 @@ export function useChapter(reader: Reader): ChapterState {
           await Promise.all(
             batch.map(async (idx) => {
               if (controller.signal.aborted || pageUrls[idx]) return;
-              const url = await provider.getPageUrl(ch, idx);
+              let url: string;
+              try {
+                url = await provider.getPageUrl(ch, idx);
+              } catch (err) {
+                if (!controller.signal.aborted) {
+                  showError(
+                    `Failed to load page ${idx + 1}: ${err instanceof Error ? err.message : String(err)}`
+                  );
+                }
+                return;
+              }
               if (controller.signal.aborted) {
                 URL.revokeObjectURL(url);
                 return;

@@ -13,7 +13,6 @@ export type MangaState = {
   zoom: number;
   scrollMode: boolean;
   rtl: boolean;
-  pageUrls: string[];
 };
 
 export type Reader = {

@@ -176,6 +176,7 @@ export function createPinchZoomController(
     readerEl.addEventListener('touchcancel', handleTouchEnd, { capture: true });
 
     return () => {
+      deactivateOverlay();
       readerEl.removeEventListener('touchstart', handleTouchStart, { capture: true });
       readerEl.removeEventListener('touchmove', handleTouchMove, { capture: true });
       readerEl.removeEventListener('touchend', handleTouchEnd, { capture: true });

@@ -32,8 +32,7 @@ export function createReader(): Reader {
     shouldScroll: false,
     zoom: 1,
     scrollMode: browser ? localStorage.getItem(LS_SCROLL_MODE) !== 'false' : true,
-    rtl: browser ? localStorage.getItem(LS_RTL) === 'true' : false,
-    pageUrls: [] as string[]
+    rtl: browser ? localStorage.getItem(LS_RTL) === 'true' : false
   });
 
   const commands = createDefaultRegistry();
@@ -88,7 +87,6 @@ export function createReader(): Reader {
     state.selectedChapter = null;
     state.currentPage = 0;
     state.shouldScroll = false;
-    state.pageUrls = [];
     _chapters = [];
     _provider = null;
     _meta = null;

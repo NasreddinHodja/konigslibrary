@@ -1,23 +1,15 @@
 <script lang="ts">
   import { getReaderContext } from '$lib/context';
-  import type { ViewerCommands } from '$lib/commands';
-  import { useChapter } from '$lib/chapter-loader';
+  import type { ViewerProps } from './types';
   import { DEFAULT_PAGE_RATIO } from '$lib/utils/constants';
   import Loader from '$lib/ui/Loader.svelte';
   import Button from '$lib/ui/Button.svelte';
   import { ChevronRight } from 'lucide-svelte';
 
-  let { commands = $bindable(), ontap }: { commands?: ViewerCommands | null; ontap?: () => void } =
-    $props();
+  let { chapter, commands = $bindable(), ontap }: ViewerProps = $props();
 
   const reader = getReaderContext();
   const { state: manga } = reader;
-
-  const chapter = useChapter(reader);
-
-  $effect(() => {
-    manga.pageUrls = chapter.pageUrls;
-  });
 
   let containerEl: HTMLDivElement | undefined = $state();
   let containerHeight = $state(0);

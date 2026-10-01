@@ -109,9 +109,9 @@ export async function chapterThumbnail(
   signal: AbortSignal
 ): Promise<Blob | null> {
   const key = `${provider.kind}\u0000${provider.mangaName}\u0000${chapter}`;
-  const cached = await readCached(key);
-  if (cached) return cached;
   try {
+    const cached = await readCached(key);
+    if (cached) return cached;
     const thumb = await queued(async () => render(await firstPage(provider, chapter)), signal);
     await writeCached(key, thumb);
     return thumb;

@@ -4,6 +4,7 @@
   import type { ViewerCommands } from '$lib/commands';
   import type { createPinchZoomController } from '$lib/utils/pinch-zoom-controller.svelte';
   import { getReaderContext } from '$lib/context';
+  import { useChapter } from '$lib/chapter-loader';
   import { isNative } from '$lib/utils/platform';
   import { readerActive } from '$lib/ui/reader-active.svelte';
   import ReaderHud from '$lib/ui/ReaderHud.svelte';
@@ -25,6 +26,9 @@
   const native = isNative();
 
   const activeViewer = $derived(reader.viewers.resolve(manga));
+  // Owned here rather than by each viewer, so switching modes keeps the
+  // loaded pages and the HUD's page picker reads the same ones.
+  const chapter = useChapter(reader);
 
   const TUTORIAL_PAGETURN_KEY = 'kl:tutorial:pageTurn';
   const TUTORIAL_SCROLL_KEY = 'kl:tutorial:scroll';
@@ -48,6 +52,8 @@
       hudVisible = false;
     }, 3000);
   }
+
+  $effect(() => () => clearTimeout(hudTimer));
 
   function hideHud() {
     hudVisible = false;
@@ -98,10 +104,14 @@
     if (!('wakeLock' in navigator)) return;
 
     let sentinel: WakeLockSentinel | null = null;
+    let disposed = false;
 
     const acquire = async () => {
       try {
-        sentinel = await navigator.wakeLock.request('screen');
+        const s = await navigator.wakeLock.request('screen');
+        // The reader may have closed while the request was pending.
+        if (disposed) s.release();
+        else sentinel = s;
       } catch {
         /* not supported */
       }
@@ -115,6 +125,7 @@
     document.addEventListener('visibilitychange', onVisibility);
 
     return () => {
+      disposed = true;
       document.removeEventListener('visibilitychange', onVisibility);
       sentinel?.release();
     };
@@ -138,7 +149,7 @@
         out:fade={{ duration: ANIM_EXIT_DURATION, easing: ANIM_EASE_IN }}
       >
         {#if activeViewer}
-          <activeViewer.component bind:commands={viewerCommands} ontap={toggleHud} />
+          <activeViewer.component {chapter} bind:commands={viewerCommands} ontap={toggleHud} />
         {/if}
       </div>
     {/key}
@@ -146,6 +157,7 @@
 
   <ReaderHud
     visible={hudVisible}
+    pageUrls={chapter.pageUrls}
     onback={() => {
       hideHud();
       manga.selectedChapter = null;

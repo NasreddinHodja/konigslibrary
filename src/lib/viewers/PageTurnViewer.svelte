@@ -1,31 +1,25 @@
 <script lang="ts">
   import { inSystemGesture } from '$lib/utils/system-gestures';
   import { getReaderContext } from '$lib/context';
-  import type { ViewerCommands } from '$lib/commands';
-  import { useChapter, usePreloader } from '$lib/chapter-loader';
+  import type { ViewerProps } from './types';
+  import { usePreloader } from '$lib/chapter-loader';
   import { PAGE_TURN_ZOOM } from '$lib/utils/constants';
   import Loader from '$lib/ui/Loader.svelte';
   import EndOfChapter from '$lib/chapters/EndOfChapter.svelte';
   import { ChevronLeft, ChevronRight } from 'lucide-svelte';
 
-  let { commands = $bindable(), ontap }: { commands?: ViewerCommands | null; ontap?: () => void } =
-    $props();
+  let { chapter, commands = $bindable(), ontap }: ViewerProps = $props();
 
   const reader = getReaderContext();
   const { state: manga } = reader;
 
-  const chapter = useChapter(reader);
   usePreloader(
     manga,
     () => chapter.pageUrls,
     () => chapter.loading,
     () => chapter.decoded,
-    chapter.ensurePageUrl ?? undefined
+    () => chapter.ensurePageUrl
   );
-
-  $effect(() => {
-    manga.pageUrls = chapter.pageUrls;
-  });
 
   let showEndScreen = $state(false);
   let pendingEndScreen = false;

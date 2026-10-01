@@ -1,8 +1,6 @@
 <script lang="ts">
-  import { fly, fade } from 'svelte/transition';
-  import { ANIM_DURATION, ANIM_EXIT_DURATION, ANIM_EASE, ANIM_EASE_IN } from '$lib/utils/constants';
   import { getBindings, formatKey } from '$lib/keyboard/keybindings.svelte';
-  import Backdrop from '$lib/ui/Backdrop.svelte';
+  import Modal from '$lib/ui/Modal.svelte';
 
   let { onclose }: { onclose: () => void } = $props();
 
@@ -17,81 +15,39 @@
     }
     return Array.from(map.entries());
   });
-
-  let dialogEl: HTMLDivElement | undefined = $state();
-  let previousFocus: HTMLElement | null = null;
-
-  const FOCUSABLE = 'a[href], button, [tabindex]:not([tabindex="-1"])';
-
-  function trapFocus(e: KeyboardEvent) {
-    if (e.key !== 'Tab' || !dialogEl) return;
-    const focusable = Array.from(dialogEl.querySelectorAll<HTMLElement>(FOCUSABLE));
-    if (focusable.length === 0) return;
-    const first = focusable[0];
-    const last = focusable[focusable.length - 1];
-    if (e.shiftKey && document.activeElement === first) {
-      e.preventDefault();
-      last.focus();
-    } else if (!e.shiftKey && document.activeElement === last) {
-      e.preventDefault();
-      first.focus();
-    }
-  }
-
-  $effect(() => {
-    if (!dialogEl) return;
-    previousFocus = document.activeElement as HTMLElement | null;
-    const first = dialogEl.querySelector<HTMLElement>(FOCUSABLE);
-    first?.focus();
-    return () => previousFocus?.focus();
-  });
 </script>
 
-<svelte:window onkeydown={trapFocus} />
-
-<Backdrop onclick={onclose} />
-
-<div
-  bind:this={dialogEl}
-  class="fixed inset-0 z-50 flex items-center justify-center p-4"
-  role="dialog"
-  aria-label="Keyboard shortcuts"
-  aria-modal="true"
+<Modal
+  label="Keyboard shortcuts"
+  {onclose}
+  class="max-h-[calc(100vh-2rem)] max-w-lg overflow-y-auto bg-surface/85 p-6 shadow-xl backdrop-blur-2xl"
 >
-  <div
-    class="max-h-[calc(100vh-2rem)] w-full max-w-lg overflow-y-auto border-2 bg-surface/85 p-6 shadow-xl backdrop-blur-2xl"
-    in:fly={{ y: 16, duration: ANIM_DURATION, easing: ANIM_EASE }}
-    out:fade={{ duration: ANIM_EXIT_DURATION, easing: ANIM_EASE_IN }}
-  >
-    <div class="mb-4 flex items-center justify-between">
-      <h2 class="text-lg font-bold">Keyboard shortcuts</h2>
-      <button class="px-2 py-1 text-sm opacity-60 hover:opacity-80" onclick={onclose}>
-        Close
-      </button>
-    </div>
-
-    {#each categories as [category, items] (category)}
-      <div class="mb-4">
-        <h3 class="mb-2 text-sm font-bold opacity-60">{category}</h3>
-        <div class="space-y-1">
-          {#each items as binding (binding.action)}
-            <div class="flex items-center justify-between py-1">
-              <span class="text-sm opacity-80">{binding.label}</span>
-              <div class="flex gap-1">
-                {#each binding.keys as key (key)}
-                  <kbd class="min-w-7 border border-border/20 px-1.5 py-0.5 text-center text-xs">
-                    {formatKey(key)}
-                  </kbd>
-                {/each}
-              </div>
-            </div>
-          {/each}
-        </div>
-      </div>
-    {/each}
-
-    <p class="mt-2 text-xs opacity-50">
-      Customize bindings in <a href="/settings" class="underline" onclick={onclose}>Settings</a>
-    </p>
+  <div class="mb-4 flex items-center justify-between">
+    <h2 class="text-lg font-bold">Keyboard shortcuts</h2>
+    <button class="px-2 py-1 text-sm opacity-60 hover:opacity-80" onclick={onclose}> Close </button>
   </div>
-</div>
+
+  {#each categories as [category, items] (category)}
+    <div class="mb-4">
+      <h3 class="mb-2 text-sm font-bold opacity-60">{category}</h3>
+      <div class="space-y-1">
+        {#each items as binding (binding.action)}
+          <div class="flex items-center justify-between py-1">
+            <span class="text-sm opacity-80">{binding.label}</span>
+            <div class="flex gap-1">
+              {#each binding.keys as key (key)}
+                <kbd class="min-w-7 border border-border/20 px-1.5 py-0.5 text-center text-xs">
+                  {formatKey(key)}
+                </kbd>
+              {/each}
+            </div>
+          </div>
+        {/each}
+      </div>
+    </div>
+  {/each}
+
+  <p class="mt-2 text-xs opacity-50">
+    Customize bindings in <a href="/settings" class="underline" onclick={onclose}>Settings</a>
+  </p>
+</Modal>

@@ -68,9 +68,11 @@ export function removeToast(id: string): void {
   refold();
 }
 
-export function showError(message: string): void {
-  const id = `error-${Date.now()}`;
-  addToast({ id, label: message, current: 0, total: 0, phase: 'error' });
+let flashSeq = 0;
+
+function flash(phase: 'done' | 'error', message: string): void {
+  const id = `flash-${++flashSeq}`;
+  addToast({ id, label: message, current: 0, total: 0, phase });
   dismissTimers.set(
     id,
     setTimeout(() => {
@@ -79,13 +81,10 @@ export function showError(message: string): void {
   );
 }
 
+export function showError(message: string): void {
+  flash('error', message);
+}
+
 export function showSuccess(message: string): void {
-  const id = `success-${Date.now()}`;
-  addToast({ id, label: message, current: 0, total: 0, phase: 'done' });
-  dismissTimers.set(
-    id,
-    setTimeout(() => {
-      removeToast(id);
-    }, DISMISS_DELAY)
-  );
+  flash('done', message);
 }
