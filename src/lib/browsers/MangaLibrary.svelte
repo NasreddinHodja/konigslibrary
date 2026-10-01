@@ -76,6 +76,8 @@
   // Bumped when a list is reset, so pages still in flight for it are dropped.
   const generation: Record<Tab, number> = { device: 0, server: 0 };
   let deviceError: string | null = $state(null);
+  /// Skeleton cards per tab: as many as were on screen before the last reset.
+  const skeletons: Record<Tab, number> = $state({ device: 8, server: 8 });
 
   /// Downloaded manga: server slug to the folder holding the copy.
   const downloads = new SvelteMap<string, string>();
@@ -119,6 +121,7 @@
 
   function reset(which: Tab, keepRows = false) {
     generation[which]++;
+    if (!keepRows && lists[which].rows.length > 0) skeletons[which] = lists[which].rows.length;
     const rows = keepRows ? lists[which].rows : [];
     lists[which] = { ...emptyList(), rows, stale: rows.length > 0 };
     if (which === 'device') deviceError = null;
@@ -443,9 +446,9 @@
     <p class="mb-2 text-xs opacity-60">{deviceError}</p>
   {/if}
 
-  {#if t && isLoading(t)}
+  {#if t && (isLoading(t) || refreshing)}
     <div class={TILE_GRID_CLASS}>
-      {#each [0, 1, 2, 3, 4, 5, 6, 7] as i (i)}
+      {#each { length: skeletons[t] }, i (i)}
         <div class="flex flex-col gap-1.5">
           <Skeleton class="aspect-[2/3] w-full" />
           <Skeleton class="h-3 w-4/5" />
