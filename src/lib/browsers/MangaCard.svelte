@@ -97,8 +97,8 @@
       {#if action}
         <button
           class="hit absolute top-1.5 right-1.5 flex h-7 w-7 items-center justify-center bg-bg/85 backdrop-blur-md {action.loading
-            ? 'animate-pulse cursor-wait opacity-40'
-            : 'cursor-pointer opacity-80 hover:bg-fg/20 hover:opacity-100'}"
+            ? 'cursor-wait'
+            : 'group cursor-pointer hover:bg-fg/20'}"
           onclick={(e) => {
             e.stopPropagation();
             action.onclick();
@@ -106,7 +106,13 @@
           disabled={action.loading}
           aria-label="{action.label} {displayName}"
         >
-          <action.icon size={16} />
+          <!-- Faded on the icon, not the button, so the backdrop matches the badge's. -->
+          <action.icon
+            size={16}
+            class={action.loading
+              ? 'animate-pulse opacity-40'
+              : 'opacity-80 group-hover:opacity-100'}
+          />
         </button>
       {/if}
     {/snippet}
