@@ -2,6 +2,7 @@ type EventMap = {
   'download:complete': { slug: string; chapterName?: string };
   'download:deleted': { slug: string };
   'download:error': { slug: string; error: string };
+  'import:complete': { path: string };
   'chapter:changed': { from: string | null; to: string | null };
   'source:loaded': { kind: string; mangaName: string };
   'meta:loaded': { title: string };

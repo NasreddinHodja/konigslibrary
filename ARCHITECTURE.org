@@ -6,24 +6,42 @@
 #+begin_example
 +page.svelte
   +-- context/         DI container, reactive state, Svelte context
-  +-- sources/         source providers (upload, server, native, offline)
+  +-- sources/         source providers (upload, server, device)
   +-- commands/        command registry + keybindings
   +-- events/          typed event bus
   +-- viewers/         viewer registry + viewer components
-  +-- pipeline/        chapter loading hook + middleware
+  +-- chapter-loader/  chapter loading hook + preloader
   +-- plugins/         plugin lifecycle runner
-  +-- browsers/        source-selection UI components
+  +-- browsers/        library UI: Device/Server tabs, cards, upload
 #+end_example
 
 * Modules
 
 - =context/= -- creates =ReaderServices=, sets/gets Svelte context with a Symbol key
-- =sources/= -- =SourceProvider= interface. Implementations: zip upload, server library, native filesystem, offline IDB
+- =sources/= -- =SourceProvider= interface. Implementations: zip upload (browser), server library, native filesystem (the device's manga folders, downloads and imports)
 - =commands/= -- =CommandRegistry= with 15 commands (navigation, settings, UI). Keybindings resolve keys to action IDs
-- =events/= -- =createEventBus()= with typed =on()= / =emit()=. Events: download, chapter, source, progress
+- =events/= -- =createEventBus()= with typed =on()= / =emit()=. Events: download, import, chapter, source, meta, progress
 - =viewers/= -- =ViewerRegistry= resolves highest-priority matching viewer. Built-in: scroll (IntersectionObserver) and page-turn (hold-to-zoom)
-- =pipeline/= -- =useChapter()= reactive hook with middleware composition. Middleware: decode. Preloader: sliding window cache
+- =chapter-loader/= -- =useChapter()= reactive hook. Preloader: sliding window cache
 - =plugins/= -- =Plugin= interface with lifecycle hooks wired to the event bus
+
+* Library
+
+Two lists, each paged and searched where it lives, shown as the Device and
+Server tabs of one =ListPanel= (=ui/ListPanel.svelte=, an Embla carousel).
+
+- *Server*: =crates/klserver/src/db.rs= keeps a SQLite index of the manga
+  directory — one row per manga with its ComicInfo title (folded for sorting
+  and search), cover and metadata — re-synced when the directory's mtime
+  moves and re-read per manga when its folder, first/last archive or cover
+  changes. =/api/library?q=&after=&limit== pages it by keyset cursor; search
+  uses an FTS5 trigram index. A manga's chapter list is stored the first
+  time it is opened and each archive re-read only when its size or mtime
+  changes. It is all a cache: deleting it costs a rescan.
+- *Device*: =src-tauri/src/device_library.rs= merges the manga directory
+  (desktop only), the downloads folder and the imports folder
+  (=src-tauri/src/import.rs=, what the upload button copies into) behind
+  =list_device_manga=, paged with the same cursor (=klparse::listing=).
 
 * Extending
 

@@ -1,4 +1,5 @@
-//! Listing the library, its chapters, and its pages.
+//! Listing a manga's chapters and serving its pages; listing the library
+//! itself is the database's (`db.rs`).
 //!
 //! Port of `src/lib/server/library.ts`. Every path that leaves the configured
 //! manga directory is rejected here rather than at the route layer, so the
@@ -6,21 +7,13 @@
 
 use std::path::{Path, PathBuf};
 
-use klparse::{
-  collate::locale_cmp, comicinfo::MangaMeta, ext_with_dot, is_image_name, is_zip_name,
-  names::strip_zip_ext, page_entries, uri::encode_uri_component,
-};
+use klparse::{collate::locale_cmp, ext_with_dot, is_image_name, is_zip_name};
 use serde::Serialize;
 
 use crate::config::Config;
+use crate::db::Db;
 use crate::pathutil::{expand_home_with, is_inside, parent_of, resolve, resolve_from};
 use crate::zipcache::{FileReader, ZipCache};
-
-#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
-pub struct LibraryEntry {
-  pub name: String,
-  pub slug: String,
-}
 
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -87,46 +80,9 @@ pub fn browse_dir(cfg: &Config, path: Option<&str>) -> Result<BrowseResult, Stri
   })
 }
 
-/// Every manga in the configured directory: one subdirectory per manga, holding
-/// its chapters as `.cbz`/`.zip` archives.
-///
-/// Returns an empty list — never an error — when no directory is configured or
-/// it cannot be read, so a misconfigured server still serves its UI.
-pub fn list_manga(cfg: &Config) -> Vec<LibraryEntry> {
-  let Some(dir) = cfg.manga_dir() else {
-    return Vec::new();
-  };
-
-  let read = match std::fs::read_dir(&dir) {
-    Ok(r) => r,
-    Err(e) => {
-      eprintln!(
-        "[konigslibrary] Cannot read manga directory \"{}\": {e}",
-        dir.display()
-      );
-      return Vec::new();
-    }
-  };
-
-  let mut entries: Vec<LibraryEntry> = Vec::new();
-  for item in read.flatten() {
-    let name = item.file_name().to_string_lossy().into_owned();
-    if name.starts_with('.') || !item.file_type().is_ok_and(|t| t.is_dir()) {
-      continue;
-    }
-    entries.push(LibraryEntry {
-      slug: encode_uri_component(&name),
-      name,
-    });
-  }
-
-  entries.sort_by(|a, b| locale_cmp(&a.name, &b.name));
-  entries
-}
-
 /// Resolves a manga name against the configured directory, rejecting anything
 /// that lands outside it.
-fn manga_path(cfg: &Config, manga_name: &str) -> Option<(PathBuf, PathBuf)> {
+pub fn manga_path(cfg: &Config, manga_name: &str) -> Option<(PathBuf, PathBuf)> {
   let dir = cfg.manga_dir()?;
   let path = resolve_from(&dir, &[manga_name]);
   if !is_inside(&dir, &path) || path == dir {
@@ -135,60 +91,14 @@ fn manga_path(cfg: &Config, manga_name: &str) -> Option<(PathBuf, PathBuf)> {
   Some((dir, path))
 }
 
-/// The file names directly inside a manga folder.
-fn file_names(path: &Path) -> Vec<String> {
-  let Ok(read) = std::fs::read_dir(path) else {
-    return Vec::new();
-  };
-  read
-    .flatten()
-    .filter(|i| i.file_type().is_ok_and(|t| t.is_file()))
-    .map(|i| i.file_name().to_string_lossy().into_owned())
-    .collect()
-}
-
-/// One chapter per archive in the manga folder. Every image in an archive is a
-/// page, whatever folders it is nested under.
-pub fn list_chapters(cfg: &Config, cache: &ZipCache, manga_name: &str) -> Vec<ServerChapter> {
+/// One chapter per archive in the manga folder, through the database's store
+/// of chapter lists. Every image in an archive is a page, whatever folders it
+/// is nested under.
+pub fn list_chapters(cfg: &Config, db: &Db, manga_name: &str) -> Vec<ServerChapter> {
   let Some((_, path)) = manga_path(cfg, manga_name) else {
     return Vec::new();
   };
-
-  let mut chapters: Vec<ServerChapter> = Vec::new();
-  for file in file_names(&path) {
-    if file.starts_with('.') || !is_zip_name(&file) {
-      continue;
-    }
-    let Ok(entries) = cache.get(&path.join(&file)) else {
-      continue;
-    };
-    let pages: Vec<String> = page_entries(entries.to_vec())
-      .into_iter()
-      .map(|e| e.name)
-      .collect();
-    if !pages.is_empty() {
-      chapters.push(ServerChapter {
-        slug: encode_uri_component(&file),
-        name: strip_zip_ext(&file).to_string(),
-        page_count: pages.len(),
-        pages,
-      });
-    }
-  }
-  chapters.sort_by(|a, b| locale_cmp(&a.name, &b.name));
-  chapters
-}
-
-/// ComicInfo metadata and cover of a manga. `None` for anything that is not a
-/// directory inside the manga directory.
-pub fn manga_meta(cfg: &Config, manga_name: &str) -> Option<MangaMeta> {
-  let (_, path) = manga_path(cfg, manga_name)?;
-  if !path.is_dir() {
-    return None;
-  }
-  Some(klparse::manga_meta(&file_names(&path), |name| {
-    FileReader::open(&path.join(name)).ok()
-  }))
+  db.chapters(&path, manga_name)
 }
 
 /// A file served out of a manga folder:
@@ -256,6 +166,7 @@ mod tests {
     root: PathBuf,
     cfg: Config,
     cache: ZipCache,
+    db: std::sync::Arc<Db>,
   }
 
   /// A library rooted at `<tmp>/manga`, with the config file kept in a
@@ -271,26 +182,13 @@ mod tests {
       &tmp.path().to_string_lossy(),
       Some(&root.to_string_lossy()),
     );
+    let db = Db::open(&tmp.path().join("library.db")).unwrap();
     Lib {
       _tmp: tmp,
       root,
       cfg,
       cache: ZipCache::new(),
-    }
-  }
-
-  /// A config pointing at no manga directory at all.
-  fn unset_lib() -> Lib {
-    let tmp = tempfile::tempdir().unwrap();
-    let conf = tmp.path().join("conf");
-    std::fs::create_dir_all(&conf).unwrap();
-    let cfg = Config::for_test(&conf, &tmp.path().to_string_lossy(), None);
-    let root = tmp.path().join("missing");
-    Lib {
-      _tmp: tmp,
-      root,
-      cfg,
-      cache: ZipCache::new(),
+      db,
     }
   }
 
@@ -314,50 +212,6 @@ mod tests {
     std::fs::write(base.join(name), fx.build()).unwrap();
   }
 
-  // --- listManga ---
-
-  #[test]
-  fn list_manga_lists_only_directories_sorted() {
-    let l = lib();
-    mkdir(&l.root, "Vagabond");
-    mkdir(&l.root, "Berserk");
-    write_zip(&l.root, "Akira.cbz", &[("p.png", b"x")]);
-    mkdir(&l.root, ".hidden");
-    touch(&l.root, "notes.txt", b"");
-
-    let got: Vec<(String, String)> = list_manga(&l.cfg)
-      .into_iter()
-      .map(|e| (e.name, e.slug))
-      .collect();
-    assert_eq!(
-      got,
-      [
-        ("Berserk".to_string(), "Berserk".to_string()),
-        ("Vagabond".to_string(), "Vagabond".to_string()),
-      ]
-    );
-  }
-
-  #[test]
-  fn list_manga_percent_encodes_the_slug() {
-    let l = lib();
-    mkdir(&l.root, "One Piece");
-    assert_eq!(list_manga(&l.cfg)[0].slug, "One%20Piece");
-  }
-
-  #[test]
-  fn list_manga_returns_empty_when_no_directory_is_configured() {
-    let l = unset_lib();
-    assert_eq!(list_manga(&l.cfg), Vec::new());
-  }
-
-  #[test]
-  fn list_manga_returns_empty_rather_than_failing_when_the_directory_is_unreadable() {
-    let l = lib();
-    std::fs::remove_dir_all(&l.root).unwrap();
-    assert_eq!(list_manga(&l.cfg), Vec::new());
-  }
-
   // --- listChapters ---
 
   #[test]
@@ -367,15 +221,15 @@ mod tests {
     mkdir(&outside, "");
     write_zip(&outside, "ch1.cbz", &[("p.png", b"x")]);
 
-    assert_eq!(list_chapters(&l.cfg, &l.cache, "../secret"), Vec::new());
-    assert_eq!(list_chapters(&l.cfg, &l.cache, "/etc"), Vec::new());
-    assert_eq!(list_chapters(&l.cfg, &l.cache, ""), Vec::new());
+    assert_eq!(list_chapters(&l.cfg, &l.db, "../secret"), Vec::new());
+    assert_eq!(list_chapters(&l.cfg, &l.db, "/etc"), Vec::new());
+    assert_eq!(list_chapters(&l.cfg, &l.db, ""), Vec::new());
   }
 
   #[test]
   fn list_chapters_returns_empty_for_a_missing_manga() {
     let l = lib();
-    assert_eq!(list_chapters(&l.cfg, &l.cache, "Nope"), Vec::new());
+    assert_eq!(list_chapters(&l.cfg, &l.db, "Nope"), Vec::new());
   }
 
   #[test]
@@ -391,7 +245,7 @@ mod tests {
     );
     touch(&berserk, "cover.jpg", b"cover");
 
-    let chapters = list_chapters(&l.cfg, &l.cache, "Berserk");
+    let chapters = list_chapters(&l.cfg, &l.db, "Berserk");
     assert_eq!(chapters.len(), 2);
     assert_eq!(chapters[0].name, "ch01");
     assert_eq!(chapters[0].slug, "ch01.zip");
@@ -412,7 +266,7 @@ mod tests {
     touch(&berserk, "broken.cbz", b"not a zip");
     write_zip(&berserk, ".hidden.cbz", &[("p1.png", b"b")]);
 
-    let chapters = list_chapters(&l.cfg, &l.cache, "Berserk");
+    let chapters = list_chapters(&l.cfg, &l.db, "Berserk");
     let names: Vec<&str> = chapters.iter().map(|c| c.name.as_str()).collect();
     assert_eq!(names, ["ch01"]);
   }
@@ -424,9 +278,54 @@ mod tests {
     mkdir(&berserk, "");
     write_zip(&berserk, "Chapter 01.cbz", &[("p1.png", b"b")]);
 
-    let chapters = list_chapters(&l.cfg, &l.cache, "Berserk");
+    let chapters = list_chapters(&l.cfg, &l.db, "Berserk");
     assert_eq!(chapters[0].name, "Chapter 01");
     assert_eq!(chapters[0].slug, "Chapter%2001.cbz");
+  }
+
+  #[test]
+  fn a_changed_archive_is_read_again_and_a_removed_one_dropped() {
+    let l = lib();
+    let berserk = l.root.join("Berserk");
+    mkdir(&berserk, "");
+    write_zip(&berserk, "ch01.cbz", &[("p1.png", b"a")]);
+    write_zip(&berserk, "ch02.cbz", &[("p1.png", b"a")]);
+    assert_eq!(list_chapters(&l.cfg, &l.db, "Berserk")[0].page_count, 1);
+
+    // Rewritten in place with another page, and its sibling removed.
+    std::thread::sleep(std::time::Duration::from_millis(20));
+    write_zip(&berserk, "ch01.cbz", &[("p1.png", b"a"), ("p2.png", b"b")]);
+    std::fs::remove_file(berserk.join("ch02.cbz")).unwrap();
+
+    let chapters = list_chapters(&l.cfg, &l.db, "Berserk");
+    assert_eq!(chapters.len(), 1);
+    assert_eq!(chapters[0].pages, ["p1.png", "p2.png"]);
+  }
+
+  #[test]
+  fn an_unchanged_archive_is_served_from_the_store() {
+    let l = lib();
+    let berserk = l.root.join("Berserk");
+    mkdir(&berserk, "");
+    write_zip(&berserk, "ch01.cbz", &[("p1.png", b"a")]);
+    list_chapters(&l.cfg, &l.db, "Berserk");
+
+    // Same size and mtime, different bytes: only a stored list survives this.
+    let path = berserk.join("ch01.cbz");
+    let mtime = std::fs::metadata(&path).unwrap().modified().unwrap();
+    let mut bytes = std::fs::read(&path).unwrap();
+    for b in bytes.iter_mut() {
+      *b = 0;
+    }
+    std::fs::write(&path, &bytes).unwrap();
+    std::fs::File::options()
+      .write(true)
+      .open(&path)
+      .unwrap()
+      .set_modified(mtime)
+      .unwrap();
+
+    assert_eq!(list_chapters(&l.cfg, &l.db, "Berserk")[0].pages, ["p1.png"]);
   }
 
   // --- getFile ---

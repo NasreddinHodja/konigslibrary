@@ -16,6 +16,7 @@
 pub mod collate;
 pub mod comicinfo;
 pub mod crc32;
+pub mod listing;
 pub mod names;
 pub mod uri;
 pub mod zip;

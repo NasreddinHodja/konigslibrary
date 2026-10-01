@@ -11,6 +11,7 @@ import androidx.activity.OnBackPressedCallback
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
+import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -18,6 +19,18 @@ import androidx.core.view.WindowInsetsControllerCompat
 class MainActivity : TauriActivity() {
   private var webViewRef: WebView? = null
   private var immersiveHidden = false
+
+  /// Widths of the left and right system gesture zones (back), in CSS px.
+  /// Refreshed on the UI thread whenever the WebView lays out; read from the
+  /// JS bridge's thread, hence volatile.
+  @Volatile private var gestureInsets = "0,0"
+
+  private fun updateGestureInsets(view: WebView) {
+    val insets = ViewCompat.getRootWindowInsets(view) ?: return
+    val zones = insets.getInsets(WindowInsetsCompat.Type.systemGestures())
+    val density = resources.displayMetrics.density
+    gestureInsets = "${zones.left / density},${zones.right / density}"
+  }
 
   private val requestNotificationPermission =
     registerForActivityResult(ActivityResultContracts.RequestPermission()) {}
@@ -68,6 +81,11 @@ class MainActivity : TauriActivity() {
       })
     }
 
+    /// "left,right": how far in from each side the system's back gesture
+    /// starts, so the page can leave swipes there to the system.
+    @JavascriptInterface
+    fun systemGestureInsets(): String = gestureInsets
+
     @JavascriptInterface
     fun releaseWakeLock() {
       stopService(Intent(this@MainActivity, DownloadService::class.java))
@@ -78,7 +96,11 @@ class MainActivity : TauriActivity() {
     webViewRef = webView
     webView.isVerticalScrollBarEnabled = false
     webView.isHorizontalScrollBarEnabled = false
+    // Long presses are the page's to handle; the WebView's own one (text
+    // selection) only buzzes, with nothing to show for it.
+    webView.isHapticFeedbackEnabled = false
     webView.addJavascriptInterface(NativeBridge(), "__kl")
+    webView.addOnLayoutChangeListener { v, _, _, _, _, _, _, _, _ -> updateGestureInsets(v as WebView) }
 
     onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
       override fun handleOnBackPressed() {
@@ -116,6 +138,8 @@ class MainActivity : TauriActivity() {
     super.onWindowFocusChanged(hasFocus)
     if (hasFocus) {
       applyImmersive(immersiveHidden)
+      // Back from settings, the gesture sensitivity may have changed.
+      webViewRef?.let { updateGestureInsets(it) }
     }
   }
 }

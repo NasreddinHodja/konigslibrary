@@ -2,6 +2,9 @@
   import { fade } from 'svelte/transition';
   import { ANIM_DURATION, ANIM_EXIT_DURATION, ANIM_EASE, ANIM_EASE_IN } from '$lib/utils/constants';
   import { droppedUpload, openUpload } from '$lib/sources/upload';
+  import { importFiles } from '$lib/sources/import';
+  import { listNativeChapters } from '$lib/sources/native-library';
+  import { NativeFilesystemProvider } from '$lib/sources';
   import { resolveKey } from '$lib/keyboard/keybindings.svelte';
   import type { ViewerCommands } from '$lib/commands';
   import { getReaderContext } from '$lib/context';
@@ -16,7 +19,6 @@
   import { pushState } from '$app/navigation';
   import { CircleQuestionMark } from 'lucide-svelte';
   import AppShell from '$lib/ui/AppShell.svelte';
-  import PageContainer from '$lib/ui/PageContainer.svelte';
   import ToastStack from '$lib/ui/ToastStack.svelte';
   import UpdateBanner from '$lib/ui/UpdateBanner.svelte';
   import { showError } from '$lib/ui/toast.svelte';
@@ -56,7 +58,13 @@
     if (!e.dataTransfer) return;
     try {
       const upload = await droppedUpload(e.dataTransfer);
-      if (upload) await openUpload(reader, upload);
+      if (!upload) return;
+      if (!native) return await openUpload(reader, upload);
+      // Native builds keep what is dropped, like what is picked.
+      const path = await importFiles(upload.name, upload.files, reader.events).catch(() => null);
+      if (!path) return;
+      const chapters = await listNativeChapters(path);
+      await reader.setSource(new NativeFilesystemProvider(chapters, upload.name, path));
     } catch (err) {
       showError(`Failed to open file: ${describeOpenFileError(err)}`);
     }
@@ -184,23 +192,16 @@
     {#if chapters.length === 0}
       <div
         class="flex h-dvh w-full flex-col md:pl-14"
+        style="padding-top: var(--safe-top)"
         out:fade={{ duration: ANIM_EXIT_DURATION, easing: ANIM_EASE_IN }}
         in:fade={{ duration: ANIM_DURATION, delay: ANIM_EXIT_DURATION, easing: ANIM_EASE }}
       >
-        <div
-          class="flex min-h-0 flex-1 flex-col overflow-y-auto pb-[calc(5.25rem_+_var(--safe-bottom))] md:pb-8"
-        >
-          <PageContainer maxWidth="max-w-4xl" class="flex flex-1 flex-col">
-            <div
-              class="flex flex-1 flex-col space-y-6 md:space-y-8"
-              style="padding-top: calc(2rem + var(--safe-top))"
-            >
-              <h1 class="text-center text-4xl font-bold tracking-widest md:text-left">
-                KONIGSLIBRARY
-              </h1>
-              <MangaLibrary />
-            </div>
-          </PageContainer>
+        <!-- The library scrolls inside its own tab pages (ListPanel's fill
+             layout), so this only gives it the height left under the status
+             bar. -->
+        <div class="flex min-h-0 flex-1 flex-col">
+          <!-- The library fills the screen; the app's title lives in Settings. -->
+          <MangaLibrary />
         </div>
       </div>
     {:else}

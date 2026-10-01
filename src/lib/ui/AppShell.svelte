@@ -120,4 +120,11 @@
   </a>
 </nav>
 
+<!-- Backs the status bar, so content scrolling up passes under it and pinned
+     list bars (ListPanel) read as one with it. -->
+<div
+  class="pointer-events-none fixed inset-x-0 top-0 z-30 bg-bg"
+  style="height: var(--safe-top)"
+></div>
+
 {@render children()}

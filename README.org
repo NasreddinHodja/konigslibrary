@@ -9,9 +9,12 @@ Manga reader that opens ZIP and CBZ archives. Runs in the browser, as a desktop/
 
 - *In the browser*: open a manga folder, or drop a chapter =.cbz= to read it
   right away. Nothing to install.
-- *Desktop app* (Windows, Linux): point it at your library folder.
-- *Android app*: open a chapter =.cbz=, or download manga from your computer
-  to read offline.
+- *Desktop app* (Windows, Linux): point it at your library folder, or add
+  manga folders to the app's own library.
+- *Android app*: add chapter =.cbz= files to the app's library, or download
+  manga from your computer to read offline.
+- *Huge libraries*: the server indexes its manga directory in a database and
+  serves the list a page at a time, searchable by title.
 - *Computer to phone*: in the desktop app, Settings → Share to LAN, then scan
   the QR code with your phone.
 - *Server*: run it on a NAS or home server and read from any device on your
@@ -21,17 +24,18 @@ Manga reader that opens ZIP and CBZ archives. Runs in the browser, as a desktop/
 
 #+begin_src
 src/lib/
-├── actions/         # Svelte actions (intersect, edge swipe)
-├── browsers/        # Source browser UIs (library, native, offline, upload)
-├── chapters/        # EndOfChapter UI
+├── api/             # Manga metadata fetching (server, device)
+├── browsers/        # Library UI: Device/Server tabs, cards, upload button
+├── chapter-loader/  # Chapter loading hook + preloader
+├── chapters/        # Chapter tiles, thumbnails, EndOfChapter UI
 ├── commands/        # Command registry and keybinding actions
 ├── context/         # ReaderServices factory (createReaderServices)
 ├── events/          # Typed event bus
 ├── keyboard/        # Configurable keybindings + help overlay
-├── pipeline/        # Image decode pipeline + preloader
 ├── plugins/         # Plugin system (runner, registry, window title)
-├── sources/         # Data source abstraction (upload, server, Tauri, offline)
-├── ui/              # Shared UI components (sidebar, toast, buttons)
+├── sources/         # Data sources (upload, server, device, downloads, imports)
+├── theme/           # Theme presets and colours
+├── ui/              # Shared UI components (list panel, toast, buttons)
 ├── utils/           # Constants, types, platform detection
 ├── viewers/         # Reading modes (scroll, page-turn) + viewer registry
 └── zip/             # Byte-range plumbing around the wasm parser
@@ -43,7 +47,8 @@ The archive parser is a Rust workspace, built once and used everywhere:
 crates/
 ├── klparse/         # ZIP64 parsing, chapter grouping, JS-compatible collation
 ├── klwasm/          # wasm-bindgen bindings — the browser's no-backend path
-└── klserver/        # axum binary — LAN sharing and self-hosted deployments
+└── klserver/        # axum binary — LAN sharing and self-hosted deployments,
+                     #   with a SQLite index of the library
 #+end_src
 
 The browser and the server run the same parsing code, so a fix in one is a fix
@@ -93,7 +98,7 @@ build= or =bun run build:android= can't silently swap out what this serves):
 
 #+begin_src sh
 KL_STATIC_DIR=./build-local MANGA_DIR=~/Manga NO_BROWSER=1 \
-1. Only konigslibrary changes: parse Count, and show COMPLETE when it's there and nothing otherwise. That's small: a field on MangaMeta, one element(xml, "Count") line, and the row in MangaDetail.svelte.  crates/target/release/konigslibrary-server
+  crates/target/release/konigslibrary-server
 #+end_src
 
 See =konigslibrary.service= for a systemd user unit that does exactly this.
@@ -125,12 +130,13 @@ A signed APK is available on the [[https://github.com/NasreddinHodja/konigslibra
 
 ** Environment Variables
 
-| Variable      | Default       | Description                       |
-|---------------+---------------+-----------------------------------|
-| =MANGA_DIR=   | (from config) | Path to your manga directory      |
-| =PORT=        | =3000=        | Server port                       |
-| =HOST=        | =0.0.0.0=     | Bind address                      |
-| =LOCAL_BUILD= | (unset)       | Set to =1= for local server build |
+| Variable      | Default              | Description                                |
+|---------------+----------------------+--------------------------------------------|
+| =MANGA_DIR=   | (from config)        | Path to your manga directory               |
+| =KL_DB=       | =./konigslibrary.db= | Library database (a cache; safe to delete) |
+| =PORT=        | =3000=               | Server port                                |
+| =HOST=        | =0.0.0.0=            | Bind address                               |
+| =LOCAL_BUILD= | (unset)              | Set to =1= for local server build          |
 
 * Library Structure
 

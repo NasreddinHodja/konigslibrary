@@ -1,12 +1,13 @@
 <script lang="ts">
-  import type { ComponentType, SvelteComponent } from 'svelte';
+  import { untrack, type ComponentType, type SvelteComponent } from 'svelte';
   import { FolderOpen, Cloud, CloudCheck, type IconProps } from 'lucide-svelte';
-  import { queueMeta } from './cover-queue';
-  import type { MangaMeta } from '$lib/api/meta';
+  import { knownMeta, queueMeta } from './cover-queue';
+  import type { CardMeta } from '$lib/api/meta';
   import CoverThumbnail from '$lib/ui/CoverThumbnail.svelte';
 
   let {
     name,
+    metaKey,
     loadMeta,
     ontitle,
     badge,
@@ -14,7 +15,9 @@
     onopen
   }: {
     name: string;
-    loadMeta: () => Promise<MangaMeta | null>;
+    /// Identifies this manga's metadata in the session cache.
+    metaKey: string;
+    loadMeta: () => Promise<CardMeta | null>;
     ontitle?: (title: string) => void;
     badge: 'device' | 'server' | 'downloaded';
     action?: {
@@ -26,12 +29,19 @@
     onopen: () => void;
   } = $props();
 
+  // Cards are keyed by manga, so the key never changes for a given card.
+  const hit = knownMeta(untrack(() => metaKey));
+
   let el: HTMLDivElement | undefined = $state();
-  let cover: string | null = $state(null);
-  let title: string | null = $state(null);
+  let cover: string | null = $state(hit?.coverUrl ?? null);
+  let title: string | null = $state(hit?.title ?? null);
   let coverFailed = $state(false);
-  let loading = $state(true);
-  let requested = false;
+  let loading = $state(hit === undefined);
+  let requested = hit !== undefined;
+
+  $effect(() => {
+    if (hit?.title) untrack(() => ontitle?.(hit.title!));
+  });
 
   const displayName = $derived(title || name);
   const src = $derived(coverFailed ? null : cover);
@@ -43,14 +53,14 @@
         if (!entry.isIntersecting || requested) return;
         requested = true;
         observer.disconnect();
-        queueMeta(loadMeta).then((meta) => {
+        queueMeta(metaKey, loadMeta).then((meta) => {
           cover = meta?.coverUrl ?? null;
           title = meta?.title ?? null;
           if (title) ontitle?.(title);
           loading = false;
         });
       },
-      { rootMargin: '200px' }
+      { root: el.closest('[data-scroll-root]'), rootMargin: '200px' }
     );
     observer.observe(el);
     return () => observer.disconnect();
@@ -68,7 +78,7 @@
   >
     {#snippet overlay()}
       <div
-        class="pointer-events-none absolute top-1.5 left-1.5 flex h-5 w-5 items-center justify-center bg-bg/75 backdrop-blur-sm"
+        class="pointer-events-none absolute top-1.5 left-1.5 flex h-7 w-7 items-center justify-center bg-bg/75 backdrop-blur-sm"
         title={badge === 'device'
           ? 'Device folder'
           : badge === 'downloaded'
@@ -76,17 +86,17 @@
             : 'On server'}
       >
         {#if badge === 'device'}
-          <FolderOpen size={11} class="opacity-70" />
+          <FolderOpen size={15} class="opacity-70" />
         {:else if badge === 'downloaded'}
-          <CloudCheck size={11} class="text-success" />
+          <CloudCheck size={15} class="text-success" />
         {:else}
-          <Cloud size={11} class="opacity-70" />
+          <Cloud size={15} class="opacity-70" />
         {/if}
       </div>
 
       {#if action}
         <button
-          class="absolute top-1.5 right-1.5 flex h-5 w-5 items-center justify-center bg-bg/75 backdrop-blur-sm {action.loading
+          class="absolute top-1.5 right-1.5 flex h-7 w-7 items-center justify-center bg-bg/75 backdrop-blur-sm {action.loading
             ? 'animate-pulse cursor-wait opacity-40'
             : 'cursor-pointer opacity-80 hover:bg-fg/20 hover:opacity-100'}"
           onclick={(e) => {
@@ -96,7 +106,7 @@
           disabled={action.loading}
           aria-label="{action.label} {displayName}"
         >
-          <action.icon size={12} />
+          <action.icon size={16} />
         </button>
       {/if}
     {/snippet}

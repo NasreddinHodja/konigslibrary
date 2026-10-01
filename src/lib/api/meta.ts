@@ -8,6 +8,16 @@ type RawMeta = RawMangaMeta;
 
 export type MangaMeta = Omit<RawMeta, 'cover'> & { coverUrl: string | null };
 
+/// What a library card shows.
+export type CardMeta = Pick<MangaMeta, 'title' | 'coverUrl'>;
+
+/// With a `version`, the server lets the image be cached for good: a replaced
+/// cover gets a new version, so a new URL.
+export function serverCoverUrl(slug: string, cover: string, version?: string | null): string {
+  const url = apiUrl(`/api/library/${slug}/${encodeURIComponent(cover)}`);
+  return version ? `${url}?v=${encodeURIComponent(version)}` : url;
+}
+
 export async function fetchNativeMeta(path: string): Promise<MangaMeta | null> {
   try {
     const { cover, ...rest } = await invoke<RawMeta>('read_manga_meta', { path });
@@ -24,7 +34,7 @@ export async function fetchServerMeta(slug: string): Promise<MangaMeta | null> {
     const { cover, ...rest }: RawMeta = await res.json();
     return {
       ...rest,
-      coverUrl: cover ? apiUrl(`/api/library/${slug}/${encodeURIComponent(cover)}`) : null
+      coverUrl: cover ? serverCoverUrl(slug, cover) : null
     };
   } catch {
     return null;

@@ -2,7 +2,8 @@
   import { tick } from 'svelte';
   import { fade } from 'svelte/transition';
   import { ANIM_DURATION, ANIM_EASE } from '$lib/utils/constants';
-  import { Download, Search, X } from 'lucide-svelte';
+  import { BookOpen, Download } from 'lucide-svelte';
+  import ListPanel from '$lib/ui/ListPanel.svelte';
   import Skeleton from '$lib/ui/Skeleton.svelte';
   import Button from '$lib/ui/Button.svelte';
   import PageContainer from '$lib/ui/PageContainer.svelte';
@@ -296,35 +297,6 @@
   </div>
 {/snippet}
 
-{#snippet chaptersHeadRow(stacked: boolean)}
-  <div
-    class="flex shrink-0 gap-3 border-b border-border/15 px-4 py-3 {stacked
-      ? 'flex-col'
-      : 'items-center gap-4'}"
-  >
-    <span class="shrink-0 text-xs font-bold tracking-widest opacity-50">
-      CHAPTERS ({chapters.length})
-    </span>
-    <div
-      class="flex min-w-0 items-center gap-2 border-2 border-border/15 px-3 py-1.5 {stacked
-        ? 'w-full'
-        : 'flex-1'}"
-    >
-      <Search size={12} class="shrink-0 opacity-50" />
-      <input
-        bind:value={search}
-        placeholder="Search chapters…"
-        class="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:opacity-50"
-      />
-      {#if search}
-        <button class="cursor-pointer opacity-50 hover:opacity-80" onclick={() => (search = '')}>
-          <X size={12} />
-        </button>
-      {/if}
-    </div>
-  </div>
-{/snippet}
-
 {#snippet chapterTile(chapter: (typeof filteredChapters)[number])}
   {@const isResume = savedProgress?.chapter === chapter.name}
   <ChapterTile
@@ -348,107 +320,49 @@
       No chapters match "{search}"
     </p>
   {:else}
-    <div class="p-4">
-      <VirtualGrid
-        items={filteredChapters}
-        minItemWidth={isDesktop ? 80 : 88}
-        gap={isDesktop ? 8 : 10}
-        key={(c) => c.name}
-      >
-        {#snippet item(chapter)}
-          {@render chapterTile(chapter)}
-        {/snippet}
-      </VirtualGrid>
-    </div>
+    <VirtualGrid
+      items={filteredChapters}
+      minItemWidth={isDesktop ? 80 : 88}
+      gap={isDesktop ? 8 : 10}
+      key={(c) => c.name}
+    >
+      {#snippet item(chapter)}
+        {@render chapterTile(chapter)}
+      {/snippet}
+    </VirtualGrid>
   {/if}
 {/snippet}
 
-{#if isDesktop}
-  <!-- Desktop: single scroll column, bordered panels -->
-  <div
-    class="mx-auto flex max-w-4xl flex-col gap-6 overflow-hidden"
-    style="height: 100dvh; padding: calc(2rem + var(--safe-top)) 2rem max(2rem, var(--safe-bottom))"
-  >
-    <!-- Back -->
-    <div class="shrink-0">
-      <BackLink label="LIBRARY" onclick={reader.clearManga} />
-    </div>
-
-    {#if metaError && !meta}
-      <div class="flex shrink-0 flex-col gap-4">
-        <h1 class="text-xl leading-tight font-bold">{mangaName}</h1>
-        {#if savedProgress}
-          <Button size="lg" variant="default" class="self-start" onclick={resume}>
-            RESUME: {chapterLabel(savedProgress.chapter)}, p.{savedProgress.page + 1}
-          </Button>
-        {/if}
-      </div>
+{#snippet cover(sizeClass: string)}
+  <div class="relative shrink-0 border-2 border-border/15 {sizeClass}">
+    {#if meta?.coverUrl && !coverFailed}
+      <img
+        src={meta.coverUrl}
+        alt={meta?.title ?? mangaName}
+        class="absolute inset-0 h-full w-full object-cover"
+        onerror={() => (coverFailed = true)}
+      />
+    {:else if reader.metaState === 'loading'}
+      <Skeleton class="absolute inset-0" />
     {:else}
-      <!-- Cover + spec table -->
-      <div class="flex shrink-0 items-start gap-6">
-        <div class="relative h-56 w-40 shrink-0 border-2 border-border/15">
-          {#if meta?.coverUrl && !coverFailed}
-            <img
-              src={meta.coverUrl}
-              alt={meta?.title ?? mangaName}
-              class="absolute inset-0 h-full w-full object-cover"
-              onerror={() => (coverFailed = true)}
-            />
-          {:else}
-            <Skeleton class="absolute inset-0" />
-          {/if}
-        </div>
-
-        <div class="min-w-0 flex-1">
-          {@render specTable()}
-        </div>
+      <div class="flex h-full w-full items-center justify-center bg-fg/[0.03]">
+        <BookOpen size={22} class="opacity-20" />
       </div>
-
-      {#if savedProgress || canDownload}
-        <!-- Actions -->
-        <div class="flex shrink-0 items-center justify-end gap-3">
-          {#if canDownload}
-            <Button
-              size="md"
-              variant="default"
-              class="border-fg/40"
-              onclick={() => (confirmingDownload = true)}
-            >
-              <Download size={14} />
-              DOWNLOAD
-            </Button>
-          {/if}
-          {#if savedProgress}
-            <Button size="md" variant="default" onclick={resume}>
-              RESUME: {chapterLabel(savedProgress.chapter)}, p.{savedProgress.page + 1}
-            </Button>
-          {/if}
-        </div>
-      {/if}
     {/if}
-
-    <!-- Chapters panel -->
-    <div class="flex min-h-0 flex-1 flex-col border-2 border-border/15">
-      {@render chaptersHeadRow(false)}
-
-      <div class="min-h-0 flex-1 overflow-y-auto">
-        {@render chapterGrid()}
-      </div>
-    </div>
   </div>
-{:else}
-  <!-- Mobile: stacked single column, whole page scrolls -->
+{/snippet}
+
+<!-- One page scroll for both layouts: the metadata scrolls away and the
+     chapters' bar pins below the status bar, like the library's. -->
+<div
+  class="flex min-h-dvh w-full flex-col {showShell
+    ? 'pb-[calc(5.25rem_+_var(--safe-bottom))] md:pb-8'
+    : 'pb-[calc(2rem_+_var(--safe-bottom))]'}"
+  style="padding-top: var(--safe-top)"
+>
   <PageContainer maxWidth="max-w-4xl">
-    <div
-      class="flex min-h-screen w-full flex-col {showShell
-        ? 'pb-[calc(5.25rem_+_var(--safe-bottom))]'
-        : 'pb-[calc(2rem_+_var(--safe-bottom))]'}"
-      style="padding-top: calc(2rem + var(--safe-top))"
-    >
-      <!-- Back -->
-      <div class="mb-6 flex items-center justify-between">
-        <BackLink label="LIBRARY" onclick={reader.clearManga} />
-      </div>
+    <div class="flex flex-col gap-6 pt-8">
+      <BackLink label="LIBRARY" onclick={reader.clearManga} />
 
       {#if metaError && !meta}
         <div class="flex flex-col gap-4">
@@ -459,29 +373,43 @@
             </Button>
           {/if}
         </div>
-      {:else}
-        <!-- Cover -->
-        <div class="relative mx-auto h-64 w-44 shrink-0 border-2 border-border/15">
-          {#if meta?.coverUrl && !coverFailed}
-            <img
-              src={meta.coverUrl}
-              alt={meta?.title ?? mangaName}
-              class="absolute inset-0 h-full w-full object-cover"
-              onerror={() => (coverFailed = true)}
-            />
-          {:else}
-            <Skeleton class="absolute inset-0" />
-          {/if}
-        </div>
-
-        <!-- Spec table -->
-        <div class="mt-6">
-          {@render specTable()}
+      {:else if isDesktop}
+        <div class="flex items-start gap-6">
+          {@render cover('h-56 w-40')}
+          <div class="min-w-0 flex-1">
+            {@render specTable()}
+          </div>
         </div>
 
         {#if savedProgress || canDownload}
-          <!-- Actions -->
-          <div class="mt-4 flex flex-col gap-3">
+          <div class="flex items-center justify-end gap-3">
+            {#if canDownload}
+              <Button
+                size="md"
+                variant="default"
+                class="border-fg/40"
+                onclick={() => (confirmingDownload = true)}
+              >
+                <Download size={14} />
+                DOWNLOAD
+              </Button>
+            {/if}
+            {#if savedProgress}
+              <Button size="md" variant="default" onclick={resume}>
+                RESUME: {chapterLabel(savedProgress.chapter)}, p.{savedProgress.page + 1}
+              </Button>
+            {/if}
+          </div>
+        {/if}
+      {:else}
+        <div class="mx-auto">
+          {@render cover('h-64 w-44')}
+        </div>
+
+        {@render specTable()}
+
+        {#if savedProgress || canDownload}
+          <div class="flex flex-col gap-3">
             {#if savedProgress}
               <Button size="md" variant="default" class="w-full" onclick={resume}>
                 RESUME: {chapterLabel(savedProgress.chapter)}, p.{savedProgress.page + 1}
@@ -501,15 +429,15 @@
           </div>
         {/if}
       {/if}
+    </div>
+  </PageContainer>
 
-      <!-- Chapters panel -->
-      <div class="mt-3 border-2 border-border/15">
-        {@render chaptersHeadRow(true)}
-        {@render chapterGrid()}
-      </div>
-    </div></PageContainer
-  >
-{/if}
+  <div class="mt-6 flex flex-1 flex-col">
+    <ListPanel label="CHAPTERS ({chapters.length})" bind:search placeholder="Search chapters…">
+      {@render chapterGrid()}
+    </ListPanel>
+  </div>
+</div>
 
 {#if confirmingDownload}
   <ConfirmDialog

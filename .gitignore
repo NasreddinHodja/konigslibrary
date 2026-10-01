@@ -59,6 +59,12 @@ src-tauri/binaries/*
 # config
 konigslibrary.json
 
+# library database (klserver), a cache of the manga directory
+konigslibrary.db*
+
+# simulated manga directory (scripts/gen-dev-library.js)
+/dev-library/
+
 # audit
 AUDIT.org
 

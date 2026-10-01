@@ -14,7 +14,7 @@
     DEFAULT_BINDINGS
   } from '$lib/keyboard/keybindings.svelte';
   import { apiUrl, isLocalServer, getServerUrl } from '$lib/utils/constants';
-  import { isNative } from '$lib/utils/platform';
+  import { isAndroid, isNative } from '$lib/utils/platform';
   import { goto } from '$app/navigation';
   import { showSuccess } from '$lib/ui/toast.svelte';
   import { getMangaDir, setMangaDir, expandHome } from '$lib/sources/native-library';
@@ -119,6 +119,7 @@
   });
 
   const native = isNative();
+  const android = isAndroid();
   let deviceDir = $state(getMangaDir());
 
   async function browseDeviceDir() {
@@ -247,6 +248,8 @@
 
 {#snippet settingsBody()}
   <BackLink label="LIBRARY" href="/" />
+
+  <p class="text-center text-4xl font-bold tracking-widest md:text-left">KONIGSLIBRARY</p>
 
   <div class="flex items-center justify-between gap-3">
     <h1 class="text-2xl font-bold">Settings</h1>
@@ -440,27 +443,30 @@
       </div>
 
       <div class="flex flex-col gap-5 p-4">
-        <div class="space-y-3">
-          <h3 class="text-sm font-bold opacity-60">Local directory</h3>
-          <div class="flex gap-2">
-            <input
-              type="text"
-              bind:value={deviceDir}
-              placeholder="/home/user/Manga"
-              class="flex-1 border-2 bg-bg px-3 py-2 text-sm text-fg placeholder:opacity-60"
-            />
-            <button
-              class="border-2 px-3 opacity-60 hover:opacity-100"
-              onclick={browseDeviceDir}
-              aria-label="Browse"
-            >
-              <FolderOpen size={16} />
-            </button>
+        <!-- Android can't read shared storage by path; manga come in through Upload. -->
+        {#if !android}
+          <div class="space-y-3">
+            <h3 class="text-sm font-bold opacity-60">Local directory</h3>
+            <div class="flex gap-2">
+              <input
+                type="text"
+                bind:value={deviceDir}
+                placeholder="/home/user/Manga"
+                class="flex-1 border-2 bg-bg px-3 py-2 text-sm text-fg placeholder:opacity-60"
+              />
+              <button
+                class="border-2 px-3 opacity-60 hover:opacity-100"
+                onclick={browseDeviceDir}
+                aria-label="Browse"
+              >
+                <FolderOpen size={16} />
+              </button>
+            </div>
+            <Button size="md" onclick={saveDeviceDir}>Save</Button>
           </div>
-          <Button size="md" onclick={saveDeviceDir}>Save</Button>
-        </div>
 
-        <ShareLan />
+          <ShareLan />
+        {/if}
 
         <div class="space-y-3">
           <h3 class="text-sm font-bold opacity-60">Server URL</h3>

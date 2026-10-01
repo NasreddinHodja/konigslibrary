@@ -1,22 +1,17 @@
 mod archive;
+mod device_library;
 mod download;
 mod immersive;
+mod import;
 mod lan_server;
 mod offline;
 
-use serde::Serialize;
 use std::path::PathBuf;
 use std::sync::Mutex;
 use tauri::Manager;
 
-#[derive(Serialize)]
-struct DirEntry {
-  name: String,
-  is_dir: bool,
-}
-
-/// Directories the webview may read from: the configured manga directory, the
-/// downloads directory, and folders opened through the folder picker.
+/// Directories the webview may read from: the configured manga directory and
+/// the app's own downloads and imports folders.
 #[derive(Default)]
 struct Roots {
   manga: Option<PathBuf>,
@@ -44,18 +39,6 @@ fn set_manga_dir(
     .allow_directory(&canonical, true)
     .map_err(|e| e.to_string())?;
   state.0.lock().unwrap().manga = Some(canonical);
-  Ok(())
-}
-
-/// Lets a folder picked in the folder dialog be read like the manga directory.
-/// The dialog has already added it to the asset scope.
-#[tauri::command]
-fn open_manga_folder(state: tauri::State<MangaDirState>, path: String) -> Result<(), String> {
-  let canonical = std::fs::canonicalize(&path).map_err(|e| e.to_string())?;
-  let mut roots = state.0.lock().unwrap();
-  if !roots.others.contains(&canonical) {
-    roots.others.push(canonical);
-  }
   Ok(())
 }
 
@@ -100,22 +83,31 @@ fn read_manga_meta(
   archive::manga_meta(&allowed_path(&state, &path)?)
 }
 
-#[tauri::command]
-fn list_dir(state: tauri::State<MangaDirState>, path: String) -> Result<Vec<DirEntry>, String> {
-  let canonical = allowed_path(&state, &path)?;
+/// Manga per Device-tab page when the webview does not ask for a size, and
+/// the most it may ask for.
+const DEVICE_PAGE: usize = 100;
+const DEVICE_PAGE_MAX: usize = 500;
 
-  let entries = std::fs::read_dir(&canonical).map_err(|e| e.to_string())?;
-  let mut results = Vec::new();
-  for entry in entries {
-    let entry = entry.map_err(|e| e.to_string())?;
-    let ft = entry.file_type().map_err(|e| e.to_string())?;
-    results.push(DirEntry {
-      name: entry.file_name().to_string_lossy().to_string(),
-      is_dir: ft.is_dir(),
-    });
-  }
-  results.sort_by(|a, b| a.name.cmp(&b.name));
-  Ok(results)
+/// One page of the Device tab: the configured manga directory and the
+/// downloads folder together, filtered to names containing `query`.
+#[tauri::command]
+async fn list_device_manga(
+  app: tauri::AppHandle,
+  roots: tauri::State<'_, MangaDirState>,
+  index: tauri::State<'_, device_library::DeviceIndex>,
+  query: Option<String>,
+  after: Option<String>,
+  limit: Option<usize>,
+) -> Result<device_library::DevicePage, String> {
+  let manga_dir = roots.0.lock().unwrap().manga.clone();
+  Ok(index.page(
+    manga_dir.as_deref(),
+    &offline::offline_dir(&app)?,
+    &import::import_dir(&app)?,
+    query.as_deref().unwrap_or(""),
+    after.as_deref(),
+    limit.unwrap_or(DEVICE_PAGE).clamp(1, DEVICE_PAGE_MAX),
+  ))
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -126,21 +118,27 @@ pub fn run() {
   tauri::Builder::default()
     .manage(download::DownloadState(Default::default()))
     .manage(MangaDirState(Mutex::new(Roots::default())))
+    .manage(device_library::DeviceIndex::default())
     .manage(lan_server::LanServerState::default())
     .plugin(immersive::init())
     .plugin(tauri_plugin_dialog::init())
     .plugin(tauri_plugin_opener::init())
     .plugin(tauri_plugin_deep_link::init())
     .setup(|app| {
-      let offline = offline::offline_dir(app.handle())?;
-      std::fs::create_dir_all(&offline)?;
-      app
-        .state::<MangaDirState>()
-        .0
-        .lock()
-        .unwrap()
-        .others
-        .push(std::fs::canonicalize(&offline)?);
+      // The app's own manga folders are always readable.
+      for dir in [
+        offline::offline_dir(app.handle())?,
+        import::import_dir(app.handle())?,
+      ] {
+        std::fs::create_dir_all(&dir)?;
+        app
+          .state::<MangaDirState>()
+          .0
+          .lock()
+          .unwrap()
+          .others
+          .push(std::fs::canonicalize(&dir)?);
+      }
 
       let log_level = if cfg!(debug_assertions) {
         log::LevelFilter::Info
@@ -157,8 +155,7 @@ pub fn run() {
     .invoke_handler(tauri::generate_handler![
       home_dir,
       set_manga_dir,
-      list_dir,
-      open_manga_folder,
+      list_device_manga,
       list_manga_chapters,
       read_archive_page,
       read_manga_meta,
@@ -166,6 +163,9 @@ pub fn run() {
       download::cancel_download,
       offline::list_offline_manga,
       offline::delete_offline_manga,
+      import::import_file,
+      import::import_manga_folder,
+      import::delete_imported_manga,
       lan_server::start_lan_server,
       lan_server::stop_lan_server,
       lan_server::lan_server_status,

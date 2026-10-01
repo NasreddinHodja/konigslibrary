@@ -20,6 +20,16 @@
     initTheme();
   });
 
+  // A long press on touch is the app's: outside text fields it opens no
+  // browser menu or selection (which only buzzed, showing nothing). The mouse
+  // keeps its right-click menu.
+  function onContextMenu(e: MouseEvent) {
+    if (!matchMedia('(pointer: coarse)').matches) return;
+    const el = e.target;
+    if (el instanceof HTMLElement && el.closest('input, textarea, [contenteditable]')) return;
+    e.preventDefault();
+  }
+
   // Crossfades between pages. Browsers without view transitions just navigate.
   onNavigate((navigation) => {
     if (!document.startViewTransition) return;
@@ -69,6 +79,8 @@
     return () => unlisten?.();
   });
 </script>
+
+<svelte:document oncontextmenu={onContextMenu} />
 
 <svelte:head><link rel="icon" href={favicon} /></svelte:head>
 {#if !readerActive.value}

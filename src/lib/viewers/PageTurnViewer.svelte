@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { inSystemGesture } from '$lib/utils/system-gestures';
   import { getReaderContext } from '$lib/context';
   import type { ViewerCommands } from '$lib/commands';
   import { useChapter, usePreloader } from '$lib/chapter-loader';
@@ -99,16 +100,19 @@
   // Motion copied from Embla Carousel's source: a fixed-timestep integrator
   // (ScrollBody + Animations), release velocity measured over the last 170ms
   // (DragTracker), and flick/snap selection on release (DragHandler). Values
-  // are Embla's touch defaults, except BASE_DURATION: Embla's 25 takes ~380ms
-  // to cover 90% of a page turn, 18 takes ~270ms with no visible overshoot.
+  // are Embla's touch defaults, except BASE_DURATION and BASE_FRICTION, which
+  // match the library's tab pager (ListPanel): 90% of a page turn in ~133ms
+  // instead of Embla's ~380ms, overshooting ~2% of the width like it does.
   const STEP_MS = 1000 / 60;
-  const BASE_DURATION = 18;
-  const BASE_FRICTION = 0.68;
+  const BASE_DURATION = 5;
+  const BASE_FRICTION = 0.55;
   const FORCE_BOOST = 400;
   const LOG_INTERVAL = 170;
   const DRAG_THRESHOLD = 10;
   const SETTLE_PX = 0.1;
-  const OVERSHOOT_PX = 1;
+  /// The most a settle may run past its page, as a share of the width: what
+  /// the tab pager overshoots by at the same settings, so both springs match.
+  const OVERSHOOT = 0.02;
   /// How much a strong flick shortens the settle. Embla's 25 - 10 * force is
   /// 0.4; higher lets fast swipes finish faster, only safe with the overshoot cap.
   const FLICK_SPEEDUP = 0.6;
@@ -123,6 +127,11 @@
   let previous = 0;
   let target = 0;
   let velocity = 0;
+  /// Which way the current settle is heading, fixed when it starts: once past
+  /// the target the displacement flips sign, so it can't tell the way back.
+  let settleDir = 0;
+  /// OVERSHOOT in px for the current settle, measured once as it starts.
+  let overshootCap = 0;
   let duration = BASE_DURATION;
   let friction = BASE_FRICTION;
   let rafId = 0;
@@ -144,9 +153,8 @@
     location += velocity;
     // Not in Embla: a fast flick's carried speed would spring well past the
     // page before bouncing back, so the overshoot is capped to a small bounce.
-    const dir = Math.sign(displacement);
-    if ((location - target) * dir > OVERSHOOT_PX) {
-      location = target + dir * OVERSHOOT_PX;
+    if ((location - target) * settleDir > overshootCap) {
+      location = target + settleDir * overshootCap;
       velocity = 0;
     }
   }
@@ -188,6 +196,8 @@
 
   function animateTo(to: number, dur = BASE_DURATION, fric = BASE_FRICTION) {
     target = to;
+    settleDir = Math.sign(to - location);
+    overshootCap = getW() * OVERSHOOT;
     duration = dur;
     friction = fric;
     if (!rafId) rafId = requestAnimationFrame(frame);
@@ -255,6 +265,9 @@
   let maxDrag = 0;
   let trackStart = { x: 0, t: 0 };
   let trackLast = { x: 0, t: 0 };
+  /// The touch began in the system's back-gesture zone: it never drags the
+  /// strip, since the system may take it over, but can still be a tap.
+  let edgeStart = false;
 
   const onTouchStart = (e: TouchEvent) => {
     if (zoomHeld || e.touches.length > 1) return;
@@ -266,6 +279,7 @@
     const t = e.touches[0];
     startX = t.clientX;
     startY = t.clientY;
+    edgeStart = inSystemGesture(t.clientX);
     startLocation = location;
     maxDrag = 0;
     axisDecided = false;
@@ -294,6 +308,7 @@
     trackLast = { x: t.clientX, t: e.timeStamp };
     if (expired) trackStart = trackLast;
     maxDrag = Math.max(maxDrag, Math.abs(dx));
+    if (edgeStart) return;
 
     let loc = startLocation + dx;
     // Moving the strip left brings in the panel on the right, which is the
@@ -323,6 +338,7 @@
       }
       return;
     }
+    if (edgeStart) return animateTo(0);
 
     // DragTracker.pointerUp: only a recent, fast enough movement is a flick.
     const diffTime = e.timeStamp - trackStart.t;

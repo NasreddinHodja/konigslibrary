@@ -8,7 +8,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use axum::{
-  extract::{ConnectInfo, Query, RawPathParams, State},
+  extract::{ConnectInfo, Query, RawPathParams, RawQuery, State},
   http::{header, HeaderValue, Method, StatusCode},
   response::{IntoResponse, Response},
   routing::get,
@@ -19,12 +19,14 @@ use tower_http::cors::{Any, CorsLayer};
 use tower_http::services::{ServeDir, ServeFile};
 
 use crate::config::Config;
+use crate::db::Db;
 use crate::library;
 use crate::zipcache::ZipCache;
 
 pub struct AppState {
   pub config: Config,
   pub cache: ZipCache,
+  pub db: Arc<Db>,
   pub static_dir: PathBuf,
 }
 
@@ -92,13 +94,47 @@ fn cors() -> CorsLayer {
 }
 
 /// Reachability probe: the client polls this while offline, so it must stay
-/// cheaper than `/api/library`, which lists the whole manga directory.
+/// cheaper than `/api/library`, which can re-sync the library database.
 async fn get_ping() -> StatusCode {
   StatusCode::NO_CONTENT
 }
 
-async fn get_library(State(state): State<SharedState>) -> Response {
-  Json(library::list_manga(&state.config)).into_response()
+/// Manga per page when the client does not ask for a size, and the most it
+/// may ask for.
+const LIBRARY_PAGE: usize = 100;
+const LIBRARY_PAGE_MAX: usize = 500;
+
+#[derive(serde::Deserialize)]
+pub struct LibraryQuery {
+  q: Option<String>,
+  after: Option<String>,
+  limit: Option<usize>,
+}
+
+async fn get_library(
+  State(state): State<SharedState>,
+  Query(query): Query<LibraryQuery>,
+) -> Response {
+  let limit = query
+    .limit
+    .unwrap_or(LIBRARY_PAGE)
+    .clamp(1, LIBRARY_PAGE_MAX);
+  let Some(dir) = state.config.manga_dir() else {
+    return Json(json!({ "entries": [], "next": null })).into_response();
+  };
+  state.db.refresh(&dir);
+  match state.db.page(
+    query.q.as_deref().unwrap_or(""),
+    query.after.as_deref(),
+    limit,
+  ) {
+    Ok(page) => Json(page).into_response(),
+    Err(e) => (
+      StatusCode::INTERNAL_SERVER_ERROR,
+      Json(json!({ "error": e.to_string() })),
+    )
+      .into_response(),
+  }
 }
 
 /// Path parameters arrive percent-encoded and are decoded exactly once here.
@@ -119,20 +155,30 @@ async fn get_chapters(State(state): State<SharedState>, params: RawPathParams) -
   let Some(manga) = raw_param(&params, "manga").and_then(decode_param) else {
     return Json(Vec::<library::ServerChapter>::new()).into_response();
   };
-  Json(library::list_chapters(&state.config, &state.cache, &manga)).into_response()
+  Json(library::list_chapters(&state.config, &state.db, &manga)).into_response()
 }
 
 async fn get_meta(State(state): State<SharedState>, params: RawPathParams) -> Response {
   let meta = raw_param(&params, "manga")
     .and_then(decode_param)
-    .and_then(|manga| library::manga_meta(&state.config, &manga));
+    .and_then(|manga| {
+      let (_, path) = library::manga_path(&state.config, &manga)?;
+      if !path.is_dir() {
+        return None;
+      }
+      state.db.meta(&path, &manga)
+    });
   match meta {
-    Some(meta) => Json(meta).into_response(),
+    Some(json) => ([(header::CONTENT_TYPE, "application/json")], json).into_response(),
     None => (StatusCode::NOT_FOUND, "Not found").into_response(),
   }
 }
 
-async fn get_image(State(state): State<SharedState>, params: RawPathParams) -> Response {
+async fn get_image(
+  State(state): State<SharedState>,
+  params: RawPathParams,
+  RawQuery(query): RawQuery,
+) -> Response {
   let not_found = || (StatusCode::NOT_FOUND, "Not found").into_response();
 
   let (Some(manga), Some(raw_path)) = (
@@ -155,9 +201,13 @@ async fn get_image(State(state): State<SharedState>, params: RawPathParams) -> R
   let Some(image) = library::get_file(&state.config, &state.cache, &manga, &parts) else {
     return not_found();
   };
-  // Covers and whole archives can be replaced by the downloader; only pages
-  // are addressed by paths that never change.
-  let cache_control = if parts.len() > 1 {
+  // Covers and whole archives can be replaced in place, so only pages are
+  // addressed by paths that never change — and a cover asked for by the
+  // version the library listed, which a replaced cover no longer matches.
+  let versioned = query
+    .as_deref()
+    .is_some_and(|q| q.split('&').any(|kv| kv.starts_with("v=")));
+  let cache_control = if parts.len() > 1 || versioned {
     IMMUTABLE
   } else {
     "no-cache"
@@ -277,6 +327,7 @@ mod tests {
     let state = Arc::new(AppState {
       config,
       cache: ZipCache::new(),
+      db: Db::open(&tmp.path().join("library.db")).unwrap(),
       static_dir,
     });
     Harness {
@@ -296,6 +347,7 @@ mod tests {
     let state = Arc::new(AppState {
       config,
       cache: ZipCache::new(),
+      db: Db::open(&h._tmp.path().join("library-unset.db")).unwrap(),
       static_dir,
     });
     Harness {
@@ -466,8 +518,43 @@ mod tests {
     let (status, body, _) = send(&h, get_from("/api/library", LAN)).await;
     assert_eq!(status, StatusCode::OK);
     let parsed: serde_json::Value = serde_json::from_slice(&body).unwrap();
-    assert_eq!(parsed[0]["name"], "Akira");
-    assert_eq!(parsed[1]["name"], "Berserk");
+    assert_eq!(parsed["entries"][0]["name"], "Akira");
+    assert_eq!(parsed["entries"][1]["name"], "Berserk");
+    assert_eq!(parsed["next"], serde_json::Value::Null);
+  }
+
+  #[tokio::test]
+  async fn library_pages_through_the_directory() {
+    let h = harness();
+    for name in ["Akira", "Berserk", "Monster"] {
+      std::fs::create_dir_all(h.root.join(name)).unwrap();
+    }
+
+    let (_, body, _) = send(&h, get_from("/api/library?limit=2", LAN)).await;
+    let first: serde_json::Value = serde_json::from_slice(&body).unwrap();
+    assert_eq!(first["entries"].as_array().unwrap().len(), 2);
+    let next = first["next"].as_str().unwrap();
+
+    let uri = format!(
+      "/api/library?limit=2&after={}",
+      klparse::encode_uri_component(next)
+    );
+    let (_, body, _) = send(&h, get_from(&uri, LAN)).await;
+    let second: serde_json::Value = serde_json::from_slice(&body).unwrap();
+    assert_eq!(second["entries"][0]["name"], "Monster");
+    assert_eq!(second["next"], serde_json::Value::Null);
+  }
+
+  #[tokio::test]
+  async fn library_filters_by_name() {
+    let h = harness();
+    for name in ["One Piece", "Berserk"] {
+      std::fs::create_dir_all(h.root.join(name)).unwrap();
+    }
+    let (_, body, _) = send(&h, get_from("/api/library?q=piece", LAN)).await;
+    let parsed: serde_json::Value = serde_json::from_slice(&body).unwrap();
+    assert_eq!(parsed["entries"].as_array().unwrap().len(), 1);
+    assert_eq!(parsed["entries"][0]["name"], "One Piece");
   }
 
   #[tokio::test]
@@ -570,6 +657,9 @@ mod tests {
     assert_eq!(body, b"PNGDATA");
     assert_eq!(res.headers()[header::CONTENT_TYPE], "image/png");
     assert_eq!(res.headers()[header::CACHE_CONTROL], "no-cache");
+
+    let (_, _, res) = send(&h, get_from("/api/library/Berserk/cover.png?v=1:7", LAN)).await;
+    assert_eq!(res.headers()[header::CACHE_CONTROL], IMMUTABLE);
 
     let (status, body, _) = send(&h, get_from("/api/library/Berserk/ch01.cbz", LAN)).await;
     assert_eq!(status, StatusCode::OK);

@@ -28,6 +28,8 @@
     "serve": "bun run build:local && bun run build:server && crates/target/release/konigslibrary-server",
     "dev:local": "bun run build:wasm && bun scripts/dev-local.js",
     "dev:host": "bun run build:wasm && bun scripts/dev-local.js --host",
+    "dev:sim": "bun scripts/gen-dev-library.js --if-missing && MANGA_DIR=dev-library bun run dev:local",
+    "gen:dev-library": "bun scripts/gen-dev-library.js",
     "build:local": "bun run clean:kit && bun run prepare && LOCAL_BUILD=1 bun run build",
     "tauri:local": "LOCAL_BUILD=1 bun tauri dev",
     "dev:android": "bun tauri android dev",
@@ -71,6 +73,7 @@
     "@tauri-apps/plugin-deep-link": "^2.4.9",
     "@tauri-apps/plugin-dialog": "^2.7.1",
     "@tauri-apps/plugin-opener": "^2.5.4",
+    "embla-carousel": "^8.6.0",
     "lucide-svelte": "^0.563.0",
     "qrcode-generator": "^2.0.4"
   }

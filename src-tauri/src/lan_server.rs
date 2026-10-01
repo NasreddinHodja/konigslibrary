@@ -71,7 +71,10 @@ pub async fn start_lan_server(
     )
     .map_err(|e| e.to_string())?;
 
-  let server_bin = assets_dir.join(format!("konigslibrary-server{}", std::env::consts::EXE_SUFFIX));
+  let server_bin = assets_dir.join(format!(
+    "konigslibrary-server{}",
+    std::env::consts::EXE_SUFFIX
+  ));
 
   // Spawned through tokio directly rather than tauri-plugin-shell's sidecar
   // API. A sidecar has to be declared in bundle.externalBin, and Tauri's
@@ -83,6 +86,16 @@ pub async fn start_lan_server(
   // reached through .sidecar().
   let mut child = Command::new(&server_bin)
     .env("MANGA_DIR", &manga_dir)
+    // Its library database: the working directory it inherits may be a
+    // read-only install location.
+    .env(
+      "KL_DB",
+      app
+        .path()
+        .app_data_dir()
+        .map_err(|e| e.to_string())?
+        .join("lan-library.db"),
+    )
     .env("PORT", port.to_string())
     .env("HOST", "0.0.0.0")
     .env("NO_BROWSER", "1")

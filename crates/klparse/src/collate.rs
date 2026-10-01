@@ -103,6 +103,27 @@ fn base_and_accent(ch: char) -> (char, u32) {
   (base.to_lowercase().next().unwrap_or(base), accent)
 }
 
+/// A title reduced to what comparing and searching care about: lowercased,
+/// accents dropped (`Ōkami` → `okami`), whitespace runs collapsed to one
+/// space, trimmed. Searching a folded title with a folded query ignores case
+/// and accents.
+pub fn fold(s: &str) -> String {
+  let mut out = String::with_capacity(s.len());
+  let mut space = false;
+  for ch in s.trim().chars() {
+    if ch.is_whitespace() {
+      space = true;
+      continue;
+    }
+    if space {
+      out.push(' ');
+      space = false;
+    }
+    out.push(base_and_accent(ch).0);
+  }
+  out
+}
+
 fn primary_key(base: char) -> (u8, u32) {
   if let Some(rank) = punct_rank(base) {
     return (CLASS_PUNCT, rank);
@@ -237,7 +258,7 @@ fn cmp_impl(a: &str, b: &str, numeric: bool) -> Ordering {
 
 #[cfg(test)]
 mod tests {
-  use super::{locale_cmp, natural_cmp};
+  use super::{fold, locale_cmp, natural_cmp};
   use std::cmp::Ordering;
 
   #[test]
@@ -516,5 +537,12 @@ mod tests {
     let mut got = CORPUS.to_vec();
     got.sort_by(|a, b| natural_cmp(a, b));
     assert_eq!(got, expected);
+  }
+
+  #[test]
+  fn fold_drops_case_accents_and_extra_whitespace() {
+    assert_eq!(fold("  Ōkami   no  HANA "), "okami no hana");
+    assert_eq!(fold("Émile & Ça"), "emile & ca");
+    assert_eq!(fold(""), "");
   }
 }

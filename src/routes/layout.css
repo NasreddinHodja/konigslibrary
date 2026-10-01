@@ -9,7 +9,7 @@
   --ease-anim: cubic-bezier(0, 0, 0.2, 1);
   --ease-in-anim: cubic-bezier(0.4, 0, 1, 1);
   --ease-snappy: cubic-bezier(0.4, 0, 0.2, 1);
-  --duration-anim: 200ms;
+  --duration-anim: 120ms;
   --color-bg: oklch(0% 0 0);
   --color-fg: oklch(100% 0 0);
   --color-surface: oklch(0% 0 0);
@@ -32,6 +32,22 @@ body {
   @apply bg-bg text-fg antialiased;
   font-family: 'Source Code Pro', monospace;
   overflow-x: clip;
+}
+
+/* On touch screens a long press is an app's, not a document's: no selecting
+   interface text (and no haptic tick for a selection that never shows),
+   except where text is typed. The reader opts out everywhere already. */
+@media (pointer: coarse) {
+  body {
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  input,
+  textarea,
+  [contenteditable] {
+    -webkit-user-select: text;
+    user-select: text;
+  }
 }
 
 * {

@@ -14,6 +14,9 @@ use crate::pathutil::{expand_home_with, resolve};
 pub struct Config {
   /// `MANGA_DIR`, which takes priority over the config file.
   env_manga_dir: Option<String>,
+  /// `KL_DB`: where the library database goes, for a process whose working
+  /// directory may not be writable (the desktop app's LAN server).
+  env_db: Option<PathBuf>,
   /// Where `konigslibrary.json` lives — the process working directory in
   /// production, a temp directory in tests.
   config_path: PathBuf,
@@ -29,6 +32,9 @@ impl Config {
       .unwrap_or_default();
     Self {
       env_manga_dir: std::env::var("MANGA_DIR").ok().filter(|v| !v.is_empty()),
+      env_db: std::env::var_os("KL_DB")
+        .filter(|v| !v.is_empty())
+        .map(PathBuf::from),
       config_path: cwd.join("konigslibrary.json"),
       cwd,
       home,
@@ -41,6 +47,7 @@ impl Config {
   pub fn for_test(cwd: &std::path::Path, home: &str, env_manga_dir: Option<&str>) -> Self {
     Self {
       env_manga_dir: env_manga_dir.map(str::to_string),
+      env_db: None,
       config_path: cwd.join("konigslibrary.json"),
       cwd: cwd.to_path_buf(),
       home: home.to_string(),
@@ -50,6 +57,14 @@ impl Config {
   #[cfg(test)]
   pub fn config_path(&self) -> &std::path::Path {
     &self.config_path
+  }
+
+  /// The library database: `KL_DB`, or next to `konigslibrary.json`.
+  pub fn db_path(&self) -> PathBuf {
+    self
+      .env_db
+      .clone()
+      .unwrap_or_else(|| self.config_path.with_file_name("konigslibrary.db"))
   }
 
   pub fn home(&self) -> &str {

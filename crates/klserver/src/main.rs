@@ -7,6 +7,7 @@
 //! at all — that path runs the same parser compiled to wasm.
 
 mod config;
+mod db;
 mod library;
 mod pathutil;
 mod routes;
@@ -29,9 +30,30 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
   let host = std::env::var("HOST").unwrap_or_else(|_| "0.0.0.0".to_string());
   let static_dir = static_dir();
 
+  let config = Config::from_env();
+  let db = match db::Db::open(&config.db_path()) {
+    Ok(db) => db,
+    // A cache, so anywhere writable will do rather than not serving at all.
+    Err(e) => {
+      let fallback = std::env::temp_dir().join("konigslibrary.db");
+      eprintln!(
+        "[konigslibrary] Cannot open {}: {e}; using {}",
+        config.db_path().display(),
+        fallback.display()
+      );
+      db::Db::open(&fallback)?
+    }
+  };
+  // Start indexing before the first request asks for the list, without
+  // holding up the server: a request that comes in first waits for it.
+  if let Some(dir) = config.manga_dir() {
+    let db = Arc::clone(&db);
+    std::thread::spawn(move || db.refresh(&dir));
+  }
   let state: SharedState = Arc::new(AppState {
-    config: Config::from_env(),
+    config,
     cache: ZipCache::new(),
+    db,
     static_dir,
   });
 
