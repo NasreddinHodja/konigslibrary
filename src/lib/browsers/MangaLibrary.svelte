@@ -48,7 +48,14 @@
     known: CardMeta | null;
   };
 
-  type List = { rows: Row[]; next: string | null; loading: boolean; loaded: boolean };
+  /// `stale`: rows from before a reset, shown until the first new page replaces them.
+  type List = {
+    rows: Row[];
+    next: string | null;
+    loading: boolean;
+    loaded: boolean;
+    stale: boolean;
+  };
 
   const SERVER_TIMEOUT = 8000;
   const SEARCH_DEBOUNCE = 250;
@@ -58,7 +65,13 @@
   const mangaDir = native ? getMangaDir() : '';
   const serverEnabled = isLocalServer || !!getServerUrl();
 
-  const emptyList = (): List => ({ rows: [], next: null, loading: false, loaded: false });
+  const emptyList = (): List => ({
+    rows: [],
+    next: null,
+    loading: false,
+    loaded: false,
+    stale: false
+  });
   const lists: Record<Tab, List> = $state({ device: emptyList(), server: emptyList() });
   // Bumped when a list is reset, so pages still in flight for it are dropped.
   const generation: Record<Tab, number> = { device: 0, server: 0 };
@@ -104,9 +117,10 @@
     );
   }
 
-  function reset(which: Tab) {
+  function reset(which: Tab, keepRows = false) {
     generation[which]++;
-    lists[which] = emptyList();
+    const rows = keepRows ? lists[which].rows : [];
+    lists[which] = { ...emptyList(), rows, stale: rows.length > 0 };
     if (which === 'device') deviceError = null;
   }
 
@@ -151,10 +165,12 @@
     try {
       const page = await fetchPage(which, query, list.next);
       if (gen !== generation[which]) return;
-      list.rows.push(...page.rows);
+      if (list.stale) list.rows = page.rows;
+      else list.rows.push(...page.rows);
       list.next = page.next;
     } catch {
       if (gen !== generation[which]) return;
+      if (list.stale) list.rows = [];
       list.next = null;
       if (which === 'server') reportServerFailure();
       else deviceError = `Could not read manga directory: ${mangaDir}`;
@@ -162,6 +178,7 @@
       if (gen === generation[which]) {
         list.loading = false;
         list.loaded = true;
+        list.stale = false;
       }
     }
   }
@@ -199,12 +216,13 @@
     return () => clearTimeout(timer);
   });
 
-  // A new query starts both lists over; only the visible one refetches now.
+  // A new query starts both lists over, keeping the old results up until the
+  // new ones land so the grid doesn't flash skeletons on every keystroke.
   $effect(() => {
     void query;
     untrack(() => {
-      reset('device');
-      reset('server');
+      reset('device', true);
+      reset('server', true);
     });
   });
 
