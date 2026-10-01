@@ -62,6 +62,7 @@
       <button
         class="hit relative shrink-0 cursor-pointer p-1 opacity-60 hover:opacity-100"
         onclick={onclose}
+        aria-label="Close"
       >
         <X size={16} />
       </button>

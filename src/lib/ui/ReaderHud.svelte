@@ -36,6 +36,7 @@
   class="fixed inset-x-0 top-0 z-40 flex items-center gap-4 bg-surface/85 px-4 backdrop-blur-2xl transition-transform duration-200 ease-out
     {shown ? 'pointer-events-auto translate-y-0' : 'pointer-events-none -translate-y-full'}"
   style="padding-top: calc(0.75rem + var(--safe-top)); padding-bottom: 0.75rem;"
+  inert={!shown}
 >
   <button
     class="hit relative shrink-0 cursor-pointer p-1 opacity-70 hover:opacity-100"
@@ -77,6 +78,7 @@
     ? 'pointer-events-auto translate-y-0'
     : 'pointer-events-none translate-y-[calc(100%+1rem)]'}"
   style="padding-top: 1rem; padding-bottom: calc(1rem + var(--safe-bottom, 0px));"
+  inert={!shown}
 >
   <div class="w-full space-y-3">
     {#if manga.scrollMode}

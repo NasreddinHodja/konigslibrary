@@ -139,6 +139,7 @@
         <input
           type="text"
           {placeholder}
+          aria-label={placeholder}
           bind:value={search}
           class="w-full min-w-0 bg-transparent text-sm outline-none placeholder:opacity-50"
         />
@@ -146,6 +147,7 @@
           <button
             class="hit relative cursor-pointer opacity-50 hover:opacity-80"
             onclick={() => (search = '')}
+            aria-label="Clear search"
           >
             <X size={12} />
           </button>
@@ -191,7 +193,7 @@
           <div
             data-scroll-root
             class="h-full min-w-0 shrink-0 grow-0 basis-full overflow-y-auto overscroll-y-contain"
-            aria-hidden={key !== (activeTab ?? null) ? 'true' : undefined}
+            inert={key !== (activeTab ?? null)}
           >
             <div class="flex min-h-full flex-col p-4 {pageClass}">
               {@render children(key)}

@@ -75,6 +75,7 @@
     <button
       type="button"
       onclick={goLibrary}
+      aria-current={active === 'library' ? 'page' : undefined}
       class="flex cursor-pointer flex-col items-center gap-1.5"
     >
       <div
@@ -87,7 +88,11 @@
       <span class="text-[0.55rem] font-bold tracking-wide uppercase opacity-70">Library</span>
     </button>
 
-    <a href="/settings" class="flex flex-col items-center gap-1.5">
+    <a
+      href="/settings"
+      aria-current={active === 'settings' ? 'page' : undefined}
+      class="flex flex-col items-center gap-1.5"
+    >
       <div
         class="flex h-8 w-8 items-center justify-center {active === 'settings'
           ? 'bg-fg text-bg'
@@ -111,6 +116,7 @@
   <button
     type="button"
     onclick={goLibrary}
+    aria-current={active === 'library' ? 'page' : undefined}
     class="flex flex-1 cursor-pointer flex-col items-center justify-center gap-1 self-stretch {active ===
     'library'
       ? ''
@@ -124,6 +130,7 @@
 
   <a
     href="/settings"
+    aria-current={active === 'settings' ? 'page' : undefined}
     class="flex flex-1 flex-col items-center justify-center gap-1 self-stretch {active ===
     'settings'
       ? ''
