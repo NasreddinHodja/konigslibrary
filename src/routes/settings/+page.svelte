@@ -298,12 +298,12 @@
   </div>
 
   {#if isLocalServer}
-    <section id="settings-sources" class="scroll-mt-4 border-2 border-border/15">
-      <div class="border-b border-border/15 px-4 py-3">
+    <section id="settings-sources" class="scroll-mt-4">
+      <div class="border-b border-border/15 py-3">
         <span class="text-xs font-bold tracking-widest opacity-50">SOURCES</span>
       </div>
 
-      <div class="p-4">
+      <div class="py-4">
         <h3 class="mb-3 text-sm font-bold opacity-60">Manga directory</h3>
         {#if loadingDir}
           <Skeleton class="h-10 w-full border-2 border-transparent" />
@@ -337,13 +337,13 @@
     </section>
   {/if}
 
-  <section id="settings-theme" class="scroll-mt-4 border-2 border-border/15">
-    <div class="flex items-center justify-between gap-3 border-b border-border/15 px-4 py-3">
+  <section id="settings-theme" class="scroll-mt-4">
+    <div class="flex items-center justify-between gap-3 border-b border-border/15 py-3">
       <span class="text-xs font-bold tracking-widest opacity-50">THEME</span>
       <Button size="sm" onclick={resetTheme}>Reset to default</Button>
     </div>
 
-    <div class="flex flex-col gap-5 p-4">
+    <div class="flex flex-col gap-5 py-4">
       <div>
         <h3 class="mb-3 text-sm font-bold opacity-60">Presets</h3>
         <div class="grid grid-cols-3 gap-2">
@@ -395,13 +395,13 @@
   </section>
 
   {#if !isMobile}
-    <section id="settings-shortcuts" class="scroll-mt-4 border-2 border-border/15">
-      <div class="flex items-center justify-between gap-3 border-b border-border/15 px-4 py-3">
+    <section id="settings-shortcuts" class="scroll-mt-4">
+      <div class="flex items-center justify-between gap-3 border-b border-border/15 py-3">
         <span class="text-xs font-bold tracking-widest opacity-50">KEYBOARD SHORTCUTS</span>
         <Button size="sm" onclick={handleReset}>Reset to defaults</Button>
       </div>
 
-      <div class="flex flex-col gap-5 p-4">
+      <div class="flex flex-col gap-5 py-4">
         {#each categories as [category, items] (category)}
           <div>
             <h3 class="mb-2 text-sm font-bold opacity-60">{category}</h3>
@@ -437,12 +437,12 @@
   {/if}
 
   {#if native}
-    <section id="settings-providers" class="scroll-mt-4 border-2 border-border/15">
-      <div class="border-b border-border/15 px-4 py-3">
+    <section id="settings-providers" class="scroll-mt-4">
+      <div class="border-b border-border/15 py-3">
         <span class="text-xs font-bold tracking-widest opacity-50">PROVIDERS</span>
       </div>
 
-      <div class="flex flex-col gap-5 p-4">
+      <div class="flex flex-col gap-5 py-4">
         <!-- Android can't read shared storage by path; manga come in through Upload. -->
         {#if !android}
           <div class="space-y-3">
