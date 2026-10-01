@@ -298,7 +298,7 @@
   </div>
 
   {#if isLocalServer}
-    <section id="settings-sources" class="scroll-mt-4">
+    <section id="settings-sources" class="scroll-mt-[calc(1rem+var(--safe-top))]">
       <div class="border-b border-border/15 py-3">
         <span class="text-xs font-bold tracking-widest opacity-50">SOURCES</span>
       </div>
@@ -337,7 +337,7 @@
     </section>
   {/if}
 
-  <section id="settings-theme" class="scroll-mt-4">
+  <section id="settings-theme" class="scroll-mt-[calc(1rem+var(--safe-top))]">
     <div class="flex items-center justify-between gap-3 border-b border-border/15 py-3">
       <span class="text-xs font-bold tracking-widest opacity-50">THEME</span>
       <Button size="sm" onclick={resetTheme}>Reset to default</Button>
@@ -400,7 +400,7 @@
   </section>
 
   {#if !isMobile}
-    <section id="settings-shortcuts" class="scroll-mt-4">
+    <section id="settings-shortcuts" class="scroll-mt-[calc(1rem+var(--safe-top))]">
       <div class="flex items-center justify-between gap-3 border-b border-border/15 py-3">
         <span class="text-xs font-bold tracking-widest opacity-50">KEYBOARD SHORTCUTS</span>
         <Button size="sm" onclick={handleReset}>Reset to defaults</Button>
@@ -442,7 +442,7 @@
   {/if}
 
   {#if native}
-    <section id="settings-providers" class="scroll-mt-4">
+    <section id="settings-providers" class="scroll-mt-[calc(1rem+var(--safe-top))]">
       <div class="border-b border-border/15 py-3">
         <span class="text-xs font-bold tracking-widest opacity-50">PROVIDERS</span>
       </div>
