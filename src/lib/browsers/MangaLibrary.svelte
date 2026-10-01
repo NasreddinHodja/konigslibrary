@@ -480,22 +480,24 @@
     <LoadMore onvisible={() => loadMore(t)} watch={lists[t].rows.length} />
   {:else if !deviceError || t !== 'device'}
     <div class="flex flex-1 flex-col items-center justify-center gap-3 py-12 text-center">
-      <LibraryBig size={22} class="opacity-25" />
-      <p class="text-xs opacity-60">
+      <LibraryBig size={40} class="opacity-25" />
+      <div class="flex max-w-64 flex-col gap-1">
         {#if tabs.length === 0}
-          No manga sources configured - <a href="/settings" class="underline"
-            >set one up in Settings</a
-          >
+          <p class="text-base font-bold opacity-80">No manga sources configured</p>
+          <p class="text-xs opacity-60">
+            <a href="/settings" class="underline">Set one up in Settings</a>
+          </p>
         {:else if searchQuery.trim()}
-          No results for "{searchQuery.trim()}"
+          <p class="text-base font-bold opacity-80">No results for "{searchQuery.trim()}"</p>
         {:else if t === 'server' && serverStatus() === 'offline'}
-          Server unreachable
+          <p class="text-base font-bold opacity-80">Server unreachable</p>
         {:else if t === 'device' && !mangaDir}
-          No manga on this device yet - download some from the server
+          <p class="text-base font-bold opacity-80">No manga on this device yet</p>
+          <p class="text-xs opacity-60">Download some from the server</p>
         {:else}
-          No manga found
+          <p class="text-base font-bold opacity-80">No manga found</p>
         {/if}
-      </p>
+      </div>
     </div>
   {/if}
 {/snippet}
