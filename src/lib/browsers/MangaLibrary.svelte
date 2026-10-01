@@ -29,6 +29,7 @@
   import Skeleton from '$lib/ui/Skeleton.svelte';
   import ConfirmDialog from '$lib/ui/ConfirmDialog.svelte';
   import MangaCard from './MangaCard.svelte';
+  import { TILE_GRID_CLASS } from '$lib/ui/tile-grid';
   import LoadMore from './LoadMore.svelte';
   import { forgetMeta, rememberMeta } from './cover-queue';
 
@@ -425,9 +426,7 @@
   {/if}
 
   {#if t && isLoading(t)}
-    <div
-      class="grid grid-cols-3 gap-x-3 gap-y-5 md:grid-cols-[repeat(auto-fill,minmax(9rem,1fr))] md:gap-x-4 md:gap-y-6"
-    >
+    <div class={TILE_GRID_CLASS}>
       {#each [0, 1, 2, 3, 4, 5, 6, 7] as i (i)}
         <div class="flex flex-col gap-1.5">
           <Skeleton class="aspect-[2/3] w-full" />
@@ -436,9 +435,7 @@
       {/each}
     </div>
   {:else if t && lists[t].rows.length > 0}
-    <div
-      class="grid grid-cols-3 gap-x-3 gap-y-5 md:grid-cols-[repeat(auto-fill,minmax(9rem,1fr))] md:gap-x-4 md:gap-y-6"
-    >
+    <div class={TILE_GRID_CLASS}>
       {#each lists[t].rows as row (row.id)}
         {@const action = rowAction(row)}
         <MangaCard

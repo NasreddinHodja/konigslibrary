@@ -96,9 +96,11 @@
     const api = EmblaCarousel(el, {
       startIndex: untrack(() => index),
       duration: DURATION,
-      // A swipe in from the screen edge is the system's back gesture: leave it be.
+      // Only touch drags between tabs: with one page there's nowhere to go, a
+      // mouse clicks the tabs instead, and a swipe in from the screen edge is
+      // the system's back gesture.
       watchDrag: (_, evt) =>
-        !inSystemGesture('touches' in evt ? (evt.touches[0]?.clientX ?? 0) : evt.clientX)
+        pages.length > 1 && 'touches' in evt && !inSystemGesture(evt.touches[0]?.clientX ?? 0)
     });
     // A swipe picked another page: that page's tab becomes the active one.
     api.on('select', () => {

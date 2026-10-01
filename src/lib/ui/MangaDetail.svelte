@@ -4,6 +4,7 @@
   import { ANIM_DURATION, ANIM_EASE } from '$lib/utils/constants';
   import { BookOpen, Download } from 'lucide-svelte';
   import ListPanel from '$lib/ui/ListPanel.svelte';
+  import { TILE, TILE_DESKTOP_QUERY } from '$lib/ui/tile-grid';
   import Skeleton from '$lib/ui/Skeleton.svelte';
   import Button from '$lib/ui/Button.svelte';
   import PageContainer from '$lib/ui/PageContainer.svelte';
@@ -97,7 +98,7 @@
   let isDesktop = $state(false);
 
   $effect(() => {
-    const mq = window.matchMedia('(min-width: 768px)');
+    const mq = window.matchMedia(TILE_DESKTOP_QUERY);
     isDesktop = mq.matches;
     const handler = (e: MediaQueryListEvent) => (isDesktop = e.matches);
     mq.addEventListener('change', handler);
@@ -322,8 +323,8 @@
   {:else}
     <VirtualGrid
       items={filteredChapters}
-      minItemWidth={isDesktop ? 80 : 88}
-      gap={isDesktop ? 8 : 10}
+      minItemWidth={isDesktop ? TILE.desktop.min : TILE.phone.min}
+      gap={isDesktop ? TILE.desktop.gap : TILE.phone.gap}
       key={(c) => c.name}
     >
       {#snippet item(chapter)}
