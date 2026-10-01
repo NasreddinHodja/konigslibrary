@@ -3,21 +3,17 @@
     labelA,
     labelB,
     active,
-    onclick,
-    locked = false
+    onclick
   }: {
     labelA: string;
     labelB: string;
     active: boolean;
     onclick: () => void;
-    locked?: boolean;
   } = $props();
 </script>
 
 <div
-  class="flex w-full border-2 text-xs font-bold tracking-wide {locked
-    ? 'pointer-events-none opacity-50'
-    : ''}"
+  class="flex w-full border-2 text-xs font-bold tracking-wide"
   role="group"
   aria-label="{labelA} / {labelB}"
 >
@@ -25,7 +21,7 @@
     class="flex-1 py-2 text-center pointer-coarse:py-4 {!active
       ? 'bg-fg text-bg'
       : 'cursor-pointer hover:bg-fg/10'}"
-    onclick={active ? onclick : undefined}
+    {onclick}
     disabled={!active}
   >
     {labelA}
@@ -35,7 +31,7 @@
     class="flex-1 py-2 text-center pointer-coarse:py-4 {active
       ? 'bg-fg text-bg'
       : 'cursor-pointer hover:bg-fg/10'}"
-    onclick={!active ? onclick : undefined}
+    {onclick}
     disabled={active}
   >
     {labelB}

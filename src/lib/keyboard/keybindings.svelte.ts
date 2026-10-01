@@ -1,5 +1,3 @@
-import { SvelteMap } from 'svelte/reactivity';
-
 export type Action =
   | 'nextPage'
   | 'prevPage'
@@ -70,7 +68,9 @@ function loadBindings(): KeyBinding[] {
 }
 
 function buildLookup(bindings: KeyBinding[]): Map<string, Action> {
-  const map = new SvelteMap<string, Action>();
+  // Rebuilt whole by the $derived below, never mutated, so it needn't be reactive.
+  // eslint-disable-next-line svelte/prefer-svelte-reactivity
+  const map = new Map<string, Action>();
   for (const b of bindings) {
     for (const key of b.keys) {
       map.set(key, b.action);
@@ -104,11 +104,6 @@ export function resetBindings() {
 
 export function resolveKey(key: string): Action | undefined {
   return lookup.get(key);
-}
-
-export function getKeysForAction(action: Action): string[] {
-  const b = bindings.find((b) => b.action === action);
-  return b?.keys ?? [];
 }
 
 export function formatKey(key: string): string {

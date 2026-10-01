@@ -1,4 +1,4 @@
-import { isNative } from './platform';
+import { isAndroid, isNative } from './platform';
 
 const GITHUB_REPO = 'NasreddinHodja/konigslibrary';
 const LS_DISMISSED = 'kl:update:dismissed';
@@ -7,6 +7,18 @@ export type UpdateInfo = {
   version: string;
   downloadUrl: string;
 };
+
+type Release = {
+  tag_name: string;
+  html_url: string;
+  assets?: { name: string; browser_download_url: string }[];
+};
+
+/// The latest GitHub release, or `null` if it can't be fetched.
+async function fetchLatestRelease(): Promise<Release | null> {
+  const res = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/releases/latest`);
+  return res.ok ? res.json() : null;
+}
 
 function newerThan(latest: string, current: string): boolean {
   const a = latest.split('.').map(Number);
@@ -21,7 +33,7 @@ function newerThan(latest: string, current: string): boolean {
 
 export async function checkForUpdate(): Promise<UpdateInfo | null> {
   if (!isNative()) return null;
-  if (!/android/i.test(navigator.userAgent)) return null;
+  if (!isAndroid()) return null;
 
   let current: string;
   try {
@@ -32,17 +44,14 @@ export async function checkForUpdate(): Promise<UpdateInfo | null> {
   }
 
   try {
-    const res = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/releases/latest`);
-    if (!res.ok) return null;
-    const data = await res.json();
+    const data = await fetchLatestRelease();
+    if (!data) return null;
 
-    const latest = (data.tag_name as string).replace(/^v/, '');
+    const latest = data.tag_name.replace(/^v/, '');
     if (!newerThan(latest, current)) return null;
     if (localStorage.getItem(LS_DISMISSED) === latest) return null;
 
-    const apk = (data.assets as { name: string; browser_download_url: string }[])?.find((a) =>
-      a.name.endsWith('.apk')
-    );
+    const apk = data.assets?.find((a) => a.name.endsWith('.apk'));
     const downloadUrl: string = apk?.browser_download_url ?? data.html_url;
     if (!downloadUrl.startsWith('https://github.com/')) return null;
     return { version: latest, downloadUrl };
@@ -64,10 +73,9 @@ export type DownloadLinks = { windows: string; linux: string; android: string };
 export async function fetchDownloadLinks(): Promise<DownloadLinks> {
   const links = { windows: RELEASES_URL, linux: RELEASES_URL, android: RELEASES_URL };
   try {
-    const res = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/releases/latest`);
-    if (!res.ok) return links;
-    const data = await res.json();
-    const assets = (data.assets ?? []) as { name: string; browser_download_url: string }[];
+    const data = await fetchLatestRelease();
+    if (!data) return links;
+    const assets = data.assets ?? [];
     const find = (ext: string) =>
       assets.find((a) => a.name.toLowerCase().endsWith(ext))?.browser_download_url;
     return {

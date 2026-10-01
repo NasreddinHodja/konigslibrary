@@ -9,17 +9,26 @@ async function setTitle(title: string) {
   await getCurrentWindow().setTitle(title);
 }
 
+let unsubscribers: (() => void)[] = [];
+
 export const windowTitlePlugin: Plugin = {
   name: 'window-title',
 
   install(reader: Reader) {
     if (!isNative()) return;
-    reader.events.on('source:cleared', () => {
-      setTitle(DEFAULT_TITLE);
-    });
-    reader.events.on('meta:loaded', ({ title }) => {
-      setTitle(`${title} - ${DEFAULT_TITLE}`);
-    });
+    unsubscribers = [
+      reader.events.on('source:cleared', () => {
+        setTitle(DEFAULT_TITLE);
+      }),
+      reader.events.on('meta:loaded', ({ title }) => {
+        setTitle(`${title} - ${DEFAULT_TITLE}`);
+      })
+    ];
+  },
+
+  destroy() {
+    for (const unsub of unsubscribers) unsub();
+    unsubscribers = [];
   },
 
   onSourceLoaded(mangaName: string) {

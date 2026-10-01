@@ -1,8 +1,6 @@
 <script lang="ts">
   import { untrack, type Snippet } from 'svelte';
   import EmblaCarousel, { type EmblaCarouselType } from 'embla-carousel';
-  import { fade } from 'svelte/transition';
-  import { ANIM_DURATION, ANIM_EASE } from '$lib/utils/constants';
   import { inSystemGesture } from '$lib/utils/system-gestures';
   import { Search, X } from 'lucide-svelte';
 
@@ -11,9 +9,7 @@
   // Two layouts:
   //
   // - in page flow (default): the page owns the scrolling and the bar pins
-  //   once scrolled to the top. `pinAt` is how far below the scroller's top
-  //   edge it pins: the status bar's height when the window scrolls (see
-  //   AppShell), 0 for a scroller that already starts below it.
+  //   below the status bar once scrolled to the top (see AppShell).
   // - `fill`: the panel fills its parent, the bar stays put, and each tab is a
   //   page of its own with its own scroll, side by side in a carousel that
   //   follows the finger when swiped.
@@ -22,11 +18,8 @@
     activeTab,
     ontab,
     label,
-    status,
-    actions,
     search = $bindable(''),
     placeholder,
-    pinAt = 'var(--safe-top)',
     fill = false,
     pageClass = '',
     children
@@ -37,22 +30,14 @@
     ontab?: (key: string) => void;
     /// Omitted when the page's own title already names the list.
     label?: string;
-    /// Shown next to the label.
-    status?: Snippet;
-    /// Shown next to the label on narrow screens, after the search on wide ones.
-    actions?: Snippet;
     search?: string;
     placeholder: string;
-    pinAt?: string;
     fill?: boolean;
     /// Added to each page's content in `fill` mode, for room under page chrome.
     pageClass?: string;
     /// The list for one tab; given null when there are no tabs.
     children: Snippet<[string | null]>;
   } = $props();
-
-  /// Actions that come and go with the tab (refresh) fade rather than pop.
-  const actionFade = { duration: ANIM_DURATION, easing: ANIM_EASE };
 
   const pages: (string | null)[] = $derived(tabs.length > 0 ? tabs.map((t) => t.key) : [null]);
   const index = $derived(Math.max(0, pages.indexOf(activeTab ?? null)));
@@ -83,13 +68,6 @@
     const p = Math.min(1, Math.max(0, progress));
     indicator.style.transform = `translateX(${p * (tabs.length - 1) * 100}%)`;
   }
-
-  // Without a carousel to follow (not `fill`), the underline sits on the
-  // active tab.
-  $effect(() => {
-    if (fill || tabs.length < 2) return;
-    moveIndicator(index / (tabs.length - 1));
-  });
 
   $effect(() => {
     const el = viewport;
@@ -139,25 +117,18 @@
 </script>
 
 <div class="flex w-full min-w-0 flex-1 flex-col {fill ? 'min-h-0' : ''}">
-  <div class="z-10 bg-bg {fill ? 'shrink-0' : 'sticky'}" style={fill ? undefined : `top: ${pinAt}`}>
+  <div
+    class="z-10 bg-bg {fill ? 'shrink-0' : 'sticky'}"
+    style={fill ? undefined : 'top: var(--safe-top)'}
+  >
     <div
       class="flex flex-col gap-3 border-b border-border/15 px-4 pt-3 pb-4 sm:flex-row sm:items-center sm:gap-4"
     >
-      {#if label || status || actions}
-        <!-- As tall as an action button whether or not one is shown, so the bar
-             doesn't change height when actions come and go (size-7). -->
+      {#if label}
         <div class="flex min-h-7 shrink-0 items-center justify-between gap-3">
           <span class="flex items-center gap-2">
-            {#if label}
-              <span class="text-xs font-bold tracking-widest opacity-50">{label}</span>
-            {/if}
-            {@render status?.()}
+            <span class="text-xs font-bold tracking-widest opacity-50">{label}</span>
           </span>
-          {#if actions}
-            <span class="flex items-center gap-2 sm:hidden" transition:fade={actionFade}
-              >{@render actions()}</span
-            >
-          {/if}
         </div>
       {/if}
 
@@ -180,12 +151,6 @@
           </button>
         {/if}
       </div>
-
-      {#if actions}
-        <span class="hidden shrink-0 items-center gap-2 sm:flex" transition:fade={actionFade}
-          >{@render actions()}</span
-        >
-      {/if}
     </div>
     {#if tabs.length > 1}
       <div class="relative flex border-b border-border/15" role="tablist">

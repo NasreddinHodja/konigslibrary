@@ -6,6 +6,7 @@
   import { importFiles, importFolder, nameForFiles } from '$lib/sources/import';
   import { listNativeChapters } from '$lib/sources/native-library';
   import { showError } from '$lib/ui/toast.svelte';
+  import { ZIP_EXT } from '$lib/utils/constants';
   import { isAndroid, isNative } from '$lib/utils/platform';
   import { describeOpenFileError } from '$lib/utils/errors';
   import { Upload } from 'lucide-svelte';
@@ -41,7 +42,7 @@
     const blob = await (await fetch(convertFileSrc(uri))).blob();
     const last = decodeURIComponent(uri.split(/[\\/]/).pop() ?? 'chapter');
     const name = last.split(':').pop() || last;
-    return new File([blob], /\.(zip|cbz)$/i.test(name) ? name : `${name}.cbz`);
+    return new File([blob], ZIP_EXT.test(name) ? name : `${name}.cbz`);
   }
 
   async function handleClick() {

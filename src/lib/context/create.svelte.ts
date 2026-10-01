@@ -45,7 +45,7 @@ export function createReader(): Reader {
   const plugins = new PluginRunner();
   plugins.register(windowTitlePlugin);
 
-  function getProgress(): { chapter: string; page: number } | null {
+  function getSavedProgress(): { chapter: string; page: number } | null {
     const name = _provider?.mangaName;
     if (!browser || !name) return null;
     const raw = localStorage.getItem(`${LS_PROGRESS_PREFIX}${name}`);
@@ -94,37 +94,27 @@ export function createReader(): Reader {
     events.emit('source:cleared', undefined as void);
   }
 
-  function getNextChapter(): string | null {
+  /// The chapter `offset` places from the open one, or `null` past either end.
+  function neighbourChapter(offset: number): string | null {
     const idx = _chapters.findIndex((c) => c.name === state.selectedChapter);
-    if (idx < 0 || idx >= _chapters.length - 1) return null;
-    return _chapters[idx + 1].name;
+    if (idx < 0) return null;
+    return _chapters[idx + offset]?.name ?? null;
   }
 
-  function getPrevChapter(): string | null {
-    const idx = _chapters.findIndex((c) => c.name === state.selectedChapter);
-    if (idx <= 0) return null;
-    return _chapters[idx - 1].name;
-  }
+  const getNextChapter = () => neighbourChapter(1);
+  const getPrevChapter = () => neighbourChapter(-1);
 
-  function goToNextChapter() {
+  function goToChapter(to: string | null) {
+    if (!to) return;
     const from = state.selectedChapter;
-    const next = getNextChapter();
-    if (!next) return;
-    state.selectedChapter = next;
+    state.selectedChapter = to;
     state.currentPage = 0;
     state.shouldScroll = false;
-    events.emit('chapter:changed', { from, to: next });
+    events.emit('chapter:changed', { from, to });
   }
 
-  function goToPrevChapter() {
-    const from = state.selectedChapter;
-    const prev = getPrevChapter();
-    if (!prev) return;
-    state.selectedChapter = prev;
-    state.currentPage = 0;
-    state.shouldScroll = false;
-    events.emit('chapter:changed', { from, to: prev });
-  }
+  const goToNextChapter = () => goToChapter(getNextChapter());
+  const goToPrevChapter = () => goToChapter(getPrevChapter());
 
   function toggleScrollMode() {
     state.scrollMode = !state.scrollMode;
@@ -150,10 +140,6 @@ export function createReader(): Reader {
     state.shouldScroll = true;
   }
 
-  function getSavedProgress() {
-    return getProgress();
-  }
-
   function saveProgress() {
     const name = _provider?.mangaName;
     if (!browser || !name || state.selectedChapter === null) return;
@@ -162,10 +148,6 @@ export function createReader(): Reader {
       JSON.stringify({ chapter: state.selectedChapter, page: state.currentPage })
     );
     events.emit('progress:saved', { chapter: state.selectedChapter, page: state.currentPage });
-  }
-
-  function getProvider(): SourceProvider | null {
-    return _provider;
   }
 
   const reader: Reader = {
@@ -201,8 +183,7 @@ export function createReader(): Reader {
     zoomOut,
     goToPage,
     saveProgress,
-    getSavedProgress,
-    getProvider
+    getSavedProgress
   };
 
   plugins.start(reader);

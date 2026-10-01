@@ -128,4 +128,6 @@
   </div>
 </div>
 
-<PagePicker visible={pickerOpen} {pageUrls} onclose={() => (pickerOpen = false)} />
+{#if pickerOpen}
+  <PagePicker {pageUrls} onclose={() => (pickerOpen = false)} />
+{/if}

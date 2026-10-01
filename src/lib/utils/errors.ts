@@ -16,8 +16,15 @@ const ZIP_ERROR_PATTERNS: [RegExp, string][] = [
   [/^CRC32 mismatch for/, 'This ZIP file appears to be corrupted (checksum mismatch).']
 ];
 
+/// The message of a thrown value: an Error's own message (without the
+/// `Error: ` prefix String() adds), else `fallback` or the value as a string.
+export function errorMessage(err: unknown, fallback?: string): string {
+  if (err instanceof Error) return err.message;
+  return fallback ?? String(err);
+}
+
 export function describeOpenFileError(err: unknown): string {
-  const message = err instanceof Error ? err.message : String(err);
+  const message = errorMessage(err);
   for (const [pattern, friendly] of ZIP_ERROR_PATTERNS) {
     if (pattern.test(message)) return friendly;
   }

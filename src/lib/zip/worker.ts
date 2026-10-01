@@ -5,6 +5,7 @@
 // of it and one wasm heap per tab.
 import { pageEntries, extractEntry, sortNames, mangaMeta } from './index';
 import type { ZipEntry } from './index';
+import { errorMessage } from '$lib/utils/errors';
 
 type WorkerMsg = { id: number } & (
   | { type: 'pages'; file: File }
@@ -31,6 +32,6 @@ self.onmessage = async (e: MessageEvent<WorkerMsg>) => {
         return post({ result: await mangaMeta(msg.files) });
     }
   } catch (err) {
-    post({ error: err instanceof Error ? err.message : String(err) });
+    post({ error: errorMessage(err) });
   }
 };

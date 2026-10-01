@@ -4,18 +4,15 @@
   let {
     label,
     href,
-    onclick,
-    class: className = ''
+    onclick
   }: {
     label: string;
     href?: string;
     onclick?: () => void;
-    class?: string;
   } = $props();
 
-  const linkClass = $derived(
-    `hit relative flex w-fit cursor-pointer items-center gap-1.5 text-xs tracking-widest opacity-50 hover:opacity-80 ${className}`
-  );
+  const linkClass =
+    'hit relative flex w-fit cursor-pointer items-center gap-1.5 text-xs tracking-widest opacity-50 hover:opacity-80';
 </script>
 
 {#if href}

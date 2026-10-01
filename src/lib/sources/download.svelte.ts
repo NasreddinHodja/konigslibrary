@@ -3,19 +3,11 @@ import { SvelteMap, SvelteSet } from 'svelte/reactivity';
 import { addToast, updateToast, removeToast } from '$lib/ui/toast.svelte';
 import type { ServerChapter } from '$lib/utils/types';
 import type { EventBus } from '$lib/events';
+import { errorMessage } from '$lib/utils/errors';
+import { nativeBridge } from '$lib/utils/bridge';
 import { fetchServerChapters, fetchServerRawMeta, serverFileUrl } from '$lib/api/server';
 
 let nextId = 0;
-
-type NativeBridge = {
-  acquireWakeLock(label: string, total: number): void;
-  updateDownloadProgress(current: number, total: number): void;
-  releaseWakeLock(): void;
-};
-
-function getBridge(): NativeBridge | undefined {
-  return (window as unknown as { __kl?: NativeBridge }).__kl;
-}
 
 /// Manga being downloaded, or queued to be, by server slug: chapters copied
 /// of the total (both 0 while queued or while the chapter list loads), and
@@ -103,7 +95,8 @@ async function copyManga(
 
 /// How to stop each manga in `downloadProgress`, by slug: what the card's
 /// cancel calls.
-const cancellers = new SvelteMap<string, () => void>();
+// eslint-disable-next-line svelte/prefer-svelte-reactivity
+const cancellers = new Map<string, () => void>();
 
 /// Stops a manga's download, queued or running, and deletes what it copied.
 /// In a bulk download only that manga is dropped; the rest carry on.
@@ -148,25 +141,25 @@ export function saveManga(
   const cancel = () => {
     cancelJob(job);
     removeToast(id);
-    getBridge()?.releaseWakeLock();
+    nativeBridge()?.releaseWakeLock();
   };
   cancellers.set(slug, cancel);
 
   const total = chapters.length;
   setProgress(slug, 0, total, name);
   addToast({ id, label: name, current: 0, total, phase: 'fetching', cancel, group: 'download' });
-  getBridge()?.acquireWakeLock(name, total);
+  nativeBridge()?.acquireWakeLock(name, total);
 
   copyManga(id, slug, chapters, job, events, {
     // Callers pass the best name they have; the metadata title wins.
     title: (title) => {
       if (title === name) return;
       updateToast(id, { label: title });
-      getBridge()?.acquireWakeLock(title, total);
+      nativeBridge()?.acquireWakeLock(title, total);
     },
     chapter: (done) => {
       updateToast(id, { current: done });
-      getBridge()?.updateDownloadProgress(done, total);
+      nativeBridge()?.updateDownloadProgress(done, total);
     }
   })
     .then(() => {
@@ -176,14 +169,14 @@ export function saveManga(
     })
     .catch((err: unknown) => {
       if (job.cancelled) return;
-      const message = String(err);
+      const message = errorMessage(err);
       events?.emit('download:error', { slug, error: message });
       updateToast(id, { phase: 'error', cancel: undefined, errorMessage: message });
     })
     .finally(() => {
       cancellers.delete(slug);
       downloadProgress.delete(slug);
-      getBridge()?.releaseWakeLock();
+      nativeBridge()?.releaseWakeLock();
       if (job.cancelled) discard(slug, events);
     });
 
@@ -201,7 +194,8 @@ export function saveMangas(
   const id = `dl-${nextId++}`;
   let stopped = false;
   // Manga dropped by their own cancel; the one being copied stops too.
-  const dropped = new SvelteSet<string>();
+  // eslint-disable-next-line svelte/prefer-svelte-reactivity
+  const dropped = new Set<string>();
   let current: { slug: string; job: Job } | null = null;
   let total = items.length;
   const label = () => `Downloading ${total} manga`;
@@ -224,13 +218,14 @@ export function saveMangas(
     stopped = true;
     if (current) cancelJob(current.job);
     removeToast(id);
-    getBridge()?.releaseWakeLock();
+    nativeBridge()?.releaseWakeLock();
   };
 
   addToast({ id, label: label(), current: 0, total, phase: 'fetching', cancel, group: 'download' });
-  getBridge()?.acquireWakeLock(label(), total);
+  nativeBridge()?.acquireWakeLock(label(), total);
   // This batch's cancel per slug, to tell its entries from a later download's.
-  const mine = new SvelteMap<string, () => void>();
+  // eslint-disable-next-line svelte/prefer-svelte-reactivity
+  const mine = new Map<string, () => void>();
   for (const { slug, name } of items) {
     setProgress(slug, 0, 0, name);
     mine.set(slug, () => drop(slug));
@@ -253,7 +248,7 @@ export function saveMangas(
         if (stopped) return;
         if (!job.cancelled) {
           failed++;
-          events?.emit('download:error', { slug, error: String(err) });
+          events?.emit('download:error', { slug, error: errorMessage(err) });
         }
       }
       current = null;
@@ -265,7 +260,7 @@ export function saveMangas(
         continue;
       }
       updateToast(id, { current: ++done });
-      getBridge()?.updateDownloadProgress(done, total);
+      nativeBridge()?.updateDownloadProgress(done, total);
     }
     if (total === 0) {
       removeToast(id);
@@ -285,7 +280,7 @@ export function saveMangas(
       cancellers.delete(slug);
       downloadProgress.delete(slug);
     }
-    getBridge()?.releaseWakeLock();
+    nativeBridge()?.releaseWakeLock();
     // Stopped mid-copy: the manga being copied goes; finished ones stay.
     if (stopped && current) discard(current.slug, events);
   });

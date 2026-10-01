@@ -5,6 +5,7 @@ import type { BulkPageProvider, LazyPageProvider } from '$lib/sources';
 import { isLazyProvider } from '$lib/sources';
 import { PRELOAD_AHEAD, PRELOAD_BEHIND } from './preloader.svelte';
 import { showError } from '$lib/ui/toast.svelte';
+import { errorMessage } from '$lib/utils/errors';
 
 export type ChapterState = {
   readonly pageUrls: string[];
@@ -40,12 +41,6 @@ export function useChapter(reader: Reader): ChapterState {
     const controller = new AbortController();
     const ownedUrls: string[] = [];
 
-    loading = true;
-    error = null;
-    pageUrls = [];
-    decoded = emptyMap;
-    ensurePageUrl = null;
-
     async function loadLazy(provider: LazyPageProvider, ch: string) {
       const count = untrack(() => reader.chapters.find((c) => c.name === ch)?.pageCount ?? 0);
       pageUrls = new Array(count).fill('');
@@ -68,9 +63,7 @@ export function useChapter(reader: Reader): ChapterState {
             }
           })
           .catch((err) => {
-            showError(
-              `Failed to load page ${index + 1}: ${err instanceof Error ? err.message : String(err)}`
-            );
+            showError(`Failed to load page ${index + 1}: ${errorMessage(err)}`);
           })
           .finally(() => inflight.delete(index));
       };
@@ -121,9 +114,7 @@ export function useChapter(reader: Reader): ChapterState {
                 url = await provider.getPageUrl(ch, idx);
               } catch (err) {
                 if (!controller.signal.aborted) {
-                  showError(
-                    `Failed to load page ${idx + 1}: ${err instanceof Error ? err.message : String(err)}`
-                  );
+                  showError(`Failed to load page ${idx + 1}: ${errorMessage(err)}`);
                 }
                 return;
               }
@@ -141,7 +132,7 @@ export function useChapter(reader: Reader): ChapterState {
           );
         }
       })().catch((err) => {
-        showError(`Page loading stopped: ${err instanceof Error ? err.message : String(err)}`);
+        showError(`Page loading stopped: ${errorMessage(err)}`);
       });
     }
 
@@ -153,7 +144,9 @@ export function useChapter(reader: Reader): ChapterState {
       }
 
       const urls = result.urls;
-      const startPage = Math.max(0, Math.min(reader.state.currentPage, urls.length - 1));
+      const startPage = untrack(() =>
+        Math.max(0, Math.min(reader.state.currentPage, urls.length - 1))
+      );
       const decodedMap = new SvelteMap<number, HTMLImageElement>();
 
       if (urls[startPage]) {
@@ -183,13 +176,13 @@ export function useChapter(reader: Reader): ChapterState {
     if (provider && isLazyProvider(provider)) {
       loadLazy(provider, chapter).catch((err) => {
         if (controller.signal.aborted) return;
-        error = err instanceof Error ? err.message : String(err);
+        error = errorMessage(err);
         loading = false;
       });
     } else if (provider) {
       loadBulk(provider, chapter).catch((err) => {
         if (controller.signal.aborted) return;
-        error = err instanceof Error ? err.message : String(err);
+        error = errorMessage(err);
         loading = false;
       });
     } else {

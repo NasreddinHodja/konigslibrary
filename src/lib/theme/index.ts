@@ -1,3 +1,5 @@
+import { nativeBridge } from '$lib/utils/bridge';
+
 export type Theme = {
   bg: string;
   fg: string;
@@ -64,14 +66,6 @@ export function setTheme(theme: Theme) {
   applyTheme(theme);
 }
 
-type NativeBridge = {
-  setStatusBarStyle(light: boolean): void;
-};
-
-function getBridge(): NativeBridge | undefined {
-  return (window as unknown as { __kl?: NativeBridge }).__kl;
-}
-
 function isLightColor(hex: string): boolean {
   const r = parseInt(hex.slice(1, 3), 16);
   const g = parseInt(hex.slice(3, 5), 16);
@@ -87,7 +81,7 @@ export function applyTheme(theme: Theme) {
   root.style.setProperty('--color-border', theme.border);
   root.style.setProperty('--color-muted', theme.muted);
   root.style.setProperty('--color-reader-bg', theme.readerBg);
-  getBridge()?.setStatusBarStyle(isLightColor(theme.bg));
+  nativeBridge()?.setStatusBarStyle(isLightColor(theme.bg));
 }
 
 export function initTheme() {

@@ -1,5 +1,6 @@
 <script lang="ts">
   import { tick } from 'svelte';
+  import { MediaQuery } from 'svelte/reactivity';
   import { fade } from 'svelte/transition';
   import { ANIM_DURATION, ANIM_EASE } from '$lib/utils/constants';
   import { BookOpen, Download } from 'lucide-svelte';
@@ -31,10 +32,17 @@
 
   const meta = $derived(reader.meta);
   const metaError = $derived(reader.metaState === 'missing');
-  let coverFailed = $state(false);
+  // Both reset when another manga opens; writable so the page can set them.
+  let coverFailed = $derived.by(() => {
+    void mangaName;
+    return false;
+  });
   let search = $state('');
 
-  let tagsExpanded = $state(false);
+  let tagsExpanded = $derived.by(() => {
+    void mangaName;
+    return false;
+  });
   let tagsEl: HTMLDivElement | undefined = $state();
   let tagsCollapsedH = 0;
 
@@ -95,23 +103,11 @@
 
   const chapterIndex = $derived(new Map(chapters.map((c, i) => [c.name, i])));
 
-  let isDesktop = $state(false);
-
-  $effect(() => {
-    const mq = window.matchMedia(TILE_DESKTOP_QUERY);
-    isDesktop = mq.matches;
-    const handler = (e: MediaQueryListEvent) => (isDesktop = e.matches);
-    mq.addEventListener('change', handler);
-    return () => mq.removeEventListener('change', handler);
-  });
+  const desktop = new MediaQuery(TILE_DESKTOP_QUERY);
+  const isDesktop = $derived(desktop.current);
 
   const TAGS_COLLAPSED = 4;
-
-  $effect(() => {
-    void mangaName;
-    coverFailed = false;
-    tagsExpanded = false;
-  });
+  const TAGS_EXPANDED = 6;
 
   // A server manga with no copy on this device can be downloaded from here.
   const serverSource = $derived(
@@ -166,7 +162,7 @@
 
 {#snippet tagsValue()}
   {#if meta && meta.tags.length}
-    {#each meta.tags.slice(0, tagsExpanded ? 6 : TAGS_COLLAPSED) as tag (tag)}
+    {#each meta.tags.slice(0, tagsExpanded ? TAGS_EXPANDED : TAGS_COLLAPSED) as tag (tag)}
       <span class="border border-border/30 px-2 py-0.5 text-xs opacity-50">{tag}</span>
     {/each}
     {#if tagsExpanded}
@@ -345,7 +341,7 @@
     : 'pb-[calc(2rem_+_var(--safe-bottom))]'}"
   style="padding-top: var(--safe-top)"
 >
-  <PageContainer maxWidth="max-w-4xl">
+  <PageContainer>
     <div class="flex flex-col gap-6 pt-8">
       <BackLink label="LIBRARY" onclick={reader.clearManga} />
 

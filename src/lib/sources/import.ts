@@ -2,8 +2,9 @@ import { invoke, Channel } from '@tauri-apps/api/core';
 import { addToast, updateToast } from '$lib/ui/toast.svelte';
 import { mangaMetaWorker } from '$lib/zip/worker-client';
 import type { EventBus } from '$lib/events';
+import { errorMessage } from '$lib/utils/errors';
+import { ZIP_EXT } from '$lib/utils/constants';
 
-const ZIP_EXT = /\.(zip|cbz)$/i;
 const COVER = /^cover\.(jpe?g|png|webp|gif|avif|bmp)$/i;
 
 let nextId = 0;
@@ -50,7 +51,7 @@ export async function importFiles(name: string, picked: File[], events: EventBus
   } catch (err) {
     updateToast(id, {
       phase: 'error',
-      errorMessage: err instanceof Error ? err.message : String(err)
+      errorMessage: errorMessage(err)
     });
     throw err;
   }
@@ -78,7 +79,7 @@ export async function importFolder(path: string, events: EventBus): Promise<stri
   } catch (err) {
     updateToast(id, {
       phase: 'error',
-      errorMessage: err instanceof Error ? err.message : String(err)
+      errorMessage: errorMessage(err)
     });
     throw err;
   }

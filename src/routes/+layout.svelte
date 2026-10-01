@@ -7,6 +7,7 @@
   import { createReader, setReaderContext } from '$lib/context';
   import { isNative } from '$lib/utils/platform';
   import { showSuccess, showError } from '$lib/ui/toast.svelte';
+  import { errorMessage } from '$lib/utils/errors';
   import { validateAndConnect } from '$lib/sources/server-connect';
   import { goto, onNavigate } from '$app/navigation';
 
@@ -62,7 +63,7 @@
       showSuccess('Connected via QR code');
       goto('/');
     } catch (e) {
-      showError(e instanceof Error ? e.message : 'Could not connect');
+      showError(errorMessage(e, 'Could not connect'));
     }
   }
 

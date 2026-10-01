@@ -41,16 +41,12 @@ export function initParser(input?: Parameters<typeof init>[0]): Promise<unknown>
   return ready;
 }
 
-function ensureReady(): Promise<unknown> {
-  return initParser();
-}
-
 async function bytes(file: File, start: number, end: number): Promise<Uint8Array> {
   return new Uint8Array(await file.slice(start, end).arrayBuffer());
 }
 
 export async function indexZip(file: File): Promise<ZipEntry[]> {
-  await ensureReady();
+  await initParser();
 
   const tailSize = Math.min(file.size, wasm.tail_size());
   const eocd = wasm.find_eocd(await bytes(file, file.size - tailSize, file.size));
@@ -73,7 +69,7 @@ export async function indexZip(file: File): Promise<ZipEntry[]> {
 }
 
 export async function extractEntry(file: File, entry: ZipEntry): Promise<Blob> {
-  await ensureReady();
+  await initParser();
 
   // Checked before reading anything, so a zip bomb is rejected on its declared
   // size rather than after it has been inflated.
@@ -97,7 +93,7 @@ export async function pageEntries(file: File): Promise<ZipEntry[]> {
 
 /// Sorts names the way the server sorts chapters.
 export async function sortNames(names: string[]): Promise<string[]> {
-  await ensureReady();
+  await initParser();
   return wasm.sort_names(names);
 }
 
@@ -110,7 +106,7 @@ async function comicInfoXml(file: File): Promise<string | null> {
 
 /// ComicInfo metadata and cover of a manga folder, given its files.
 export async function mangaMeta(files: File[]): Promise<RawMangaMeta> {
-  await ensureReady();
+  await initParser();
   const byName = new Map(files.map((f) => [f.name, f]));
   const sources: { archives: string[]; cover: string | null } = wasm.meta_sources([
     ...byName.keys()

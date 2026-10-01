@@ -3,6 +3,7 @@
   import Modal from './Modal.svelte';
   import Button from './Button.svelte';
   import Skeleton from './Skeleton.svelte';
+  import { errorMessage } from '$lib/utils/errors';
 
   let {
     initialPath,
@@ -50,7 +51,7 @@
       entries = data.entries;
     } catch (e) {
       if (req !== latestLoad) return;
-      error = e instanceof Error ? e.message : 'Could not browse directory';
+      error = errorMessage(e, 'Could not browse directory');
     }
     loading = false;
   }

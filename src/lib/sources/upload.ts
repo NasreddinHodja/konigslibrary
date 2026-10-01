@@ -9,8 +9,7 @@ import {
 } from '$lib/zip/worker-client';
 import type { LazyPageProvider } from './types';
 import type { Reader } from '$lib/context/types';
-
-const ZIP_EXT = /\.(zip|cbz)$/i;
+import { ZIP_EXT } from '$lib/utils/constants';
 
 /// A manga folder opened in the browser: its chapter archives and cover, the
 /// same layout the library uses. A single chapter archive is a folder of one.

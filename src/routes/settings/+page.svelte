@@ -17,6 +17,7 @@
   import { isAndroid, isNative } from '$lib/utils/platform';
   import { goto } from '$app/navigation';
   import { showSuccess } from '$lib/ui/toast.svelte';
+  import { errorMessage } from '$lib/utils/errors';
   import { getMangaDir, setMangaDir, expandHome } from '$lib/sources/native-library';
   import {
     validateAndConnect,
@@ -161,7 +162,7 @@
         (e) => {
           if (ctrl.signal.aborted) return;
           probeStatus = 'error';
-          connectError = e instanceof Error ? e.message : 'Could not reach server';
+          connectError = errorMessage(e, 'Could not reach server');
         }
       );
     }, 450);
@@ -185,7 +186,7 @@
       showSuccess('Connected to server');
       goto('/');
     } catch (e) {
-      connectError = e instanceof Error ? e.message : 'Could not reach server';
+      connectError = errorMessage(e, 'Could not reach server');
     } finally {
       connecting = false;
     }
@@ -530,7 +531,7 @@
 {#if native || isLocalServer}
   <AppShell active="settings">
     <div class="md:pl-14">
-      <PageContainer maxWidth="max-w-4xl">
+      <PageContainer>
         <div
           class="space-y-6 pb-[calc(5.25rem_+_var(--safe-bottom,_0px))] md:pb-8"
           style="padding-top: calc(2rem + var(--safe-top, 0px))"
@@ -541,7 +542,7 @@
     </div>
   </AppShell>
 {:else}
-  <PageContainer maxWidth="max-w-4xl">
+  <PageContainer>
     <div class="space-y-6 pb-8" style="padding-top: calc(2rem + var(--safe-top, 0px))">
       {@render settingsBody()}
     </div>

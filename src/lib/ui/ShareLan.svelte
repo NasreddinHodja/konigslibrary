@@ -1,7 +1,9 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import Button from '$lib/ui/Button.svelte';
   import QrCode from '$lib/ui/QrCode.svelte';
   import { Copy } from 'lucide-svelte';
+  import { errorMessage } from '$lib/utils/errors';
   import { getMangaDir } from '$lib/sources/native-library';
   import { startLanServer, stopLanServer, getLanServerStatus } from '$lib/sources/lan-server';
 
@@ -20,7 +22,7 @@
     }
   });
 
-  $effect(() => {
+  onMount(() => {
     getLanServerStatus()
       .then((s) => {
         if (s.running && s.url) {
@@ -58,7 +60,7 @@
       url = result.url;
       status = 'running';
     } catch (e) {
-      error = e instanceof Error ? e.message : 'Could not start server';
+      error = errorMessage(e, 'Could not start server');
       status = 'error';
     }
   }

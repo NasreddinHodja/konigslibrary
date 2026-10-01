@@ -41,5 +41,4 @@ export type Reader = {
   goToPage(page: number, pageCount: number): void;
   saveProgress(): void;
   getSavedProgress(): { chapter: string; page: number } | null;
-  getProvider(): SourceProvider | null;
 };

@@ -6,6 +6,7 @@
   import { getReaderContext } from '$lib/context';
   import { useChapter } from '$lib/chapter-loader';
   import { isNative } from '$lib/utils/platform';
+  import { nativeBridge } from '$lib/utils/bridge';
   import { readerActive } from '$lib/ui/reader-active.svelte';
   import ReaderHud from '$lib/ui/ReaderHud.svelte';
   import ReaderTutorial from '$lib/ui/ReaderTutorial.svelte';
@@ -65,18 +66,11 @@
     else showHud();
   }
 
-  // Show HUD and maybe tutorial on mount (component only mounts when a chapter opens)
+  // Show HUD on mount (component only mounts when a chapter opens)
   showHud();
-  maybeShowTutorial(manga.scrollMode);
 
-  // Show tutorial again if scroll mode changes while reading
-  let prevScrollMode = $state(manga.scrollMode);
-  $effect(() => {
-    if (manga.scrollMode !== prevScrollMode) {
-      maybeShowTutorial(manga.scrollMode);
-    }
-    prevScrollMode = manga.scrollMode;
-  });
+  // Each mode's tutorial shows the first time that mode is used.
+  $effect(() => maybeShowTutorial(manga.scrollMode));
 
   $effect(() => {
     readerActive.value = true;
@@ -84,9 +78,6 @@
       readerActive.value = false;
     };
   });
-
-  const nativeBridge = () =>
-    (window as unknown as { __kl?: { setImmersive(h: boolean): void } }).__kl;
 
   $effect(() => {
     if (!native) return;

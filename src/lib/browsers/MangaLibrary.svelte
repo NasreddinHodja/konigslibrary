@@ -29,7 +29,7 @@
   import { isLocalServer, getServerUrl, ANIM_DURATION, ANIM_EASE } from '$lib/utils/constants';
   import { isNative } from '$lib/utils/platform';
   import { showError, addToast, updateToast } from '$lib/ui/toast.svelte';
-  import { describeOpenFileError } from '$lib/utils/errors';
+  import { describeOpenFileError, errorMessage } from '$lib/utils/errors';
   import { Download, Trash2, RefreshCw, LibraryBig, ListChecks, X } from 'lucide-svelte';
   import ListPanel from '$lib/ui/ListPanel.svelte';
   import Skeleton from '$lib/ui/Skeleton.svelte';
@@ -433,7 +433,7 @@
     } catch (err) {
       updateToast(id, {
         phase: 'error',
-        errorMessage: err instanceof Error ? err.message : String(err)
+        errorMessage: errorMessage(err)
       });
     }
   }

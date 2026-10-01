@@ -3,15 +3,13 @@
 
   let {
     size = 'md',
-    as = 'button',
     variant = 'default',
     disabled = false,
     class: className = '',
     onclick,
     children
   }: {
-    size?: 'lg' | 'md' | 'sm' | 'icon';
-    as?: 'button' | 'span';
+    size?: 'lg' | 'md' | 'sm';
     variant?: 'default' | 'primary' | 'ghost';
     disabled?: boolean;
     class?: string;
@@ -31,34 +29,17 @@
     {
       lg: 'px-6 py-3 text-sm font-bold tracking-wide',
       md: 'px-3 py-2 text-sm',
-      sm: 'px-2 py-1 text-xs',
-      icon: 'p-2'
+      sm: 'px-2 py-1 text-xs'
     }[size]
   );
 </script>
 
-{#if as === 'span'}
-  <span
-    class="hit relative inline-flex cursor-pointer items-center gap-2 {variantClass} {sizeClass} {className}"
-    tabindex="0"
-    role="button"
-    onkeydown={(e: KeyboardEvent) => {
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        (e.currentTarget as HTMLElement).closest('label')?.click();
-      }
-    }}
-  >
-    {@render children()}
-  </span>
-{:else}
-  <button
-    class="hit relative inline-flex items-center gap-2 {variantClass} {sizeClass} {className} {disabled
-      ? 'cursor-not-allowed opacity-60'
-      : 'cursor-pointer'}"
-    {onclick}
-    {disabled}
-  >
-    {@render children()}
-  </button>
-{/if}
+<button
+  class="hit relative inline-flex items-center gap-2 {variantClass} {sizeClass} {className} {disabled
+    ? 'cursor-not-allowed opacity-60'
+    : 'cursor-pointer'}"
+  {onclick}
+  {disabled}
+>
+  {@render children()}
+</button>

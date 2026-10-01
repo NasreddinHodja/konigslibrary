@@ -10,7 +10,7 @@ import {
   nextChapter,
   prevChapter
 } from './navigation';
-import { back, showHelp } from './ui';
+import { back } from './ui';
 import { toggleMode, toggleRtlCmd, zoomInCmd, zoomOutCmd } from './settings';
 
 export function createDefaultRegistry(): CommandRegistry {
@@ -22,7 +22,6 @@ export function createDefaultRegistry(): CommandRegistry {
   registry.register(nextChapter);
   registry.register(prevChapter);
   registry.register(back);
-  registry.register(showHelp);
   registry.register(toggleMode);
   registry.register(toggleRtlCmd);
   registry.register(zoomInCmd);

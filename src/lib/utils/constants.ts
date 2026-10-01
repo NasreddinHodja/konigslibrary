@@ -12,14 +12,14 @@ export const LS_SCROLL_MODE = 'kl:scrollMode';
 export const LS_RTL = 'kl:rtl';
 export const LS_PROGRESS_PREFIX = 'kl:progress:';
 
-export const INTERSECT_THRESHOLD = 0.5;
+/// Chapter archives, by file name.
+export const ZIP_EXT = /\.(zip|cbz)$/i;
 
-export const VIRTUAL_BUFFER = 5;
 export const DEFAULT_PAGE_RATIO = 1.5; // height / width, typical manga page
 
 export const PAGE_TURN_ZOOM = 2;
 
-export const LS_SERVER_URL = 'kl:serverUrl';
+const LS_SERVER_URL = 'kl:serverUrl';
 
 const browser = typeof localStorage !== 'undefined';
 

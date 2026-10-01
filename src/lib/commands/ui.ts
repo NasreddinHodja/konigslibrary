@@ -6,8 +6,3 @@ export const back: Command = {
     ctx.reader.clearManga();
   }
 };
-
-export const showHelp: Command = {
-  id: 'showHelp',
-  execute() {}
-};

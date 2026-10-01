@@ -13,7 +13,8 @@ export function isProbeable(url: string): boolean {
 export async function probeServer(url: string, signal?: AbortSignal): Promise<void> {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), 5000);
-  signal?.addEventListener('abort', () => ctrl.abort());
+  const onAbort = () => ctrl.abort();
+  signal?.addEventListener('abort', onAbort);
   try {
     const res = await fetch(`${url}/api/library`, { signal: ctrl.signal });
     if (!res.ok) throw new Error(`Server responded with ${res.status}`);
@@ -22,6 +23,7 @@ export async function probeServer(url: string, signal?: AbortSignal): Promise<vo
     throw e;
   } finally {
     clearTimeout(timer);
+    signal?.removeEventListener('abort', onAbort);
   }
 }
 
