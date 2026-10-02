@@ -10,7 +10,7 @@
 
 use std::cmp::Ordering;
 
-use crate::collate::locale_cmp;
+use crate::collate::{fold, locale_cmp};
 
 /// Separates the name from the tie-breaker inside a cursor. No filename or
 /// path can contain it.
@@ -41,7 +41,8 @@ pub struct Page<'a, T> {
 }
 
 /// The `limit` items of `sorted` that come after `after` and whose name
-/// contains `query`, ignoring case.
+/// contains `query`, ignoring case and accents as the server's search does
+/// (both sides [`fold`]ed: "okami" finds "Ōkami").
 ///
 /// `sorted` must be in [`key_cmp`] order by `key`. An empty `query` matches
 /// everything; an `after` that no longer names an item still resumes at the
@@ -61,10 +62,10 @@ pub fn page<'a, T>(
     None => 0,
   };
 
-  let query = query.trim().to_lowercase();
+  let query = fold(query);
   let mut matching = sorted[start..]
     .iter()
-    .filter(|item| query.is_empty() || key(item).0.to_lowercase().contains(&query));
+    .filter(|item| query.is_empty() || fold(key(item).0).contains(&query));
 
   let items: Vec<&T> = matching.by_ref().take(limit).collect();
   let next = match (items.last(), matching.next()) {
@@ -126,6 +127,19 @@ mod tests {
     let all = names(&["One Piece", "Berserk", "Piece of Cake"]);
     let p = page(&all, key, "  PIECE ", None, 10);
     assert_eq!(shown(&p), ["One Piece", "Piece of Cake"]);
+  }
+
+  #[test]
+  fn query_matches_ignoring_accents_and_spacing() {
+    let all = names(&["Ōkami", "Okami Den", "Berserk", "One  Piece"]);
+    assert_eq!(
+      shown(&page(&all, key, "okami", None, 10)),
+      ["Ōkami", "Okami Den"]
+    );
+    assert_eq!(
+      shown(&page(&all, key, "one piece", None, 10)),
+      ["One  Piece"]
+    );
   }
 
   #[test]

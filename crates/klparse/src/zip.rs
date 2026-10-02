@@ -40,7 +40,7 @@ pub const METHOD_DEFLATE: u16 = 8;
 
 /// Serialised as camelCase so the shape crossing the wasm boundary matches the
 /// `ZipEntry` the TypeScript code already used.
-#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ZipEntry {
   pub name: String,
@@ -70,11 +70,26 @@ pub enum ZipError {
   Io(String),
 }
 
+impl ZipError {
+  /// A stable name for the kind of error, for callers that react to the kind
+  /// (the browser picks the message it shows by it) without parsing the text.
+  pub fn code(&self) -> &'static str {
+    match self {
+      Self::NotAZip => "not-a-zip",
+      Self::CentralDirectoryTooLarge(_) => "central-directory-too-large",
+      Self::InvalidLocalHeader => "invalid-local-header",
+      Self::UnsupportedCompressionMethod(_) => "unsupported-compression-method",
+      Self::EntryTooLarge { .. } => "entry-too-large",
+      Self::Crc32Mismatch { .. } => "crc32-mismatch",
+      Self::Inflate(_) => "inflate",
+      Self::Io(_) => "io",
+    }
+  }
+}
+
 impl fmt::Display for ZipError {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     match self {
-      // Wording kept identical to the TypeScript implementation: the browser
-      // surfaces these strings to the user when an upload fails to open.
       Self::NotAZip => write!(f, "Not a valid ZIP file"),
       Self::CentralDirectoryTooLarge(n) => {
         write!(f, "Central directory size ({n}) exceeds limit")
@@ -161,7 +176,9 @@ fn u64le(b: &[u8], off: usize) -> Option<u64> {
 
 /// Where the central directory lives, as read from the end-of-central-directory
 /// record.
-#[derive(Debug, Clone, PartialEq, Eq)]
+/// Serialised as camelCase for the browser, which follows it to the directory.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct EocdInfo {
   pub cd_offset: u64,
   pub cd_size: u64,
@@ -329,6 +346,14 @@ pub fn local_header_data_offset(lh: &[u8]) -> Result<u64> {
   Ok(30 + name_len + extra_len)
 }
 
+/// Rejects a central directory over [`MAX_CD_BYTES`], before it is read.
+pub fn check_central_directory_size(cd_size: u64) -> Result<()> {
+  if cd_size > MAX_CD_BYTES {
+    return Err(ZipError::CentralDirectoryTooLarge(cd_size));
+  }
+  Ok(())
+}
+
 /// Rejects an entry whose declared sizes are over the zip-bomb limit. Checked
 /// before any bytes are read, so neither a huge read nor a huge allocation
 /// happens on the archive's say-so.
@@ -421,9 +446,7 @@ pub fn index_zip<R: ReadAt + ?Sized>(r: &R) -> Result<Vec<ZipEntry>> {
     }
   }
 
-  if info.cd_size > MAX_CD_BYTES {
-    return Err(ZipError::CentralDirectoryTooLarge(info.cd_size));
-  }
+  check_central_directory_size(info.cd_size)?;
 
   let cd = r.read_at(info.cd_offset, info.cd_size as usize)?;
   Ok(parse_central_directory(&cd))

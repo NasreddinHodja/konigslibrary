@@ -45,7 +45,8 @@ async function bytes(file: File, start: number, end: number): Promise<Uint8Array
   return new Uint8Array(await file.slice(start, end).arrayBuffer());
 }
 
-export async function indexZip(file: File): Promise<ZipEntry[]> {
+/// The bytes of an archive's central directory, found from its tail.
+async function centralDirectory(file: File): Promise<Uint8Array> {
   await initParser();
 
   const tailSize = Math.min(file.size, wasm.tail_size());
@@ -61,11 +62,13 @@ export async function indexZip(file: File): Promise<ZipEntry[]> {
     }
   }
 
-  if (cdSize > wasm.max_central_directory_bytes()) {
-    throw new Error(`Central directory size (${cdSize}) exceeds limit`);
-  }
+  wasm.check_central_directory_size(cdSize);
 
-  return wasm.parse_central_directory(await bytes(file, cdOffset, cdOffset + cdSize));
+  return bytes(file, cdOffset, cdOffset + cdSize);
+}
+
+export async function indexZip(file: File): Promise<ZipEntry[]> {
+  return wasm.parse_central_directory(await centralDirectory(file));
 }
 
 export async function extractEntry(file: File, entry: ZipEntry): Promise<Blob> {
@@ -93,8 +96,7 @@ export async function extractEntry(file: File, entry: ZipEntry): Promise<Blob> {
 
 /// The image entries of a chapter archive, in reading order.
 export async function pageEntries(file: File): Promise<ZipEntry[]> {
-  const entries = await indexZip(file);
-  return wasm.page_entries(entries);
+  return wasm.page_entries(await centralDirectory(file));
 }
 
 /// Sorts names the way the server sorts chapters.

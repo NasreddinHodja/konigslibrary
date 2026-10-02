@@ -8,7 +8,8 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use axum::{
-  extract::{ConnectInfo, Query, RawPathParams, RawQuery, State},
+  body::Body,
+  extract::{ConnectInfo, Query, RawPathParams, RawQuery, Request, State},
   http::{header, HeaderMap, HeaderValue, Method, StatusCode},
   response::{IntoResponse, Response},
   routing::get,
@@ -233,6 +234,7 @@ async fn get_image(
   State(state): State<SharedState>,
   params: RawPathParams,
   RawQuery(query): RawQuery,
+  req: Request,
 ) -> Response {
   let not_found = || (StatusCode::NOT_FOUND, "Not found").into_response();
 
@@ -253,38 +255,52 @@ async fn get_image(
     return not_found();
   };
 
-  blocking(move || {
-    let Some(image) = library::get_file(&state.config, &state.cache, &manga, &parts) else {
-      return not_found();
-    };
-    // Covers and whole archives can be replaced in place, so only pages are
-    // addressed by paths that never change — and a cover asked for by the
-    // version the library listed, which a replaced cover no longer matches.
-    let versioned = query
-      .as_deref()
-      .is_some_and(|q| q.split('&').any(|kv| kv.starts_with("v=")));
-    let cache_control = if parts.len() > 1 || versioned {
-      IMMUTABLE
-    } else {
-      "no-cache"
-    };
+  // Covers and whole archives can be replaced in place, so only pages are
+  // addressed by paths that never change — and a cover asked for by the
+  // version the library listed, which a replaced cover no longer matches.
+  let versioned = query
+    .as_deref()
+    .is_some_and(|q| q.split('&').any(|kv| kv.starts_with("v=")));
+  let cache_control = if parts.len() > 1 || versioned {
+    IMMUTABLE
+  } else {
+    "no-cache"
+  };
+  let headers = |ext: &str| {
+    [
+      (
+        header::CONTENT_TYPE,
+        HeaderValue::from_static(klparse::content_type(ext)),
+      ),
+      (
+        header::CACHE_CONTROL,
+        HeaderValue::from_static(cache_control),
+      ),
+    ]
+  };
 
-    (
-      [
-        (
-          header::CONTENT_TYPE,
-          HeaderValue::from_static(klparse::content_type(&image.ext)),
-        ),
-        (
-          header::CACHE_CONTROL,
-          HeaderValue::from_static(cache_control),
-        ),
-      ],
-      image.bytes,
-    )
-      .into_response()
+  let found = tokio::task::spawn_blocking(move || {
+    library::get_file(&state.config, &state.cache, &manga, &parts)
   })
-  .await
+  .await;
+  match found {
+    Ok(Some(library::Served::Bytes(image))) => (headers(&image.ext), image.bytes).into_response(),
+    // Streamed from disk, ranges and all, rather than read whole into memory.
+    Ok(Some(library::Served::File { path, ext })) => {
+      match ServeFile::new(path).try_call(req).await {
+        Ok(res) => {
+          let mut res = res.map(Body::new);
+          for (name, value) in headers(&ext) {
+            res.headers_mut().insert(name, value);
+          }
+          res
+        }
+        Err(_) => not_found(),
+      }
+    }
+    Ok(None) => not_found(),
+    Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+  }
 }
 
 async fn get_settings(State(state): State<SharedState>) -> Response {

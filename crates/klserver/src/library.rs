@@ -43,6 +43,16 @@ pub struct ImageResult {
   pub ext: String,
 }
 
+/// What `get_file` found: bytes to send, or a whole file to stream from disk.
+pub enum Served {
+  Bytes(ImageResult),
+  /// A chapter archive, too big to read into memory per request.
+  File {
+    path: PathBuf,
+    ext: String,
+  },
+}
+
 /// Directory listing for the settings folder picker. Directories only, dotfiles
 /// hidden, sorted by name.
 pub fn browse_dir(cfg: &Config, path: Option<&str>) -> Result<BrowseResult, String> {
@@ -129,7 +139,7 @@ pub fn get_file(
   cache: &ZipCache,
   manga_name: &str,
   path_parts: &[String],
-) -> Option<ImageResult> {
+) -> Option<Served> {
   let (_, manga) = manga_path(cfg, manga_name)?;
   let (first, rest) = path_parts.split_first()?;
   if !is_plain_name(first) {
@@ -143,22 +153,22 @@ pub fn get_file(
 
   if is_zip_name(first) {
     if rest.is_empty() {
-      return Some(ImageResult {
-        bytes: std::fs::read(&resolved).ok()?,
+      return Some(Served::File {
+        path: resolved,
         ext: ext_with_dot(first),
       });
     }
-    return read_zip_entry(cache, &resolved, &rest.join("/"));
+    return read_zip_entry(cache, &resolved, &rest.join("/")).map(Served::Bytes);
   }
 
   // Allowlist by extension: the library must never serve arbitrary files.
   if !rest.is_empty() || !is_image_name(first) {
     return None;
   }
-  Some(ImageResult {
+  Some(Served::Bytes(ImageResult {
     bytes: std::fs::read(&resolved).ok()?,
     ext: ext_with_dot(first),
-  })
+  }))
 }
 
 fn read_zip_entry(cache: &ZipCache, zip_path: &Path, entry_path: &str) -> Option<ImageResult> {
@@ -362,13 +372,14 @@ mod tests {
     mkdir(&berserk, "");
     write_zip(&berserk, "ch01.cbz", &[("inner/p1.PNG", b"PNGDATA")]);
 
-    let img = get_file(
+    let Some(Served::Bytes(img)) = get_file(
       &l.cfg,
       &l.cache,
       "Berserk",
       &parts(&["ch01.cbz", "inner", "p1.PNG"]),
-    )
-    .unwrap();
+    ) else {
+      panic!("expected the page's bytes");
+    };
     assert_eq!(img.bytes, b"PNGDATA");
     assert_eq!(img.ext, ".png");
   }
@@ -380,15 +391,23 @@ mod tests {
     mkdir(&berserk, "");
     write_zip(&berserk, "ch01.cbz", &[("p1.png", b"x")]);
 
-    let file = get_file(&l.cfg, &l.cache, "Berserk", &parts(&["ch01.cbz"])).unwrap();
-    assert_eq!(file.bytes, std::fs::read(berserk.join("ch01.cbz")).unwrap());
+    let Some(Served::File { path, ext }) =
+      get_file(&l.cfg, &l.cache, "Berserk", &parts(&["ch01.cbz"]))
+    else {
+      panic!("expected the archive's path");
+    };
+    assert_eq!(path, berserk.join("ch01.cbz"));
+    assert_eq!(ext, ".cbz");
   }
 
   #[test]
   fn serves_the_cover() {
     let l = lib();
     touch(&l.root, "Berserk/cover.jpg", b"JPEG");
-    let img = get_file(&l.cfg, &l.cache, "Berserk", &parts(&["cover.jpg"])).unwrap();
+    let Some(Served::Bytes(img)) = get_file(&l.cfg, &l.cache, "Berserk", &parts(&["cover.jpg"]))
+    else {
+      panic!("expected the cover's bytes");
+    };
     assert_eq!(img.bytes, b"JPEG");
     assert_eq!(img.ext, ".jpg");
   }

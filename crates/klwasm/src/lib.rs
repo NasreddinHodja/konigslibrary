@@ -17,7 +17,7 @@
 //! native server runs.
 
 use klparse::comicinfo;
-use klparse::zip::{self, ZipEntry};
+use klparse::zip;
 use serde::Serialize;
 use wasm_bindgen::prelude::*;
 
@@ -27,36 +27,29 @@ fn to_js_error(e: impl std::fmt::Display) -> JsValue {
   JsValue::from(js_sys::Error::new(&e.to_string()))
 }
 
-fn to_js<T: Serialize>(value: &T) -> Result<JsValue, JsValue> {
-  serde_wasm_bindgen::to_value(value).map_err(to_js_error)
+/// A zip error as a JS `Error` whose `name` is the error's code, which the
+/// browser maps to the message it shows (`src/lib/utils/errors.ts`).
+fn zip_error(e: zip::ZipError) -> JsValue {
+  let err = js_sys::Error::new(&e.to_string());
+  err.set_name(e.code());
+  err.into()
 }
 
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-struct EocdInfo {
-  cd_offset: f64,
-  cd_size: f64,
-  /// When set, the caller must read 56 bytes at this absolute file offset and
-  /// pass them to `parse_zip64_eocd`.
-  zip64_eocd_offset: Option<f64>,
+fn to_js<T: Serialize>(value: &T) -> Result<JsValue, JsValue> {
+  serde_wasm_bindgen::to_value(value).map_err(to_js_error)
 }
 
 /// Locates the end-of-central-directory record within the archive's tail.
 #[wasm_bindgen]
 pub fn find_eocd(tail: &[u8]) -> Result<JsValue, JsValue> {
-  let info = zip::find_eocd(tail).map_err(to_js_error)?;
-  to_js(&EocdInfo {
-    cd_offset: info.cd_offset as f64,
-    cd_size: info.cd_size as f64,
-    zip64_eocd_offset: info.zip64_eocd_offset.map(|v| v as f64),
-  })
+  to_js(&zip::find_eocd(tail).map_err(zip_error)?)
 }
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 struct Zip64Eocd {
-  cd_offset: f64,
-  cd_size: f64,
+  cd_offset: u64,
+  cd_size: u64,
 }
 
 /// Reads the real central-directory offset and size out of a ZIP64
@@ -65,10 +58,7 @@ struct Zip64Eocd {
 #[wasm_bindgen]
 pub fn parse_zip64_eocd(buf: &[u8]) -> Result<JsValue, JsValue> {
   match zip::parse_zip64_eocd(buf) {
-    Some((cd_size, cd_offset)) => to_js(&Zip64Eocd {
-      cd_offset: cd_offset as f64,
-      cd_size: cd_size as f64,
-    }),
+    Some((cd_size, cd_offset)) => to_js(&Zip64Eocd { cd_offset, cd_size }),
     None => Ok(JsValue::NULL),
   }
 }
@@ -86,7 +76,7 @@ pub fn parse_central_directory(cd: &[u8]) -> Result<JsValue, JsValue> {
 pub fn local_header_data_offset(lh: &[u8]) -> Result<f64, JsValue> {
   zip::local_header_data_offset(lh)
     .map(|v| v as f64)
-    .map_err(to_js_error)
+    .map_err(zip_error)
 }
 
 /// Rejects an entry whose declared sizes are over the zip-bomb limit. Called
@@ -97,7 +87,7 @@ pub fn check_entry_size(
   compressed_size: f64,
   uncompressed_size: f64,
 ) -> Result<(), JsValue> {
-  zip::check_entry_size(name, compressed_size as u64, uncompressed_size as u64).map_err(to_js_error)
+  zip::check_entry_size(name, compressed_size as u64, uncompressed_size as u64).map_err(zip_error)
 }
 
 /// Decompresses one entry's raw bytes and verifies its CRC32.
@@ -116,7 +106,7 @@ pub fn decode_entry(
     uncompressed_size as u64,
     name,
   )
-  .map_err(to_js_error)
+  .map_err(zip_error)
 }
 
 /// The maximum bytes worth reading from the end of a file to find the EOCD.
@@ -125,17 +115,18 @@ pub fn tail_size() -> f64 {
   zip::TAIL_SIZE as f64
 }
 
-/// The central-directory size limit, checked by the caller before fetching it.
+/// Rejects a central directory over the size limit. Called before fetching it.
 #[wasm_bindgen]
-pub fn max_central_directory_bytes() -> f64 {
-  zip::MAX_CD_BYTES as f64
+pub fn check_central_directory_size(cd_size: f64) -> Result<(), JsValue> {
+  zip::check_central_directory_size(cd_size as u64).map_err(zip_error)
 }
 
-/// The image entries of a chapter archive, in reading order.
+/// The image entries of a chapter archive, in reading order, from its central
+/// directory: parsed, filtered and sorted in one call, so the entries cross to
+/// JavaScript once.
 #[wasm_bindgen]
-pub fn page_entries(entries: JsValue) -> Result<JsValue, JsValue> {
-  let entries: Vec<ZipEntry> = serde_wasm_bindgen::from_value(entries).map_err(to_js_error)?;
-  to_js(&klparse::page_entries(entries))
+pub fn page_entries(cd: &[u8]) -> Result<JsValue, JsValue> {
+  to_js(&klparse::page_entries(zip::parse_central_directory(cd)))
 }
 
 /// Sorts names the way the server sorts chapters.

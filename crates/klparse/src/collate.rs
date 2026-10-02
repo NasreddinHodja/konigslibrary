@@ -154,29 +154,51 @@ enum Token<'a> {
   },
 }
 
-fn tokenize(s: &str, numeric: bool) -> Vec<Token<'_>> {
-  let mut out = Vec::new();
-  let bytes = s.as_bytes();
-  let mut i = 0;
-  while i < s.len() {
-    if numeric && bytes[i].is_ascii_digit() {
-      let start = i;
-      while i < s.len() && bytes[i].is_ascii_digit() {
-        i += 1;
-      }
-      out.push(Token::Digits(&s[start..i]));
-      continue;
+/// The tokens of a string, produced as they are compared. An iterator rather
+/// than a `Vec` because comparing runs for every pair a sort or a SQLite
+/// index looks at, where allocating two vectors each time adds up; each pass
+/// below re-tokenizes instead.
+#[derive(Clone)]
+struct Tokens<'a> {
+  s: &'a str,
+  i: usize,
+  numeric: bool,
+}
+
+fn tokenize(s: &str, numeric: bool) -> Tokens<'_> {
+  Tokens { s, i: 0, numeric }
+}
+
+impl<'a> Iterator for Tokens<'a> {
+  type Item = Token<'a>;
+
+  fn next(&mut self) -> Option<Token<'a>> {
+    let s = self.s;
+    let bytes = s.as_bytes();
+    let start = self.i;
+    if start >= s.len() {
+      return None;
     }
-    let ch = s[i..].chars().next().expect("index is on a char boundary");
+    if self.numeric && bytes[start].is_ascii_digit() {
+      let end = bytes[start..]
+        .iter()
+        .position(|b| !b.is_ascii_digit())
+        .map_or(s.len(), |n| start + n);
+      self.i = end;
+      return Some(Token::Digits(&s[start..end]));
+    }
+    let ch = s[start..]
+      .chars()
+      .next()
+      .expect("index is on a char boundary");
+    self.i += ch.len_utf8();
     let (base, accent) = base_and_accent(ch);
-    out.push(Token::Char {
+    Some(Token::Char {
       base,
       accent,
       raw: ch,
-    });
-    i += ch.len_utf8();
+    })
   }
-  out
 }
 
 /// Compares two digit runs by value, with no width limit: strip leading zeros,
@@ -198,28 +220,31 @@ fn token_primary(t: &Token<'_>) -> (u8, u32) {
 }
 
 fn cmp_impl(a: &str, b: &str, numeric: bool) -> Ordering {
-  let ta = tokenize(a, numeric);
-  let tb = tokenize(b, numeric);
+  let pairs = || tokenize(a, numeric).zip(tokenize(b, numeric));
 
-  // Pass 1 — primary: class, then base letter, ignoring case and accents.
-  for (x, y) in ta.iter().zip(tb.iter()) {
-    let ord = match (x, y) {
+  // Pass 1 — primary: class, then base letter, ignoring case and accents;
+  // then fewer tokens first. Past this pass both have as many tokens.
+  let (mut ta, mut tb) = (tokenize(a, numeric), tokenize(b, numeric));
+  loop {
+    let (x, y) = match (ta.next(), tb.next()) {
+      (Some(x), Some(y)) => (x, y),
+      (None, None) => break,
+      (None, Some(_)) => return Ordering::Less,
+      (Some(_), None) => return Ordering::Greater,
+    };
+    let ord = match (&x, &y) {
       (Token::Digits(da), Token::Digits(db)) => cmp_digit_value(da, db),
-      _ => token_primary(x).cmp(&token_primary(y)),
+      _ => token_primary(&x).cmp(&token_primary(&y)),
     };
     if ord != Ordering::Equal {
       return ord;
     }
   }
-  let len_ord = ta.len().cmp(&tb.len());
-  if len_ord != Ordering::Equal {
-    return len_ord;
-  }
 
   // Pass 2 — secondary: unaccented before accented.
-  for (x, y) in ta.iter().zip(tb.iter()) {
+  for (x, y) in pairs() {
     if let (Token::Char { accent: aa, .. }, Token::Char { accent: ab, .. }) = (x, y) {
-      let ord = aa.cmp(ab);
+      let ord = aa.cmp(&ab);
       if ord != Ordering::Equal {
         return ord;
       }
@@ -227,7 +252,7 @@ fn cmp_impl(a: &str, b: &str, numeric: bool) -> Ordering {
   }
 
   // Pass 3 — tertiary: lowercase before uppercase.
-  for (x, y) in ta.iter().zip(tb.iter()) {
+  for (x, y) in pairs() {
     if let (Token::Char { raw: ca, .. }, Token::Char { raw: cb, .. }) = (x, y) {
       if ca != cb {
         let (la, lb) = (ca.is_lowercase(), cb.is_lowercase());
@@ -238,13 +263,13 @@ fn cmp_impl(a: &str, b: &str, numeric: bool) -> Ordering {
             Ordering::Greater
           };
         }
-        return ca.cmp(cb);
+        return ca.cmp(&cb);
       }
     }
   }
 
   // Pass 4 — equal-valued digit runs: fewer leading zeros first.
-  for (x, y) in ta.iter().zip(tb.iter()) {
+  for (x, y) in pairs() {
     if let (Token::Digits(da), Token::Digits(db)) = (x, y) {
       if da != db {
         return da.len().cmp(&db.len()).then_with(|| da.cmp(db));

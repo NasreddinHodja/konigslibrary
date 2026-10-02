@@ -32,6 +32,7 @@ self.onmessage = async (e: MessageEvent<WorkerMsg>) => {
         return post({ result: await mangaMeta(msg.files) });
     }
   } catch (err) {
-    post({ error: errorMessage(err) });
+    // The name carries a zip error's code (see describeOpenFileError).
+    post({ error: errorMessage(err), name: err instanceof Error ? err.name : undefined });
   }
 };

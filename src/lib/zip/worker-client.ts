@@ -1,7 +1,9 @@
 import type { RawMangaMeta, ZipEntry } from './index';
 
 type Resolver = { resolve: (v: unknown) => void; reject: (e: Error) => void };
-type WorkerResponse = { id: number; result: unknown } | { id: number; error: string };
+type WorkerResponse =
+  | { id: number; result: unknown }
+  | { id: number; error: string; name?: string };
 
 let worker: Worker | null = null;
 let nextId = 0;
@@ -15,7 +17,9 @@ function getWorker(): Worker {
       if (!p) return;
       pending.delete(e.data.id);
       if ('error' in e.data) {
-        p.reject(new Error(e.data.error));
+        const err = new Error(e.data.error);
+        if (e.data.name) err.name = e.data.name;
+        p.reject(err);
       } else {
         p.resolve(e.data.result);
       }

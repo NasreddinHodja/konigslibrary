@@ -63,6 +63,8 @@ describe('wasm zip parser', () => {
   it('rejects a file that is not a zip', async () => {
     const notAZip = new File([new TextEncoder().encode('nope')], 'fake.cbz');
     await expect(indexZip(notAZip)).rejects.toThrow('Not a valid ZIP file');
+    // describeOpenFileError picks the user's message by this code.
+    await expect(indexZip(notAZip)).rejects.toMatchObject({ name: 'not-a-zip' });
   });
 
   it('lists only image entries as pages, ordered numerically', async () => {
