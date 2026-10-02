@@ -177,12 +177,16 @@
   async function connectServer() {
     if (!serverUrl.trim()) return;
     connecting = true;
-    connectError = null;
+    // The last error stays up until this try settles, and the try takes at
+    // least a moment, so a fast answer doesn't blink the button and error.
+    const floor = new Promise((r) => setTimeout(r, 600));
     try {
-      await validateAndConnect(serverUrl);
+      await Promise.all([validateAndConnect(serverUrl), floor]);
+      connectError = null;
       showSuccess('Connected to server');
       goto('/');
     } catch (e) {
+      await floor;
       connectError = errorMessage(e, 'Could not reach server');
     } finally {
       connecting = false;
@@ -474,7 +478,14 @@
           </div>
           <div class="flex items-center gap-3">
             <Button size="md" onclick={connectServer} disabled={connecting}>
-              {connecting ? 'Connecting…' : 'Connect'}
+              <!-- Both labels laid over each other: the button keeps the
+                   longer one's width, so the error beside it holds still. -->
+              <span class="grid">
+                <span class="col-start-1 row-start-1 {connecting ? 'invisible' : ''}">Connect</span>
+                <span class="col-start-1 row-start-1 {connecting ? '' : 'invisible'}"
+                  >Connecting…</span
+                >
+              </span>
             </Button>
             {#if connectError}
               <span class="text-sm text-error">{connectError}</span>
