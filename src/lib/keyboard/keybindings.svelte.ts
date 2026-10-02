@@ -42,7 +42,7 @@ export const DEFAULT_BINDINGS: KeyBinding[] = [
   { action: 'prevChapter', keys: ['p', '['], label: 'Previous chapter', category: 'Navigation' },
   { action: 'holdZoom', keys: ['z'], label: 'Hold to zoom', category: 'Navigation' },
   { action: 'close', keys: ['Escape'], label: 'Close overlay', category: 'UI' },
-  { action: 'back', keys: ['b'], label: 'Back to library', category: 'UI' },
+  { action: 'back', keys: ['b'], label: 'Back', category: 'UI' },
   { action: 'showHelp', keys: ['?'], label: 'Toggle shortcut help', category: 'UI' },
   { action: 'toggleMode', keys: ['m'], label: 'Toggle scroll/turn mode', category: 'Settings' },
   { action: 'toggleRtl', keys: ['r'], label: 'Toggle LTR/RTL', category: 'Settings' },

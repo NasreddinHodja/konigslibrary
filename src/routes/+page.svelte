@@ -15,6 +15,7 @@
   import { isNative } from '$lib/utils/platform';
   import { isLocalServer } from '$lib/utils/constants';
   import { pushState } from '$app/navigation';
+  import { page } from '$app/state';
   import { CircleQuestionMark } from 'lucide-svelte';
   import AppShell from '$lib/ui/AppShell.svelte';
   import ToastStack from '$lib/ui/ToastStack.svelte';
@@ -22,7 +23,7 @@
   import { showError } from '$lib/ui/toast.svelte';
   import { describeOpenFileError } from '$lib/utils/errors';
   import { fetchDownloadLinks, DEFAULT_DOWNLOAD_LINKS } from '$lib/utils/update';
-  import { onMount } from 'svelte';
+  import { onMount, untrack } from 'svelte';
 
   const reader = getReaderContext();
 
@@ -63,25 +64,38 @@
     }
   };
 
-  /// Closes the topmost thing open, for browser and Android back alike;
-  /// false when there was nothing to close.
-  function back(): boolean {
+  // Every back — browser, Android, the app's back buttons and the `b` key —
+  // goes one layer up: overlay, reader, manga detail, library. While a manga
+  // is open the current history entry is one pushed for it, so each of them
+  // is `history.back()`, and popping that entry closes the topmost layer.
+
+  /// Closes the topmost thing open.
+  function back() {
     if (pz.overlayActive) pz.deactivateOverlay();
     else if (helpOpen) helpOpen = false;
     else if (manga.selectedChapter !== null) manga.selectedChapter = null;
     else if (chapters.length > 0) reader.clearManga();
-    else return false;
-    return true;
   }
 
   // A boolean, so opening another manga while one is open doesn't push a
   // second history entry.
   const hasManga = $derived(chapters.length > 0);
 
+  // A manga's entry with the manga gone (closed from the library tab, or
+  // reached with forward) is popped, so the next back isn't a dead press.
+  $effect(() => {
+    if (!hasManga && page.state.kl === 'reader') history.back();
+  });
+
   $effect(() => {
     if (!hasManga) return;
 
-    pushState('', { kl: 'reader' });
+    // Already on the manga's entry when coming back to it from settings.
+    // Untracked: SvelteKit's own popstate update of `page` would otherwise
+    // re-run this effect, dropping the listener below before it fires.
+    untrack(() => {
+      if (page.state.kl !== 'reader') pushState('', { kl: 'reader' });
+    });
 
     const onPopState = () => {
       back();
@@ -95,7 +109,9 @@
   $effect(() => {
     if (!native) return;
     const onNativeBack = (e: Event) => {
-      if (back()) e.preventDefault();
+      if (!hasManga) return;
+      e.preventDefault();
+      history.back();
     };
     window.addEventListener('nativeback', onNativeBack);
     return () => window.removeEventListener('nativeback', onNativeBack);

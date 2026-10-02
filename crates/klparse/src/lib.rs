@@ -11,6 +11,7 @@
 //!
 //! The Tauri app (`src-tauri`) links it natively too.
 
+pub mod chapters;
 pub mod collate;
 pub mod comicinfo;
 mod crc32;
@@ -22,6 +23,7 @@ pub mod zip;
 #[cfg(any(test, feature = "fixtures"))]
 pub mod fixture;
 
+pub use chapters::{chapter_cmp, chapter_number, ChapterNumber};
 pub use collate::{locale_cmp, natural_cmp};
 pub use comicinfo::{manga_meta, MangaMeta};
 pub use names::{

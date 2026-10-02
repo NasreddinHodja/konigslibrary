@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
-  import { goto } from '$app/navigation';
+  import { page } from '$app/state';
+  import { backOrHome } from '$lib/ui/back';
   import { LibraryBig, Settings } from 'lucide-svelte';
   import UploadButton from '$lib/browsers/UploadButton.svelte';
   import { getReaderContext } from '$lib/context';
@@ -17,9 +18,11 @@
 
   const reader = getReaderContext();
 
+  // On the library page, closing the manga is enough: its history entry pops
+  // itself. Elsewhere this leaves settings the way its back does.
   function goLibrary() {
     reader.clearManga();
-    goto('/');
+    if (page.url.pathname !== '/') backOrHome();
   }
 
   // Android pans the window under the keyboard (adjustPan), which would leave the

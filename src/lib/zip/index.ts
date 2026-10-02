@@ -99,10 +99,32 @@ export async function pageEntries(file: File): Promise<ZipEntry[]> {
   return wasm.page_entries(await centralDirectory(file));
 }
 
-/// Sorts names the way the server sorts chapters.
-export async function sortNames(names: string[]): Promise<string[]> {
+/// The `<Volume>` and `<Number>` of a chapter's `ComicInfo.xml`; missing ones
+/// come back `undefined`.
+export type ChapterNumber = { volume?: number; chapter?: number };
+
+/// A chapter archive's pages in reading order, and its ComicInfo number.
+export async function chapterEntries(
+  file: File
+): Promise<{ pages: ZipEntry[]; number: ChapterNumber }> {
+  const { pages, comicInfo } = wasm.chapter_entries(await centralDirectory(file)) as {
+    pages: ZipEntry[];
+    comicInfo: ZipEntry | null;
+  };
+  // An unreadable ComicInfo.xml just leaves the number to the file name.
+  const xml = comicInfo
+    ? await extractEntry(file, comicInfo)
+        .then((b) => b.text())
+        .catch(() => null)
+    : null;
+  const number: ChapterNumber = xml ? wasm.comic_info_number(xml) : {};
+  return { pages, number };
+}
+
+/// Chapter names in the order the server sorts them.
+export async function sortChapters(items: ({ name: string } & ChapterNumber)[]): Promise<string[]> {
   await initParser();
-  return wasm.sort_names(names);
+  return wasm.sort_chapters(items);
 }
 
 async function comicInfoXml(file: File): Promise<string | null> {

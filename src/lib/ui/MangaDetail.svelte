@@ -363,7 +363,7 @@
 >
   <PageContainer>
     <div class="flex flex-col gap-6 pt-8">
-      <BackLink label="LIBRARY" onclick={reader.clearManga} />
+      <BackLink label="LIBRARY" onclick={() => history.back()} />
 
       <h1 class="text-2xl leading-tight font-bold">{meta?.title || mangaName}</h1>
 

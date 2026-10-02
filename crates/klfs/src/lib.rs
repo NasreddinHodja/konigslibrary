@@ -12,7 +12,7 @@ mod reader;
 use std::path::{Path, PathBuf};
 
 use klparse::zip::ZipError;
-use klparse::MangaMeta;
+use klparse::{ChapterNumber, MangaMeta};
 
 pub use cache::{ZipCache, ZIP_CACHE_MAX};
 pub use reader::FileReader;
@@ -62,18 +62,32 @@ pub fn subfolders(dir: &Path) -> std::io::Result<Vec<String>> {
   Ok(names)
 }
 
-/// An archive's page entry names in reading order; none if it can't be read.
-pub fn archive_pages(path: &Path) -> Vec<String> {
+/// What listing a chapter needs from its archive.
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct ArchiveChapter {
+  /// Page entry names in reading order.
+  pub pages: Vec<String>,
+  /// The volume and chapter its `ComicInfo.xml` gives, if any.
+  pub number: ChapterNumber,
+}
+
+/// An archive's pages and ComicInfo number; no pages if it can't be read.
+pub fn read_chapter(path: &Path) -> ArchiveChapter {
   let Ok(reader) = FileReader::open(path) else {
-    return Vec::new();
+    return ArchiveChapter::default();
   };
   let Ok(entries) = klparse::zip::index_zip(&reader) else {
-    return Vec::new();
+    return ArchiveChapter::default();
   };
-  klparse::page_entries(entries)
+  let number = klparse::comicinfo::comic_info_entry(&entries)
+    .and_then(|e| klparse::zip::extract_entry(&reader, e).ok())
+    .map(|xml| klparse::chapters::comic_info_number(&String::from_utf8_lossy(&xml)))
+    .unwrap_or_default();
+  let pages = klparse::page_entries(entries)
     .into_iter()
     .map(|e| e.name)
-    .collect()
+    .collect();
+  ArchiveChapter { pages, number }
 }
 
 /// The ComicInfo metadata and cover of the manga folder `dir`, given the

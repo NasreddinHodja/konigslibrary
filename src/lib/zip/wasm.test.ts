@@ -1,7 +1,14 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { indexZip, extractEntry, pageEntries, sortNames, initParser } from './index';
+import {
+  indexZip,
+  extractEntry,
+  pageEntries,
+  chapterEntries,
+  sortChapters,
+  initParser
+} from './index';
 
 // Exercises the browser parser end to end: the same wasm module the reader
 // loads, driven through the same byte-range plumbing. The Rust unit tests in
@@ -79,11 +86,21 @@ describe('wasm zip parser', () => {
     ]);
   });
 
-  it("sorts chapter names with the server's collation", async () => {
-    expect(await sortNames(['chapter_0010', 'Chapter_0002', 'chapter_0001'])).toEqual([
-      'chapter_0001',
-      'Chapter_0002',
-      'chapter_0010'
-    ]);
+  it('reads pages and the ComicInfo number of a chapter', async () => {
+    const { pages, number } = await chapterEntries(fixture());
+    expect(pages.map((e) => e.name)).toEqual((await pageEntries(fixture())).map((e) => e.name));
+    // The fixture's ComicInfo.xml has no <Volume> or <Number>.
+    expect(number).toEqual({});
+  });
+
+  it('sorts chapters the way the server does', async () => {
+    expect(
+      await sortChapters([
+        { name: 'ch10' },
+        { name: 'Extras' },
+        { name: 'a', chapter: 5 },
+        { name: 'ch2' }
+      ])
+    ).toEqual(['ch2', 'a', 'ch10', 'Extras']);
   });
 });

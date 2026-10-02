@@ -4,7 +4,7 @@
 use std::path::Path;
 
 use klfs::ZipCache;
-use klparse::{is_chapter_name, is_image_name, locale_cmp, MangaMeta};
+use klparse::{chapter_cmp, chapter_number, is_chapter_name, is_image_name, MangaMeta};
 use serde::Serialize;
 
 #[derive(Serialize)]
@@ -14,26 +14,31 @@ pub struct Chapter {
   pages: Vec<String>,
 }
 
-/// One chapter per archive in a manga folder, sorted the way the server sorts
-/// them. A corrupt archive is skipped rather than failing the whole manga.
+/// One chapter per archive in a manga folder, in chapter order as the server
+/// sorts them. A corrupt archive is skipped rather than failing the whole manga.
 pub fn list_chapters(dir: &Path) -> Result<Vec<Chapter>, String> {
-  let mut chapters: Vec<Chapter> = Vec::new();
+  let mut chapters = Vec::new();
   for file in klfs::file_names(dir).map_err(|e| e.to_string())? {
     if !is_chapter_name(&file) {
       continue;
     }
     let path = dir.join(&file);
-    let pages = klfs::archive_pages(&path);
-    if !pages.is_empty() {
-      chapters.push(Chapter {
-        name: klparse::strip_zip_ext(&file).to_string(),
-        archive: path.to_string_lossy().into_owned(),
-        pages,
-      });
+    let read = klfs::read_chapter(&path);
+    if !read.pages.is_empty() {
+      let name = klparse::strip_zip_ext(&file).to_string();
+      let number = chapter_number(&name, read.number);
+      chapters.push((
+        Chapter {
+          name,
+          archive: path.to_string_lossy().into_owned(),
+          pages: read.pages,
+        },
+        number,
+      ));
     }
   }
-  chapters.sort_by(|a, b| locale_cmp(&a.name, &b.name));
-  Ok(chapters)
+  chapters.sort_by(|(a, an), (b, bn)| chapter_cmp((&a.name, *an), (&b.name, *bn)));
+  Ok(chapters.into_iter().map(|(c, _)| c).collect())
 }
 
 /// One page of a chapter archive. The archive's directory is parsed once and

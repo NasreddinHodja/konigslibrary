@@ -8,7 +8,7 @@ use serde::Serialize;
 
 use crate::collate::natural_cmp;
 use crate::names::{is_chapter_name, is_cover_name};
-use crate::zip::{extract_entry, index_zip, ReadAt};
+use crate::zip::{extract_entry, index_zip, ReadAt, ZipEntry};
 
 #[derive(Debug, Clone, Default, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -49,7 +49,7 @@ impl MangaMeta {
 
 /// The text of the first `<tag>…</tag>`, entity-decoded and trimmed. `None` when
 /// the element is missing, self-closing or blank.
-fn element(xml: &str, tag: &str) -> Option<String> {
+pub(crate) fn element(xml: &str, tag: &str) -> Option<String> {
   let open = format!("<{tag}>");
   let close = format!("</{tag}>");
   let start = xml.find(&open)? + open.len();
@@ -147,13 +147,18 @@ pub fn parse_comic_info(xml: &str) -> MangaMeta {
   }
 }
 
+/// An archive's `ComicInfo.xml` entry, at any depth.
+pub fn comic_info_entry(entries: &[ZipEntry]) -> Option<&ZipEntry> {
+  entries.iter().find(|e| {
+    let base = e.name.rsplit('/').next().unwrap_or(&e.name);
+    base.eq_ignore_ascii_case("ComicInfo.xml")
+  })
+}
+
 /// The `ComicInfo.xml` of one archive, if it has one.
 pub(crate) fn read_comic_info<R: ReadAt + ?Sized>(r: &R) -> Option<MangaMeta> {
   let entries = index_zip(r).ok()?;
-  let entry = entries.iter().find(|e| {
-    let base = e.name.rsplit('/').next().unwrap_or(&e.name);
-    base.eq_ignore_ascii_case("ComicInfo.xml")
-  })?;
+  let entry = comic_info_entry(&entries)?;
   let bytes = extract_entry(r, entry).ok()?;
   Some(parse_comic_info(&String::from_utf8_lossy(&bytes)))
 }

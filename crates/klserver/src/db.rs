@@ -20,12 +20,13 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
-use klparse::collate::{fold, locale_cmp};
+use klparse::collate::fold;
 use klparse::comicinfo::meta_sources;
 use klparse::is_chapter_name;
 use klparse::listing;
 use klparse::names::strip_zip_ext;
 use klparse::uri::encode_uri_component;
+use klparse::{chapter_cmp, chapter_number, ChapterNumber};
 use rusqlite::{params, Connection, OptionalExtension};
 use serde::Serialize;
 
@@ -45,7 +46,7 @@ const TRIGRAM: usize = 3;
 
 /// Bumped whenever the schema changes. A database from another version is
 /// dropped and rebuilt, which is only a rescan since it is a cache.
-const SCHEMA_VERSION: i64 = 2;
+const SCHEMA_VERSION: i64 = 3;
 
 const DROP: &str = "
   DROP TABLE IF EXISTS chapters;
@@ -89,6 +90,9 @@ const SCHEMA: &str = "
     -- Its page entry names in reading order, as JSON; [] for an archive with
     -- none or one that can't be read, so it isn't retried until it changes.
     pages TEXT NOT NULL,
+    -- The <Volume> and <Number> of its ComicInfo.xml, where they are numbers.
+    volume REAL,
+    number REAL,
     PRIMARY KEY (folder, file)
   ) WITHOUT ROWID;
 
@@ -488,7 +492,7 @@ impl Db {
   }
 
   /// The chapters of the manga folder at `path`, one per archive holding at
-  /// least one page, in name order. Each archive's pages are stored once read
+  /// least one page, in chapter order. Each archive's pages are stored once read
   /// and read again only when its size or mtime changes, so opening a long
   /// series costs a directory listing and a `stat` per chapter, not a parse.
   pub fn chapters(&self, path: &Path, folder: &str) -> Vec<ServerChapter> {
@@ -502,29 +506,34 @@ impl Db {
 
     // Archives are parsed with the connection free, so a long series opening
     // for the first time doesn't hold up everyone else's requests.
-    let mut changed: Vec<(String, String, Vec<String>)> = Vec::new();
-    let mut chapters: Vec<ServerChapter> = Vec::new();
+    let mut changed: Vec<(String, String, klfs::ArchiveChapter)> = Vec::new();
+    let mut chapters: Vec<(ServerChapter, ChapterNumber)> = Vec::new();
     for file in &files {
       // Taken out, not cloned: what is left afterwards is what's gone.
       let known = stored.remove(file);
       let Some(current) = stamp(&path.join(file)) else {
         continue;
       };
-      let pages = match known {
-        Some((s, pages)) if s == current => pages,
+      let read = match known {
+        Some((s, read)) if s == current => read,
         _ => {
-          let pages = klfs::archive_pages(&path.join(file));
-          changed.push((file.clone(), current, pages.clone()));
-          pages
+          let read = klfs::read_chapter(&path.join(file));
+          changed.push((file.clone(), current, read.clone()));
+          read
         }
       };
-      if !pages.is_empty() {
-        chapters.push(ServerChapter {
-          slug: encode_uri_component(file),
-          name: strip_zip_ext(file).to_string(),
-          page_count: pages.len(),
-          pages,
-        });
+      if !read.pages.is_empty() {
+        let name = strip_zip_ext(file).to_string();
+        let number = chapter_number(&name, read.number);
+        chapters.push((
+          ServerChapter {
+            slug: encode_uri_component(file),
+            name,
+            page_count: read.pages.len(),
+            pages: read.pages,
+          },
+          number,
+        ));
       }
     }
 
@@ -535,23 +544,30 @@ impl Db {
       }
     }
 
-    chapters.sort_by(|a, b| locale_cmp(&a.name, &b.name));
-    chapters
+    chapters.sort_by(|(a, an), (b, bn)| chapter_cmp((&a.name, *an), (&b.name, *bn)));
+    chapters.into_iter().map(|(c, _)| c).collect()
   }
 
   fn stored_chapters(
     &self,
     folder: &str,
-  ) -> rusqlite::Result<HashMap<String, (String, Vec<String>)>> {
+  ) -> rusqlite::Result<HashMap<String, (String, klfs::ArchiveChapter)>> {
     let conn = lock(&self.conn);
-    let mut stmt = conn.prepare("SELECT file, stamp, pages FROM chapters WHERE folder = ?1")?;
+    let mut stmt =
+      conn.prepare("SELECT file, stamp, pages, volume, number FROM chapters WHERE folder = ?1")?;
     let rows = stmt.query_map([folder], |r| {
       let pages: String = r.get(2)?;
       Ok((
         r.get::<_, String>(0)?,
         (
           r.get::<_, String>(1)?,
-          serde_json::from_str(&pages).unwrap_or_default(),
+          klfs::ArchiveChapter {
+            pages: serde_json::from_str(&pages).unwrap_or_default(),
+            number: ChapterNumber {
+              volume: r.get(3)?,
+              chapter: r.get(4)?,
+            },
+          },
         ),
       ))
     })?;
@@ -561,19 +577,22 @@ impl Db {
   fn store_chapters(
     &self,
     folder: &str,
-    changed: &[(String, String, Vec<String>)],
+    changed: &[(String, String, klfs::ArchiveChapter)],
     gone: &[&String],
   ) -> rusqlite::Result<()> {
     let mut conn = lock(&self.conn);
     let tx = conn.transaction()?;
     {
       let mut upsert = tx.prepare(
-        "INSERT INTO chapters (folder, file, stamp, pages) VALUES (?1, ?2, ?3, ?4)
-         ON CONFLICT (folder, file) DO UPDATE SET stamp = excluded.stamp, pages = excluded.pages",
+        "INSERT INTO chapters (folder, file, stamp, pages, volume, number)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+         ON CONFLICT (folder, file) DO UPDATE SET stamp = excluded.stamp,
+           pages = excluded.pages, volume = excluded.volume, number = excluded.number",
       )?;
-      for (file, stamp, pages) in changed {
-        let json = serde_json::to_string(pages).expect("page names serialize");
-        upsert.execute(params![folder, file, stamp, json])?;
+      for (file, stamp, read) in changed {
+        let json = serde_json::to_string(&read.pages).expect("page names serialize");
+        let n = read.number;
+        upsert.execute(params![folder, file, stamp, json, n.volume, n.chapter])?;
       }
       let mut delete = tx.prepare("DELETE FROM chapters WHERE folder = ?1 AND file = ?2")?;
       for file in gone {

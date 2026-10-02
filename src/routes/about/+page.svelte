@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import BackLink from '$lib/ui/BackLink.svelte';
+  import { backOrHome, nativeBackOrHome } from '$lib/ui/back';
   import { fetchDownloadLinks, DEFAULT_DOWNLOAD_LINKS } from '$lib/utils/update';
 
   let downloads = $state(DEFAULT_DOWNLOAD_LINKS);
@@ -8,6 +9,8 @@
   onMount(async () => {
     downloads = await fetchDownloadLinks();
   });
+
+  $effect(nativeBackOrHome);
 
   const README = 'https://github.com/NasreddinHodja/konigslibrary#self-hosted-server';
 
@@ -33,7 +36,7 @@
 </script>
 
 <div class="mx-auto max-w-2xl space-y-10 p-8">
-  <BackLink label="BACK" href="/" />
+  <BackLink label="BACK" onclick={backOrHome} />
 
   <h1 class="text-2xl font-bold">How to use konigslibrary</h1>
 
@@ -151,9 +154,17 @@
   <section class="space-y-3">
     <h3 class="text-lg font-bold text-soft">Chapter order and numbers</h3>
     <p class="text-sm leading-relaxed text-soft">
-      Chapters are sorted by file name, letter by letter, so <code>10.cbz</code> comes before
-      <code>2.cbz</code>. Pad numbers with zeros so they all have the same length:
-      <code>001</code>, <code>002</code>, <code>010</code>.
+      Chapters are sorted by the volume and chapter numbers in their file names, so no renaming is
+      needed: <code>Berserk v01 c003.cbz</code>, <code>Vol. 2 Ch. 12.5.cbz</code>,
+      <code>chapter 7.cbz</code> and <code>053.cbz</code> all work, and <code>2.cbz</code> comes
+      before
+      <code>10.cbz</code>. Without a "chapter" or "volume" word, the last number in the name is the
+      chapter. Numbers in brackets, like <code>(2016)</code> or <code>[Group]</code>, are skipped.
+    </p>
+    <p class="text-sm leading-relaxed text-soft">
+      Volumes come first, then chapters not yet in a volume. Files with no number at all come last,
+      by name. A <code>ComicInfo.xml</code> with <code>Volume</code> or <code>Number</code> (see below)
+      overrides the numbers in the file name.
     </p>
     <p class="text-sm leading-relaxed text-soft">
       Files named <code>chapter_0044-00.cbz</code> show as "Ch. 44", and

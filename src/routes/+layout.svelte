@@ -9,7 +9,8 @@
   import { showSuccess, showError } from '$lib/ui/toast.svelte';
   import { errorMessage } from '$lib/utils/errors';
   import { parseConnectLink, validateAndConnect } from '$lib/sources/server-connect';
-  import { goto, onNavigate } from '$app/navigation';
+  import { afterNavigate, goto, onNavigate, replaceState } from '$app/navigation';
+  import { page } from '$app/state';
 
   let { children } = $props();
 
@@ -42,6 +43,12 @@
         await navigation.complete;
       });
     });
+  });
+
+  // Marks entries the app navigated to, so their back can return into it
+  // (backOrHome) rather than leave.
+  afterNavigate(({ type }) => {
+    if (type === 'link' || type === 'goto') replaceState('', { ...page.state, fromApp: true });
   });
 
   async function handleDeepLink(raw: string) {

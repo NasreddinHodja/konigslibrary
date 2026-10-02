@@ -186,11 +186,28 @@ with =Count= but no =Status= is shown as complete.
 
 ** Sorting
 
-Chapters sort lexicographically. Zero-pad file names to get correct numeric order:
+Chapters sort by volume, then chapter number, read from each archive's file
+name, so a library needs no renaming:
 
-| Wrong                | Right                  |
-|----------------------+------------------------|
-| =ch1=, =ch10=, =ch2= | =ch01=, =ch02=, =ch10= |
+| File name                 | Volume | Chapter |
+|---------------------------+--------+---------|
+| =Berserk v01 c003.cbz=    |      1 |       3 |
+| =Vol. 2 Ch. 12.5.cbz=     |      2 |    12.5 |
+| =Volume 07.cbz=           |      7 |         |
+| =chapter 7.cbz=           |        |       7 |
+| =Beelzebub_53[KSH].cbz=   |        |      53 |
+| =chapter_0044-05.cbz=     |        |   44.05 |
+
+- Markers: =v=, =vol=, =volume=, =tome= for volumes; =c=, =ch=, =chp=,
+  =chap=, =chapter=, =episode= for chapters, in any case, at the start of a
+  word.
+- With no marker, the last number in the name is the chapter.
+- Text in =()=, =[]= and ={}= is skipped.
+- =<Volume>= and =<Number>= in an archive's =ComicInfo.xml= override what the
+  file name gives, each on its own, when they are numbers.
+
+Volumes come first, chapters with no volume after them. Archives with no
+number sort last, by name, with numbers in names compared by value.
 
 Archives named =chapter_<major>-<minor>= are shown
 as chapter numbers: =chapter_0044-00= is "Ch. 44" and =chapter_0044-05= is
@@ -262,7 +279,7 @@ All shortcuts are rebindable from Settings. Defaults:
 | =p= / =[=  | Previous chapter                |
 | =z= (hold) | Zoom to cursor (page-turn mode) |
 | =s=        | Toggle sidebar                  |
-| =b=        | Back to library                 |
+| =b=        | Back                            |
 | =m=        | Toggle scroll / page-turn mode  |
 | =r=        | Toggle LTR / RTL                |
 | =-= / ===  | Zoom out / in (scroll mode)     |

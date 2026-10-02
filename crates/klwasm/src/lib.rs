@@ -16,9 +16,10 @@
 //! walking, inflate, CRC verification — happens in `klparse`, the same code the
 //! native server runs.
 
+use klparse::chapters;
 use klparse::comicinfo;
 use klparse::zip;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 
 fn to_js_error(e: impl std::fmt::Display) -> JsValue {
@@ -129,11 +130,56 @@ pub fn page_entries(cd: &[u8]) -> Result<JsValue, JsValue> {
   to_js(&klparse::page_entries(zip::parse_central_directory(cd)))
 }
 
-/// Sorts names the way the server sorts chapters.
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ChapterEntries {
+  pages: Vec<zip::ZipEntry>,
+  comic_info: Option<zip::ZipEntry>,
+}
+
+/// A chapter archive's pages, as `page_entries` gives them, and its
+/// `ComicInfo.xml` entry, for the chapter's number.
 #[wasm_bindgen]
-pub fn sort_names(mut names: Vec<String>) -> Vec<String> {
-  names.sort_by(|a, b| klparse::locale_cmp(a, b));
-  names
+pub fn chapter_entries(cd: &[u8]) -> Result<JsValue, JsValue> {
+  let entries = zip::parse_central_directory(cd);
+  let comic_info = comicinfo::comic_info_entry(&entries).cloned();
+  to_js(&ChapterEntries {
+    pages: klparse::page_entries(entries),
+    comic_info,
+  })
+}
+
+/// The `<Volume>` and `<Number>` of a `ComicInfo.xml` text.
+#[wasm_bindgen]
+pub fn comic_info_number(xml: &str) -> Result<JsValue, JsValue> {
+  to_js(&chapters::comic_info_number(xml))
+}
+
+#[derive(Deserialize)]
+struct SortItem {
+  name: String,
+  volume: Option<f64>,
+  chapter: Option<f64>,
+}
+
+/// Chapter names in the order the server sorts them, given each one's
+/// ComicInfo numbers.
+#[wasm_bindgen]
+pub fn sort_chapters(items: JsValue) -> Result<Vec<String>, JsValue> {
+  let items: Vec<SortItem> = serde_wasm_bindgen::from_value(items).map_err(to_js_error)?;
+  let mut keyed: Vec<(String, chapters::ChapterNumber)> = items
+    .into_iter()
+    .map(|i| {
+      let info = chapters::ChapterNumber {
+        volume: i.volume,
+        chapter: i.chapter,
+      };
+      let number = chapters::chapter_number(&i.name, info);
+      (i.name, number)
+    })
+    .collect();
+  keyed.sort_by(|a, b| chapters::chapter_cmp((&a.0, a.1), (&b.0, b.1)));
+  Ok(keyed.into_iter().map(|(name, _)| name).collect())
 }
 
 /// Which archives to read `ComicInfo.xml` from, and which file is the cover.

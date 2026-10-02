@@ -2,9 +2,9 @@ import type { Chapter } from '$lib/utils/types';
 import type { ZipEntry } from '$lib/zip';
 import type { MangaMeta } from '$lib/api/meta';
 import {
-  pageEntriesWorker,
+  chapterEntriesWorker,
   extractEntryWorker,
-  sortNamesWorker,
+  sortChaptersWorker,
   mangaMetaWorker
 } from '$lib/zip/worker-client';
 import type { LazyPageProvider } from './types';
@@ -32,20 +32,21 @@ export class UploadProvider implements LazyPageProvider {
         .filter((f) => !f.name.startsWith('.') && ZIP_EXT.test(f.name))
         .map((f) => [f.name, f])
     );
-    const names = await sortNamesWorker([...archives.keys()]);
     const chapters = await Promise.all(
-      names.map(async (name) => {
-        const file = archives.get(name)!;
+      [...archives].map(async ([fileName, file]) => {
         // A corrupt archive is skipped, unless it is the only one.
-        const entries = await pageEntriesWorker(file).catch((err) => {
+        const { pages: entries, number } = await chapterEntriesWorker(file).catch((err) => {
           if (archives.size === 1) throw err;
-          return [];
+          return { pages: [], number: {} };
         });
-        return { name: name.replace(ZIP_EXT, ''), file, entries };
+        return { name: fileName.replace(ZIP_EXT, ''), file, entries, number };
       })
     );
+    const order = await sortChaptersWorker(chapters.map((c) => ({ name: c.name, ...c.number })));
+    const byName = new Map(chapters.map((c) => [c.name, c]));
+    const sorted = order.map((name) => byName.get(name)!);
 
-    this.pages = new Map(chapters.filter((c) => c.entries.length > 0).map((c) => [c.name, c]));
+    this.pages = new Map(sorted.filter((c) => c.entries.length > 0).map((c) => [c.name, c]));
     return [...this.pages.values()].map((c) => ({ name: c.name, pageCount: c.entries.length }));
   }
 

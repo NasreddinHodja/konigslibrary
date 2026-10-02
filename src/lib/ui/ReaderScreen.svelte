@@ -146,7 +146,7 @@
     pageUrls={chapter.pageUrls}
     onback={() => {
       hideHud();
-      manga.selectedChapter = null;
+      history.back();
     }}
   />
 

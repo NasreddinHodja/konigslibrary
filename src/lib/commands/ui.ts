@@ -2,7 +2,8 @@ import type { Command } from './types';
 
 export const back: Command = {
   id: 'back',
-  execute(ctx) {
-    ctx.reader.clearManga();
+  execute() {
+    // One layer up, as browser back: see src/routes/+page.svelte.
+    history.back();
   }
 };

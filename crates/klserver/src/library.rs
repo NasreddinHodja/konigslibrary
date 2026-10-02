@@ -259,6 +259,36 @@ mod tests {
   }
 
   #[test]
+  fn orders_chapters_by_comic_info_then_file_name_numbers() {
+    let l = lib();
+    let berserk = l.root.join("Berserk");
+    mkdir(&berserk, "");
+    write_zip(&berserk, "ch10.cbz", &[("p.png", b"x")]);
+    write_zip(&berserk, "ch2.cbz", &[("p.png", b"x")]);
+    write_zip(&berserk, "Extras.cbz", &[("p.png", b"x")]);
+    // Named as if first, numbered by its ComicInfo as between 2 and 10.
+    write_zip(
+      &berserk,
+      "a.cbz",
+      &[
+        ("p.png", b"x"),
+        (
+          "ComicInfo.xml",
+          b"<ComicInfo><Number>5</Number></ComicInfo>",
+        ),
+      ],
+    );
+
+    let names = |chapters: Vec<ServerChapter>| -> Vec<String> {
+      chapters.into_iter().map(|c| c.name).collect()
+    };
+    let expected = ["ch2", "a", "ch10", "Extras"];
+    assert_eq!(names(list_chapters(&l.cfg, &l.db, "Berserk")), expected);
+    // The second listing comes from the store.
+    assert_eq!(names(list_chapters(&l.cfg, &l.db, "Berserk")), expected);
+  }
+
+  #[test]
   fn ignores_image_folders_loose_images_and_broken_archives() {
     let l = lib();
     let berserk = l.root.join("Berserk");

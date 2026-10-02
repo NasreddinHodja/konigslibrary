@@ -33,6 +33,7 @@
   import DirectoryBrowser from '$lib/ui/DirectoryBrowser.svelte';
   import { PRESETS, getTheme, setTheme } from '$lib/theme';
   import type { Theme } from '$lib/theme';
+  import { backOrHome, nativeBackOrHome } from '$lib/ui/back';
 
   const TOKEN_LABELS: [keyof Theme, string][] = [
     ['bg', 'Background'],
@@ -206,6 +207,8 @@
   let loadingDir = $state(isLocalServer);
   let browsingDir = $state(false);
 
+  $effect(nativeBackOrHome);
+
   onMount(() => {
     if (!isLocalServer) return;
     fetchServerSettings()
@@ -249,7 +252,7 @@
 <svelte:window onkeydown={handleKeyCapture} />
 
 {#snippet settingsBody()}
-  <BackLink label="LIBRARY" href="/" />
+  <BackLink label="BACK" onclick={backOrHome} />
 
   <p class="py-12 text-center text-4xl font-bold tracking-widest md:text-left">KONIGSLIBRARY</p>
 

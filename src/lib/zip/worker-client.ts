@@ -1,4 +1,4 @@
-import type { RawMangaMeta, ZipEntry } from './index';
+import type { ChapterNumber, RawMangaMeta, ZipEntry } from './index';
 
 type Resolver = { resolve: (v: unknown) => void; reject: (e: Error) => void };
 type WorkerResponse =
@@ -53,8 +53,10 @@ function dispatch<T>(msg: object, transfer?: Transferable[]): Promise<T> {
   });
 }
 
-export function pageEntriesWorker(file: File): Promise<ZipEntry[]> {
-  return call<ZipEntry[]>({ type: 'pages', file });
+export function chapterEntriesWorker(
+  file: File
+): Promise<{ pages: ZipEntry[]; number: ChapterNumber }> {
+  return call({ type: 'chapter', file });
 }
 
 export async function extractEntryWorker(file: File, entry: ZipEntry): Promise<Blob> {
@@ -62,8 +64,8 @@ export async function extractEntryWorker(file: File, entry: ZipEntry): Promise<B
   return new Blob([buffer]);
 }
 
-export function sortNamesWorker(names: string[]): Promise<string[]> {
-  return call<string[]>({ type: 'sort', names });
+export function sortChaptersWorker(items: ({ name: string } & ChapterNumber)[]): Promise<string[]> {
+  return call<string[]>({ type: 'sort', items });
 }
 
 export function mangaMetaWorker(files: File[]): Promise<RawMangaMeta> {

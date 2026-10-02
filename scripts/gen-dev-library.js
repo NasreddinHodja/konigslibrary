@@ -9,6 +9,9 @@
 //
 // --chapters 0 makes empty manga folders, for listing very large libraries
 // without writing an archive per manga.
+//
+// Alongside them, a fixed "Order - …" manga per chapter-ordering rule, whose
+// summary lists the order its chapters should show in.
 import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { deflateSync } from 'node:zlib';
@@ -239,6 +242,69 @@ function comicInfo(title, number) {
 `);
 }
 
+/// A chapter's ComicInfo for the ordering cases: `number` is written as given,
+/// so a non-numeric one can be tested too.
+function orderComicInfo(title, summary, number) {
+  return Buffer.from(`<?xml version="1.0" encoding="utf-8"?>
+<ComicInfo>
+  <Series>${xmlEscape(title)}</Series>
+  ${number === undefined ? '' : `<Number>${xmlEscape(String(number))}</Number>`}
+  <Summary>${xmlEscape(summary)}</Summary>
+</ComicInfo>
+`);
+}
+
+// Each case's chapters are listed shuffled; `expected` is the order they
+// should show in, by file name without the extension.
+const ORDER_CASES = [
+  {
+    name: 'Order - Unpadded numbers',
+    files: [['ch10'], ['ch2'], ['ch1.5'], ['ch1']],
+    expected: ['ch1', 'ch1.5', 'ch2', 'ch10']
+  },
+  {
+    name: 'Order - Volumes then loose chapters',
+    files: [['Ch 21'], ['Vol 2 Ch 15'], ['Vol 1'], ['Ch 20'], ['Vol 2']],
+    expected: ['Vol 1', 'Vol 2', 'Vol 2 Ch 15', 'Ch 20', 'Ch 21']
+  },
+  {
+    name: 'Order - Marker styles',
+    files: [['Tome 1 Chapter 4'], ['Berserk v01 c003'], ['vol1 chp.1'], ['Vol. 1 Ch. 2.5']],
+    expected: ['vol1 chp.1', 'Vol. 1 Ch. 2.5', 'Berserk v01 c003', 'Tome 1 Chapter 4']
+  },
+  {
+    name: 'Order - Bare numbers and brackets',
+    files: [['Beelzebub_100 (2012) [KSH]'], ['Beelzebub_53[KSH]'], ['Beelzebub_7[KSH]']],
+    expected: ['Beelzebub_7[KSH]', 'Beelzebub_53[KSH]', 'Beelzebub_100 (2012) [KSH]']
+  },
+  {
+    name: 'Order - Words that look like markers',
+    files: [['Witch 12'], ['Love Witch 7'], ['Witch 3']],
+    expected: ['Witch 3', 'Love Witch 7', 'Witch 12']
+  },
+  {
+    name: 'Order - ComicInfo Number overrides',
+    files: [
+      ['a', 3],
+      ['b', 1],
+      ['c', 4],
+      ['d', 2],
+      ['ch 9', 'Special']
+    ],
+    expected: ['b', 'd', 'a', 'c', 'ch 9']
+  },
+  {
+    name: 'Order - Unnumbered last',
+    files: [['Extras'], ['ch 2'], ['Bonus'], ['ch 1']],
+    expected: ['ch 1', 'ch 2', 'Bonus', 'Extras']
+  },
+  {
+    name: 'Order - Legacy chapter names',
+    files: [['chapter_0010-00'], ['chapter_0002-05'], ['chapter_0002-00']],
+    expected: ['chapter_0002-00 (Ch. 2)', 'chapter_0002-05 (Ch. 2.5)', 'chapter_0010-00 (Ch. 10)']
+  }
+];
+
 // --- output ---
 
 mkdirSync(OUT, { recursive: true });
@@ -268,6 +334,26 @@ for (const [i, name] of list.entries()) {
   }
 
   if ((i + 1) % 1000 === 0) process.stdout.write(`\r${i + 1}/${COUNT}`);
+}
+
+if (CHAPTERS > 0) {
+  for (const { name, files, expected } of ORDER_CASES) {
+    const dir = join(OUT, name);
+    mkdirSync(dir);
+    const rgb = [64 + rand() * 191, 64 + rand() * 191, 64 + rand() * 191].map(Math.floor);
+    const summary = `Expected order: ${expected.join(', ')}`;
+    for (const [file, number] of files) {
+      const pages = [];
+      for (let p = 1; p <= PAGES; p++) {
+        pages.push({
+          name: `${String(p).padStart(3, '0')}.png`,
+          data: png(120, 180, rgb, PAGES > 1 ? (p - 1) / (PAGES - 1) : 0)
+        });
+      }
+      pages.push({ name: 'ComicInfo.xml', data: orderComicInfo(name, summary, number) });
+      writeFileSync(join(dir, `${file}.cbz`), zip(pages));
+    }
+  }
 }
 
 const secs = ((performance.now() - started) / 1000).toFixed(1);

@@ -7,7 +7,12 @@ declare global {
     }
     // interface Locals {}
     // interface PageData {}
-    // interface PageState {}
+    interface PageState {
+      /// The entry pushed while a manga is open; back from it closes one layer.
+      kl?: 'reader';
+      /// Reached by a link or `goto` in the app, so back returns into it.
+      fromApp?: boolean;
+    }
     // interface Platform {}
   }
 }
