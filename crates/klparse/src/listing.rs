@@ -34,6 +34,12 @@ pub fn cursor((name, tie): Key) -> String {
   format!("{name}{CURSOR_SEP}{tie}")
 }
 
+/// The key a [`cursor`] was made from. A cursor with no separator is a bare
+/// name, with an empty tie-breaker.
+pub fn parse_cursor(cursor: &str) -> Key<'_> {
+  cursor.split_once(CURSOR_SEP).unwrap_or((cursor, ""))
+}
+
 pub struct Page<'a, T> {
   pub items: Vec<&'a T>,
   /// Cursor for the page after this one; `None` on the last page.
@@ -56,7 +62,7 @@ pub fn page<'a, T>(
 ) -> Page<'a, T> {
   let start = match after {
     Some(cursor) => {
-      let cursor = cursor.split_once(CURSOR_SEP).unwrap_or((cursor, ""));
+      let cursor = parse_cursor(cursor);
       sorted.partition_point(|item| key_cmp(key(item), cursor) != Ordering::Greater)
     }
     None => 0,

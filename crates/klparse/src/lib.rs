@@ -9,13 +9,11 @@
 //! - native via `klserver`, for the LAN-sharing sidecar and the standalone
 //!   self-hosted deployment.
 //!
-//! It replaces three TypeScript modules that between them held two copies of
-//! the same byte-range plumbing: `src/lib/zip/parse.ts`, `src/lib/zip/index.ts`
-//! and `src/lib/server/zip-node.ts`.
+//! The Tauri app (`src-tauri`) links it natively too.
 
 pub mod collate;
 pub mod comicinfo;
-pub mod crc32;
+mod crc32;
 pub mod listing;
 pub mod names;
 pub mod uri;
@@ -26,7 +24,6 @@ pub mod fixture;
 
 pub use collate::{locale_cmp, natural_cmp};
 pub use comicinfo::{manga_meta, MangaMeta};
-pub use crc32::crc32;
 pub use names::{content_type, ext_with_dot, is_image_name, is_zip_name, strip_zip_ext};
 pub use uri::{decode_uri_component, encode_uri_component};
 pub use zip::{extract_entry, index_zip, page_entries, ReadAt, Result, ZipEntry, ZipError};

@@ -1,8 +1,7 @@
 //! Listing a manga's chapters and serving its pages; listing the library
 //! itself is the database's (`db.rs`).
 //!
-//! Port of `src/lib/server/library.ts`. Every path that leaves the configured
-//! manga directory is rejected here rather than at the route layer, so the
+//! Every path that leaves the configured manga directory is rejected here rather than at the route layer, so the
 //! guard cannot be bypassed by adding a route.
 
 use std::path::{Component, Path, PathBuf};
@@ -12,7 +11,7 @@ use serde::Serialize;
 
 use crate::config::Config;
 use crate::db::Db;
-use crate::pathutil::{expand_home_with, is_inside, parent_of, resolve, resolve_from};
+use crate::pathutil::{expand_home_with, is_inside, parent_of, resolve, resolve_from, subfolders};
 use crate::zipcache::{FileReader, ZipCache};
 
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]
@@ -65,22 +64,14 @@ pub fn browse_dir(cfg: &Config, path: Option<&str>) -> Result<BrowseResult, Stri
     &expand_home_with(requested, cfg.home()),
   );
 
-  let read = std::fs::read_dir(&dir).map_err(|e| format!("{}: {}", dir.display(), e))?;
-
-  let mut entries: Vec<BrowseEntry> = Vec::new();
-  for item in read.flatten() {
-    let name = item.file_name().to_string_lossy().into_owned();
-    if name.starts_with('.') {
-      continue;
-    }
-    if !item.file_type().map(|t| t.is_dir()).unwrap_or(false) {
-      continue;
-    }
-    entries.push(BrowseEntry {
-      name: name.clone(),
+  let mut entries: Vec<BrowseEntry> = subfolders(&dir)
+    .map_err(|e| format!("{}: {}", dir.display(), e))?
+    .into_iter()
+    .map(|name| BrowseEntry {
       path: dir.join(&name).to_string_lossy().into_owned(),
-    });
-  }
+      name,
+    })
+    .collect();
   entries.sort_by(|a, b| locale_cmp(&a.name, &b.name));
 
   Ok(BrowseResult {

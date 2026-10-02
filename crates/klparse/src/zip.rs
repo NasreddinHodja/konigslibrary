@@ -10,19 +10,20 @@
 //! the browser: opening a 2GB CBZ still only reads the tail, the central
 //! directory, and the bytes of the page being displayed.
 
+use std::borrow::Cow;
 use std::fmt;
 
 use crate::crc32::crc32;
 
-pub const EOCD_SIG: u32 = 0x0605_4b50;
-pub const ZIP64_EOCD_LOC_SIG: u32 = 0x0706_4b50;
-pub const ZIP64_EOCD_SIG: u32 = 0x0606_4b50;
-pub const CD_SIG: u32 = 0x0201_4b50;
-pub const LOCAL_SIG: u32 = 0x0403_4b50;
-pub const ZIP64_EXTRA_ID: u16 = 0x0001;
+pub(crate) const EOCD_SIG: u32 = 0x0605_4b50;
+pub(crate) const ZIP64_EOCD_LOC_SIG: u32 = 0x0706_4b50;
+pub(crate) const ZIP64_EOCD_SIG: u32 = 0x0606_4b50;
+pub(crate) const CD_SIG: u32 = 0x0201_4b50;
+pub(crate) const LOCAL_SIG: u32 = 0x0403_4b50;
+pub(crate) const ZIP64_EXTRA_ID: u16 = 0x0001;
 
 /// A 32-bit field set to this means "the real value is in the ZIP64 extra field".
-const ZIP64_SENTINEL_32: u32 = 0xffff_ffff;
+pub(crate) const ZIP64_SENTINEL_32: u32 = 0xffff_ffff;
 
 /// How far back from EOF to search for the end-of-central-directory record.
 /// 64KiB is the largest possible archive comment, so the record cannot be
@@ -30,13 +31,13 @@ const ZIP64_SENTINEL_32: u32 = 0xffff_ffff;
 pub const TAIL_SIZE: u64 = 65536;
 
 /// 8MiB. A central directory larger than this is not a manga archive.
-pub const MAX_CD_BYTES: u64 = 8 * 1024 * 1024;
+pub(crate) const MAX_CD_BYTES: u64 = 8 * 1024 * 1024;
 
 /// 64MiB per entry — enough for any manga page, blocks zip bombs.
-pub const MAX_UNCOMPRESSED_BYTES: u64 = 64 * 1024 * 1024;
+pub(crate) const MAX_UNCOMPRESSED_BYTES: u64 = 64 * 1024 * 1024;
 
-pub const METHOD_STORE: u16 = 0;
-pub const METHOD_DEFLATE: u16 = 8;
+pub(crate) const METHOD_STORE: u16 = 0;
+pub(crate) const METHOD_DEFLATE: u16 = 8;
 
 /// Serialised as camelCase so the shape crossing the wasm boundary matches the
 /// `ZipEntry` the TypeScript code already used.
@@ -189,8 +190,8 @@ pub struct EocdInfo {
 }
 
 /// Scans backwards through the last [`TAIL_SIZE`] bytes of the archive for the
-/// EOCD signature. `tail_start` is the absolute file offset `tail` begins at,
-/// needed to turn the ZIP64 locator's position into an absolute offset.
+/// EOCD signature. The ZIP64 locator holds an absolute offset, so `tail`'s own
+/// position in the file is not needed.
 pub fn find_eocd(tail: &[u8]) -> Result<EocdInfo> {
   let mut eocd_offset = None;
   // 22 is the size of a comment-less EOCD record; anything shorter cannot hold one.
@@ -390,9 +391,27 @@ pub fn decode_entry(
   uncompressed_size: u64,
   name: &str,
 ) -> Result<Vec<u8>> {
+  decode(
+    Cow::Borrowed(raw),
+    compression_method,
+    expected_crc,
+    uncompressed_size,
+    name,
+  )
+}
+
+/// [`decode_entry`] over bytes that may already be owned: a stored entry read
+/// off disk is then returned as-is instead of copied.
+fn decode(
+  raw: Cow<'_, [u8]>,
+  compression_method: u16,
+  expected_crc: u32,
+  uncompressed_size: u64,
+  name: &str,
+) -> Result<Vec<u8>> {
   let out = match compression_method {
-    METHOD_STORE => raw.to_vec(),
-    METHOD_DEFLATE => inflate_raw(raw, uncompressed_size, name)?,
+    METHOD_STORE => raw.into_owned(),
+    METHOD_DEFLATE => inflate_raw(&raw, uncompressed_size, name)?,
     other => return Err(ZipError::UnsupportedCompressionMethod(other)),
   };
 
@@ -463,8 +482,8 @@ pub fn extract_entry<R: ReadAt + ?Sized>(r: &R, entry: &ZipEntry) -> Result<Vec<
     entry.compressed_size as usize,
   )?;
 
-  decode_entry(
-    &raw,
+  decode(
+    Cow::Owned(raw),
     entry.compression_method,
     entry.crc32,
     entry.uncompressed_size,

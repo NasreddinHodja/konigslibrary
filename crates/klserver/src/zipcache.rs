@@ -1,7 +1,7 @@
 //! Cache of parsed central directories, keyed by path and invalidated by mtime.
 //!
-//! Port of `getCachedIndex` from `src/lib/server/zip-node.ts`. Without it, every
-//! page request would re-read and re-parse the archive's central directory.
+//! Without it, every page request would re-read and re-parse the archive's
+//! central directory.
 //!
 //! Also holds the [`FileReader`] adapter that lets `klparse` read an archive
 //! through positional file reads instead of loading it into memory.
@@ -13,7 +13,7 @@ use std::sync::{Arc, Mutex};
 
 use klparse::zip::{ReadAt, ZipEntry, ZipError};
 
-/// Matches `ZIP_CACHE_MAX` in the TypeScript implementation.
+/// How many archives' central directories are kept.
 pub const ZIP_CACHE_MAX: usize = 50;
 
 /// Reads an archive off disk without mapping or buffering the whole file.

@@ -19,8 +19,10 @@ pub fn encode_uri_component(s: &str) -> String {
     if is_unreserved(b) {
       out.push(b as char);
     } else {
+      const HEX: &[u8; 16] = b"0123456789ABCDEF";
       out.push('%');
-      out.push_str(&format!("{b:02X}"));
+      out.push(char::from(HEX[usize::from(b >> 4)]));
+      out.push(char::from(HEX[usize::from(b & 0xF)]));
     }
   }
   out

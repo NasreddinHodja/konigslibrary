@@ -1,43 +1,37 @@
-//! Filename classification, shared by the browser and the server so both agree
-//! on what counts as a page and what counts as an archive.
-//!
-//! These replace the `IMAGE_EXT` / `ZIP_EXT` regexes that were declared
-//! separately in `src/lib/sources/upload.ts`, `src/lib/server/library.ts`,
-//! `src/lib/sources/native-library.ts` and the image route.
+//! Filename classification, shared by the browser (through klwasm), the
+//! server and the app, so all agree on what counts as a page and what counts
+//! as an archive.
 
 const IMAGE_EXTS: [&str; 7] = ["jpg", "jpeg", "png", "gif", "webp", "avif", "bmp"];
 const ZIP_EXTS: [&str; 2] = ["zip", "cbz"];
 
-/// The extension of `name`, lowercased, without the dot. `None` when there is
+/// The extension of `name`, as written, without the dot. `None` when there is
 /// no dot in the final path segment.
-fn extension(name: &str) -> Option<String> {
+fn extension(name: &str) -> Option<&str> {
   let last = name.rsplit('/').next().unwrap_or(name);
   let (_, ext) = last.rsplit_once('.')?;
-  if ext.is_empty() {
-    return None;
-  }
-  Some(ext.to_ascii_lowercase())
+  (!ext.is_empty()).then_some(ext)
+}
+
+/// Whether `ext` is one of `exts`, ignoring case. Compared in place: these run
+/// for every entry of every archive listed, so nothing is allocated.
+fn is_one_of(ext: &str, exts: &[&str]) -> bool {
+  exts.iter().any(|e| ext.eq_ignore_ascii_case(e))
 }
 
 pub fn is_image_name(name: &str) -> bool {
-  match extension(name) {
-    Some(ext) => IMAGE_EXTS.contains(&ext.as_str()),
-    None => false,
-  }
+  extension(name).is_some_and(|ext| is_one_of(ext, &IMAGE_EXTS))
 }
 
 pub fn is_zip_name(name: &str) -> bool {
-  match extension(name) {
-    Some(ext) => ZIP_EXTS.contains(&ext.as_str()),
-    None => false,
-  }
+  extension(name).is_some_and(|ext| is_one_of(ext, &ZIP_EXTS))
 }
 
 /// The lowercased extension including the leading dot, for Content-Type
 /// mapping. Equivalent to Node's `extname(p).toLowerCase()`.
 pub fn ext_with_dot(name: &str) -> String {
   match extension(name) {
-    Some(ext) => format!(".{ext}"),
+    Some(ext) => format!(".{}", ext.to_ascii_lowercase()),
     None => String::new(),
   }
 }
@@ -45,7 +39,7 @@ pub fn ext_with_dot(name: &str) -> String {
 /// Drops a trailing `.zip`/`.cbz`, for display names. The slug keeps it.
 pub fn strip_zip_ext(name: &str) -> &str {
   match name.rsplit_once('.') {
-    Some((stem, ext)) if ZIP_EXTS.contains(&ext.to_ascii_lowercase().as_str()) => stem,
+    Some((stem, ext)) if is_one_of(ext, &ZIP_EXTS) => stem,
     _ => name,
   }
 }

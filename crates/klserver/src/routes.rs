@@ -1,7 +1,6 @@
 //! HTTP surface.
 //!
-//! Port of the five `src/routes/api/**/+server.ts` handlers, plus serving the
-//! static SPA build that SvelteKit's adapter-node used to serve.
+//! The JSON API under `/api`, plus the static SPA build for everything else.
 
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr};
 use std::path::PathBuf;
@@ -42,9 +41,9 @@ const IMMUTABLE: &str = "public, max-age=31536000, immutable";
 /// `POST /api/settings` and `GET /api/settings/browse` are gated on this: the
 /// LAN server is reachable by every device on the network, and neither
 /// rewriting the served directory nor walking the host's filesystem should be
-/// exposed to them. Kept byte-for-byte equivalent to the TypeScript check
-/// against `127.0.0.1` and `::1`, with the IPv4-mapped form of loopback also
-/// accepted because a dual-stack listener reports v4 clients that way.
+/// exposed to them. Loopback is `127.0.0.1` and `::1`, with the IPv4-mapped
+/// form of loopback also accepted because a dual-stack listener reports v4
+/// clients that way.
 fn is_local_client(addr: SocketAddr) -> bool {
   match addr.ip() {
     IpAddr::V4(v4) => v4 == Ipv4Addr::LOCALHOST,
@@ -88,8 +87,13 @@ fn is_local_page(headers: &HeaderMap) -> bool {
   }
 }
 
+/// A `{"error": …}` response, the shape the client reads failures from.
+fn error(status: StatusCode, message: impl std::fmt::Display) -> Response {
+  (status, Json(json!({ "error": message.to_string() }))).into_response()
+}
+
 fn forbidden() -> Response {
-  (StatusCode::FORBIDDEN, Json(json!({ "error": "Forbidden" }))).into_response()
+  error(StatusCode::FORBIDDEN, "Forbidden")
 }
 
 pub fn router(state: SharedState) -> Router {
@@ -184,20 +188,13 @@ fn library_page(state: &AppState, query: &LibraryQuery) -> Response {
     limit,
   ) {
     Ok(page) => Json(page).into_response(),
-    Err(e) => (
-      StatusCode::INTERNAL_SERVER_ERROR,
-      Json(json!({ "error": e.to_string() })),
-    )
-      .into_response(),
+    Err(e) => error(StatusCode::INTERNAL_SERVER_ERROR, e),
   }
 }
 
-/// Path parameters arrive percent-encoded and are decoded exactly once here.
-///
-/// The old stack decoded inconsistently — SvelteKit decoded the param, then
-/// `library.ts` called `decodeURIComponent` again for directory manga but not
-/// for zip entries — so a filename containing a literal `%` behaved differently
-/// depending on the manga's type. One decode, in one place, for both.
+/// Path parameters arrive percent-encoded and are decoded exactly once here,
+/// for every kind of file, so a filename containing a literal `%` resolves the
+/// same way whatever it is.
 fn decode_param(raw: &str) -> Option<String> {
   klparse::decode_uri_component(raw)
 }
@@ -317,36 +314,23 @@ async fn post_settings(
     return forbidden();
   }
 
-  let Some(Json(body)) = body else {
-    return (
-      StatusCode::BAD_REQUEST,
-      Json(json!({ "error": "mangaDir must be a string" })),
-    )
-      .into_response();
-  };
-  let Some(manga_dir) = body.get("mangaDir").and_then(|v| v.as_str()) else {
-    return (
-      StatusCode::BAD_REQUEST,
-      Json(json!({ "error": "mangaDir must be a string" })),
-    )
-      .into_response();
+  let Some(manga_dir) = body
+    .as_ref()
+    .and_then(|Json(b)| b.get("mangaDir")?.as_str())
+  else {
+    return error(StatusCode::BAD_REQUEST, "mangaDir must be a string");
   };
 
   // Saving would succeed and change nothing: the variable wins.
   if state.config.manga_dir_is_from_env() {
-    return (
+    return error(
       StatusCode::CONFLICT,
-      Json(json!({ "error": "The manga directory is set by MANGA_DIR" })),
-    )
-      .into_response();
+      "The manga directory is set by MANGA_DIR",
+    );
   }
 
   if let Err(e) = state.config.save_manga_dir(manga_dir) {
-    return (
-      StatusCode::INTERNAL_SERVER_ERROR,
-      Json(json!({ "error": e.to_string() })),
-    )
-      .into_response();
+    return error(StatusCode::INTERNAL_SERVER_ERROR, e);
   }
   // Echoes back what was sent, before `~` expansion, as the old handler did.
   Json(json!({ "mangaDir": manga_dir })).into_response()
@@ -370,7 +354,7 @@ async fn get_browse(
   blocking(
     move || match library::browse_dir(&state.config, query.path.as_deref()) {
       Ok(result) => Json(result).into_response(),
-      Err(e) => (StatusCode::BAD_REQUEST, Json(json!({ "error": e }))).into_response(),
+      Err(e) => error(StatusCode::BAD_REQUEST, e),
     },
   )
   .await
@@ -387,7 +371,7 @@ mod tests {
   use tower::ServiceExt;
 
   struct Harness {
-    _tmp: tempfile::TempDir,
+    tmp: tempfile::TempDir,
     root: PathBuf,
     state: SharedState,
   }
@@ -418,28 +402,24 @@ mod tests {
       db: Db::open(&tmp.path().join("library.db")).unwrap(),
       static_dir,
     });
-    Harness {
-      _tmp: tmp,
-      root,
-      state,
-    }
+    Harness { tmp, root, state }
   }
 
   /// A config with no manga directory, so `POST /api/settings` has something to
   /// change.
   fn harness_unset() -> Harness {
     let h = harness();
-    let conf = h._tmp.path().join("conf");
-    let config = Config::for_test(&conf, &h._tmp.path().to_string_lossy(), None);
+    let conf = h.tmp.path().join("conf");
+    let config = Config::for_test(&conf, &h.tmp.path().to_string_lossy(), None);
     let static_dir = h.state.static_dir.clone();
     let state = Arc::new(AppState {
       config,
       cache: ZipCache::new(),
-      db: Db::open(&h._tmp.path().join("library-unset.db")).unwrap(),
+      db: Db::open(&h.tmp.path().join("library-unset.db")).unwrap(),
       static_dir,
     });
     Harness {
-      _tmp: h._tmp,
+      tmp: h.tmp,
       root: h.root,
       state,
     }
@@ -511,7 +491,7 @@ mod tests {
   async fn post_settings_is_allowed_from_loopback() {
     for peer in [LOCAL_V4, LOCAL_V6] {
       let h = harness_unset();
-      let target = h._tmp.path().join("newdir");
+      let target = h.tmp.path().join("newdir");
       std::fs::create_dir_all(&target).unwrap();
       let body = format!(r#"{{"mangaDir":"{}"}}"#, target.to_string_lossy());
 

@@ -10,10 +10,8 @@
 use crate::crc32::crc32;
 use crate::zip::{
   CD_SIG, EOCD_SIG, LOCAL_SIG, METHOD_DEFLATE, METHOD_STORE, ZIP64_EOCD_LOC_SIG, ZIP64_EOCD_SIG,
-  ZIP64_EXTRA_ID,
+  ZIP64_EXTRA_ID, ZIP64_SENTINEL_32,
 };
-
-const SENTINEL: u32 = 0xffff_ffff;
 
 #[derive(Debug, Clone)]
 pub struct FixtureEntry {
@@ -176,17 +174,17 @@ impl Fixture {
       // bytes 12..16: mod time/date, left zeroed
       ch[16..20].copy_from_slice(&crc.to_le_bytes());
       let cd_csize = if e.zip64_sizes {
-        SENTINEL
+        ZIP64_SENTINEL_32
       } else {
         *csize as u32
       };
       let cd_usize = if e.zip64_sizes {
-        SENTINEL
+        ZIP64_SENTINEL_32
       } else {
         e.data.len() as u32
       };
       let cd_offset = if e.zip64_offset {
-        SENTINEL
+        ZIP64_SENTINEL_32
       } else {
         *local_offset as u32
       };
@@ -227,7 +225,7 @@ impl Fixture {
       loc[16..20].copy_from_slice(&1u32.to_le_bytes()); // total disks
       out.extend_from_slice(&loc);
 
-      (SENTINEL, SENTINEL)
+      (ZIP64_SENTINEL_32, ZIP64_SENTINEL_32)
     } else {
       (cd_size as u32, cd_start as u32)
     };

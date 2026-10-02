@@ -1,8 +1,6 @@
 //! The configured manga directory.
 //!
-//! Port of `getMangaDir` / `saveMangaDir` / `readConfig` from
-//! `src/lib/server/library.ts`. The config file is re-read on every lookup, not
-//! cached: `POST /api/settings` has to take effect for the very next request
+//! The config file is re-read on every lookup, not cached: `POST /api/settings` has to take effect for the very next request
 //! without a restart.
 
 use std::fs;

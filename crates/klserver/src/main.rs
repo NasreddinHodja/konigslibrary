@@ -1,7 +1,6 @@
 //! konigslibrary's local server.
 //!
-//! Replaces `server.js` (SvelteKit adapter-node behind a vendored ~88MB bun
-//! runtime) for both deployments that need a backend: the desktop app's
+//! Serves both deployments that need a backend: the desktop app's
 //! "Share to LAN" sidecar, and the standalone self-hosted install driven by
 //! `konigslibrary.service`. The browser-only deployment still needs no server
 //! at all — that path runs the same parser compiled to wasm.

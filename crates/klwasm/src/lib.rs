@@ -131,8 +131,7 @@ pub fn page_entries(cd: &[u8]) -> Result<JsValue, JsValue> {
 
 /// Sorts names the way the server sorts chapters.
 #[wasm_bindgen]
-pub fn sort_names(names: Vec<String>) -> Vec<String> {
-  let mut names = names;
+pub fn sort_names(mut names: Vec<String>) -> Vec<String> {
   names.sort_by(|a, b| klparse::locale_cmp(a, b));
   names
 }

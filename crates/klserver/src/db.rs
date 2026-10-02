@@ -30,6 +30,7 @@ use rusqlite::{params, Connection, OptionalExtension};
 use serde::Serialize;
 
 use crate::library::ServerChapter;
+use crate::pathutil::{file_names, subfolders};
 use crate::zipcache::FileReader;
 
 /// How often a request may trigger a pass over every manga's metadata even
@@ -181,18 +182,6 @@ fn stamp(path: &Path) -> Option<String> {
   Some(format!("{}:{}", nanos(m.modified().ok()?), m.len()))
 }
 
-/// The manga folders in `dir`: its subdirectories, dotfolders skipped.
-fn manga_folders(dir: &Path) -> std::io::Result<Vec<String>> {
-  Ok(
-    std::fs::read_dir(dir)?
-      .flatten()
-      .filter(|item| item.file_type().is_ok_and(|t| t.is_dir()))
-      .map(|item| item.file_name().to_string_lossy().into_owned())
-      .filter(|name| !name.starts_with('.'))
-      .collect(),
-  )
-}
-
 /// What the metadata of a manga was read from, as stored in its row.
 struct Sources {
   dir_mtime: Option<i64>,
@@ -225,12 +214,7 @@ fn read_manga(path: &Path) -> Option<Read> {
   // Stamped before reading, so a change made mid-read shows up as stale next
   // time rather than being stamped over.
   let dir_mtime = nanos(mtime(path)?);
-  let names: Vec<String> = std::fs::read_dir(path)
-    .ok()?
-    .flatten()
-    .filter(|i| i.file_type().is_ok_and(|t| t.is_file()))
-    .map(|i| i.file_name().to_string_lossy().into_owned())
-    .collect();
+  let names = file_names(path).ok()?;
   let archives = meta_sources(&names).archives;
   let stamped =
     |name: Option<&String>| name.and_then(|n| stamp(&path.join(n)).map(|s| (n.clone(), s)));
@@ -404,7 +388,7 @@ impl Db {
   /// ones with no metadata yet. A different directory than last time starts
   /// over.
   fn sync_folders(&self, dir: &Path) -> rusqlite::Result<()> {
-    let folders = match manga_folders(dir) {
+    let folders = match subfolders(dir) {
       Ok(f) => f,
       Err(e) => {
         eprintln!(
@@ -521,18 +505,10 @@ impl Db {
   /// and read again only when its size or mtime changes, so opening a long
   /// series costs a directory listing and a `stat` per chapter, not a parse.
   pub fn chapters(&self, path: &Path, folder: &str) -> Vec<ServerChapter> {
-    let files: Vec<String> = std::fs::read_dir(path)
-      .map(|read| {
-        read
-          .flatten()
-          .filter(|i| i.file_type().is_ok_and(|t| t.is_file()))
-          .map(|i| i.file_name().to_string_lossy().into_owned())
-          .filter(|n| !n.starts_with('.') && is_zip_name(n))
-          .collect()
-      })
-      .unwrap_or_default();
+    let mut files = file_names(path).unwrap_or_default();
+    files.retain(|n| !n.starts_with('.') && is_zip_name(n));
 
-    let stored = self.stored_chapters(folder).unwrap_or_else(|e| {
+    let mut stored = self.stored_chapters(folder).unwrap_or_else(|e| {
       eprintln!("[konigslibrary] Cannot read stored chapters of \"{folder}\": {e}");
       HashMap::new()
     });
@@ -542,11 +518,13 @@ impl Db {
     let mut changed: Vec<(String, String, Vec<String>)> = Vec::new();
     let mut chapters: Vec<ServerChapter> = Vec::new();
     for file in &files {
+      // Taken out, not cloned: what is left afterwards is what's gone.
+      let known = stored.remove(file);
       let Some(current) = stamp(&path.join(file)) else {
         continue;
       };
-      let pages = match stored.get(file) {
-        Some((s, pages)) if *s == current => pages.clone(),
+      let pages = match known {
+        Some((s, pages)) if s == current => pages,
         _ => {
           let pages = archive_pages(&path.join(file));
           changed.push((file.clone(), current, pages.clone()));
@@ -563,7 +541,7 @@ impl Db {
       }
     }
 
-    let gone: Vec<&String> = stored.keys().filter(|f| !files.contains(f)).collect();
+    let gone: Vec<&String> = stored.keys().collect();
     if !changed.is_empty() || !gone.is_empty() {
       if let Err(e) = self.store_chapters(folder, &changed, &gone) {
         eprintln!("[konigslibrary] Cannot store chapters of \"{folder}\": {e}");
@@ -626,7 +604,7 @@ impl Db {
     after: Option<&str>,
     limit: usize,
   ) -> rusqlite::Result<LibraryPage> {
-    let after = after.map(|c| c.split_once('\0').unwrap_or((c, "")));
+    let after = after.map(listing::parse_cursor);
     let q = fold(query);
     let trigram = q.chars().count() >= TRIGRAM;
     let needle = if trigram {
@@ -697,7 +675,7 @@ mod tests {
   use klparse::fixture::{stored, Fixture};
 
   struct Lib {
-    _tmp: tempfile::TempDir,
+    tmp: tempfile::TempDir,
     root: PathBuf,
     db: Arc<Db>,
   }
@@ -707,11 +685,7 @@ mod tests {
     let root = tmp.path().join("manga");
     std::fs::create_dir_all(&root).unwrap();
     let db = Db::open(&tmp.path().join("library.db")).unwrap();
-    Lib {
-      _tmp: tmp,
-      root,
-      db,
-    }
+    Lib { tmp, root, db }
   }
 
   fn manga(l: &Lib, folder: &str, series: Option<&str>) {
@@ -834,7 +808,7 @@ mod tests {
     let l = lib();
     manga(&l, "Akira", None);
     scan(&l);
-    let other = l._tmp.path().join("other");
+    let other = l.tmp.path().join("other");
     std::fs::create_dir_all(other.join("Monster")).unwrap();
     l.db.sync_folders(&other).unwrap();
     assert_eq!(names(&l.db.page("", None, 10).unwrap()), ["Monster"]);

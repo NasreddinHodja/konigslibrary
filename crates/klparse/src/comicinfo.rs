@@ -148,7 +148,7 @@ pub fn parse_comic_info(xml: &str) -> MangaMeta {
 }
 
 /// The `ComicInfo.xml` of one archive, if it has one.
-pub fn read_comic_info<R: ReadAt + ?Sized>(r: &R) -> Option<MangaMeta> {
+pub(crate) fn read_comic_info<R: ReadAt + ?Sized>(r: &R) -> Option<MangaMeta> {
   let entries = index_zip(r).ok()?;
   let entry = entries.iter().find(|e| {
     let base = e.name.rsplit('/').next().unwrap_or(&e.name);
@@ -220,20 +220,6 @@ pub fn manga_meta<R: ReadAt>(names: &[String], open: impl Fn(&str) -> Option<R>)
 mod tests {
   use super::*;
   use crate::fixture::{deflated, stored, Fixture};
-  use crate::zip::ZipError;
-
-  struct Bytes(Vec<u8>);
-
-  impl ReadAt for Bytes {
-    fn size(&self) -> u64 {
-      self.0.len() as u64
-    }
-    fn read_at(&self, offset: u64, len: usize) -> Result<Vec<u8>, ZipError> {
-      let start = (offset as usize).min(self.0.len());
-      let end = (start + len).min(self.0.len());
-      Ok(self.0[start..end].to_vec())
-    }
-  }
 
   const FULL: &str = r#"<?xml version="1.0" encoding="utf-8"?>
 <ComicInfo>
@@ -305,12 +291,12 @@ mod tests {
     assert!(start.elapsed() < std::time::Duration::from_secs(2));
   }
 
-  fn archive(xml: Option<&str>) -> Bytes {
+  fn archive(xml: Option<&str>) -> Vec<u8> {
     let mut fx = Fixture::new().entry(stored("01.jpg", b"x"));
     if let Some(xml) = xml {
       fx = fx.entry(deflated("ComicInfo.xml", xml.as_bytes()));
     }
-    Bytes(fx.build())
+    fx.build()
   }
 
   fn names(list: &[&str]) -> Vec<String> {
