@@ -1,6 +1,4 @@
 <script lang="ts">
-  import { slide } from 'svelte/transition';
-  import { ANIM_DURATION, ANIM_EXIT_DURATION, ANIM_EASE, ANIM_EASE_IN } from '$lib/utils/constants';
   import { ArrowLeft, Minus, Plus, Settings } from 'lucide-svelte';
   import { getReaderContext } from '$lib/context';
   import { chapterLabel } from '$lib/utils/chapters';
@@ -81,11 +79,12 @@
   inert={!shown}
 >
   <div class="w-full space-y-3">
-    {#if manga.scrollMode}
+    <!-- Mode-dependent controls share one grid cell so swapping them never changes the island height -->
+    <div class="grid">
       <div
-        class="flex items-center justify-between overflow-hidden"
-        in:slide={{ duration: ANIM_DURATION, easing: ANIM_EASE }}
-        out:slide={{ duration: ANIM_EXIT_DURATION, easing: ANIM_EASE_IN }}
+        class="col-start-1 row-start-1 flex items-center justify-between transition-opacity duration-150 ease-out
+          {manga.scrollMode ? 'opacity-100 delay-150' : 'pointer-events-none opacity-0'}"
+        inert={!manga.scrollMode}
       >
         <span class="text-xs font-bold tracking-widest">ZOOM</span>
         <div class="flex items-center gap-3">
@@ -106,17 +105,15 @@
           </button>
         </div>
       </div>
-    {/if}
 
-    {#if !manga.scrollMode}
       <div
-        in:slide={{ duration: ANIM_DURATION, easing: ANIM_EASE }}
-        out:slide={{ duration: ANIM_EXIT_DURATION, easing: ANIM_EASE_IN }}
-        class="overflow-hidden"
+        class="col-start-1 row-start-1 transition-opacity duration-150 ease-out
+          {manga.scrollMode ? 'pointer-events-none opacity-0' : 'opacity-100 delay-150'}"
+        inert={manga.scrollMode}
       >
         <Toggle labelA="LTR" labelB="RTL" active={manga.rtl} onclick={toggleRtl} />
       </div>
-    {/if}
+    </div>
 
     <Toggle labelA="Turn" labelB="Scroll" active={manga.scrollMode} onclick={toggleScrollMode} />
 
