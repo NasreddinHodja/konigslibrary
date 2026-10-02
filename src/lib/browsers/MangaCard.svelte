@@ -191,9 +191,7 @@
           <!-- Faded on the icon, not the button, so the backdrop matches the badge's. -->
           <action.icon
             size={16}
-            class={action.loading
-              ? 'animate-pulse opacity-40'
-              : 'text-soft group-hover:text-fg'}
+            class={action.loading ? 'animate-pulse opacity-40' : 'text-soft group-hover:text-fg'}
           />
         </button>
       {/if}

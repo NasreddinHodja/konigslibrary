@@ -84,7 +84,7 @@
         placeholder="Page number…"
         class="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-dim"
       />
-      <span class="shrink-0 text-xs tabular-nums text-dim">{totalPages} pages</span>
+      <span class="shrink-0 text-xs text-dim tabular-nums">{totalPages} pages</span>
     </div>
 
     <!-- Grid -->

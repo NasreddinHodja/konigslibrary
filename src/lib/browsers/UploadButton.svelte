@@ -121,7 +121,9 @@
     type="button"
     onclick={handleClick}
     class="group flex w-full cursor-pointer items-center justify-between border-2 px-5 py-4 transition-colors duration-150 md:flex-col md:gap-4 md:py-12
-      {isDragOver ? 'border-fg bg-fg/5' : 'border-line-strong hover:border-fg/70 hover:bg-fg/[0.03]'}"
+      {isDragOver
+      ? 'border-fg bg-fg/5'
+      : 'border-line-strong hover:border-fg/70 hover:bg-fg/[0.03]'}"
   >
     <div class="flex items-center gap-4">
       <Upload

@@ -40,7 +40,9 @@
   <p class="text-sm leading-relaxed text-soft">
     konigslibrary reads manga stored as <code>.cbz</code> files. Your folders have to follow the
     layout in
-    <a href="#preparing" class="border-b border-line-strong hover:border-fg/80">Preparing your manga</a>.
+    <a href="#preparing" class="border-b border-line-strong hover:border-fg/80"
+      >Preparing your manga</a
+    >.
   </p>
 
   <h2 class="pt-4 text-xl font-bold">Pick how you want to read</h2>
@@ -58,7 +60,9 @@
     <h3 class="text-lg font-bold text-soft">On your Android phone</h3>
     <p class="text-sm leading-relaxed text-soft">
       Download the
-      <a href={downloads.android} class="border-b border-line-strong hover:border-fg/80">Android app</a>
+      <a href={downloads.android} class="border-b border-line-strong hover:border-fg/80"
+        >Android app</a
+      >
       and install it. Open a chapter <code>.cbz</code> from your phone, or download manga from your computer
       (see "From your computer to your phone").
     </p>
@@ -85,9 +89,10 @@
         >Windows installer</a
       >
       and install it, or the
-      <a href={downloads.linux} class="border-b border-line-strong hover:border-fg/80">Linux AppImage</a>,
-      make it executable and run it. In Settings, pick your library folder. All your manga show up
-      on the home screen.
+      <a href={downloads.linux} class="border-b border-line-strong hover:border-fg/80"
+        >Linux AppImage</a
+      >, make it executable and run it. In Settings, pick your library folder. All your manga show
+      up on the home screen.
     </p>
     <div class="space-y-3">
       <img src="/help/home-desktop.png" alt="The library in the desktop app" class="w-full" />
@@ -163,8 +168,7 @@
       files, next to the pages. It's a plain text file you can write in any text editor. Only the first
       and last chapters are read, so putting it in the first chapter is enough. Every field is optional:
     </p>
-    <pre
-      class="overflow-x-auto border border-line p-4 text-xs leading-relaxed">{comicInfo}</pre>
+    <pre class="overflow-x-auto border border-line p-4 text-xs leading-relaxed">{comicInfo}</pre>
     <ul class="list-inside list-disc space-y-1 text-sm leading-relaxed text-soft">
       <li><code>Series</code>: title</li>
       <li><code>Summary</code>: description</li>

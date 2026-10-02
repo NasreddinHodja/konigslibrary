@@ -95,11 +95,11 @@
         </div>
         <div class="flex items-baseline justify-between gap-3 text-xs">
           {#if toast.phase === 'fetching' && toast.id === FOLDED_ID}
-            <span class="tabular-nums text-dim">{toast.current} / {toast.total} chapters</span>
+            <span class="text-dim tabular-nums">{toast.current} / {toast.total} chapters</span>
           {:else if toast.phase === 'fetching'}
-            <span class="tabular-nums text-dim">{toast.current} / {toast.total}</span>
+            <span class="text-dim tabular-nums">{toast.current} / {toast.total}</span>
           {:else if toast.phase === 'deleting'}
-            <span class="tabular-nums text-dim">Deleting… {toast.current} / {toast.total}</span>
+            <span class="text-dim tabular-nums">Deleting… {toast.current} / {toast.total}</span>
           {:else if toast.phase === 'packaging'}
             <span class="text-dim">Zipping…</span>
           {:else if toast.phase === 'done'}

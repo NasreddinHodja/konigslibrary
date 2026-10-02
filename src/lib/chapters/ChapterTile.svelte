@@ -59,6 +59,6 @@
       {src ? 'bg-bg/85 backdrop-blur-md' : ''}"
   >
     <span class="text-sm font-bold tabular-nums {highlighted ? '' : 'text-soft'}">{number}</span>
-    <span class="text-[11px] tabular-nums text-dim">{pageCount}p</span>
+    <span class="text-[11px] text-dim tabular-nums">{pageCount}p</span>
   </div>
 </button>

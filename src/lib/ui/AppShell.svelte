@@ -85,7 +85,7 @@
       >
         <LibraryBig size={15} />
       </div>
-      <span class="text-[0.55rem] font-bold tracking-wide uppercase text-soft">Library</span>
+      <span class="text-[0.55rem] font-bold tracking-wide text-soft uppercase">Library</span>
     </button>
 
     <a
@@ -100,7 +100,7 @@
       >
         <Settings size={15} />
       </div>
-      <span class="text-[0.55rem] font-bold tracking-wide uppercase text-soft">Settings</span>
+      <span class="text-[0.55rem] font-bold tracking-wide text-soft uppercase">Settings</span>
     </a>
   </div>
 

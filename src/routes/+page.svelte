@@ -215,9 +215,7 @@
 
       <div class="w-full border-t border-line pt-6">
         <p class="mb-1 text-xs font-bold tracking-widest text-dim">RUN LOCALLY</p>
-        <p class="mb-5 text-sm text-dim">
-          Serve manga from your PC to any device on your network.
-        </p>
+        <p class="mb-5 text-sm text-dim">Serve manga from your PC to any device on your network.</p>
         <div class="flex flex-wrap gap-3">
           <a
             href={downloads.windows}
