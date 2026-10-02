@@ -15,6 +15,7 @@
     action,
     progress = null,
     selection = null,
+    disabled = false,
     onopen,
     onlongpress
   }: {
@@ -36,6 +37,8 @@
     progress?: { done: number; total: number } | null;
     /// In selection mode, whether this card is picked, or can't be.
     selection?: 'selected' | 'unselected' | 'disabled' | null;
+    /// Can't be opened; its action button still works.
+    disabled?: boolean;
     onopen: () => void;
     onlongpress?: () => void;
   } = $props();
@@ -134,6 +137,7 @@
     caption={displayName}
     alt="Open {displayName}"
     {loading}
+    {disabled}
     active={selection === 'selected'}
     onclick={onopen}
   >

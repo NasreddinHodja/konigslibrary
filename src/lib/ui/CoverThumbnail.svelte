@@ -9,6 +9,7 @@
     alt,
     active = false,
     loading = false,
+    disabled = false,
     objectPosition = 'center',
     onclick,
     overlay,
@@ -19,6 +20,8 @@
     alt: string;
     active?: boolean;
     loading?: boolean;
+    /// Can't be opened: faded, overlay controls still work.
+    disabled?: boolean;
     objectPosition?: 'center' | 'top';
     onclick: () => void;
     overlay?: Snippet;
@@ -35,11 +38,14 @@
 <div
   class="relative aspect-[2/3] w-full overflow-hidden border-2 transition-colors {active
     ? 'border-fg'
-    : 'border-border/10 hover:border-border/40'}"
+    : disabled
+      ? 'border-border/10'
+      : 'border-border/10 hover:border-border/40'}"
 >
   <button
-    class="absolute inset-0 h-full w-full cursor-pointer"
+    class="absolute inset-0 h-full w-full cursor-pointer transition-opacity disabled:cursor-default disabled:opacity-40"
     {onclick}
+    {disabled}
     aria-label={alt}
     aria-current={active ? 'true' : undefined}
   >

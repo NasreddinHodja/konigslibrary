@@ -379,7 +379,8 @@
 
   async function openRow(row: Row) {
     try {
-      const path = localPath(row);
+      // A copy still downloading is incomplete: the server's is opened instead.
+      const path = row.slug && busy(row.slug) ? null : localPath(row);
       if (path) {
         await openNativeManga({ setSource }, path, row.name);
       } else if (row.slug) {
@@ -668,6 +669,7 @@
                 : 'unselected'
               : 'disabled'
             : null}
+          disabled={t === 'device' && !selecting && !!row.slug && busy(row.slug)}
           onopen={() => (selecting ? toggle(row) : openRow(row))}
           onlongpress={native ? () => (selecting ? toggle(row) : startSelecting(row)) : undefined}
         />
