@@ -82,7 +82,7 @@
     <!-- Mode-dependent controls share one grid cell so swapping them never changes the island height -->
     <div class="grid">
       <div
-        class="col-start-1 row-start-1 flex items-center justify-between transition-opacity duration-150 ease-out
+        class="col-start-1 row-start-1 flex items-center justify-between border-2 px-3 transition-opacity duration-150 ease-out
           {manga.scrollMode ? 'opacity-100 delay-150' : 'pointer-events-none opacity-0'}"
         inert={!manga.scrollMode}
       >

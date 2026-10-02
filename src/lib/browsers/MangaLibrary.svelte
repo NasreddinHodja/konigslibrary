@@ -541,7 +541,7 @@
   const TOUCH_BUTTON = 'pointer-coarse:h-10 pointer-coarse:px-4 pointer-coarse:text-sm';
   /// The bar's square icon buttons, without their opacity.
   const ICON_BUTTON =
-    'hit relative flex size-7 cursor-pointer items-center justify-center hover:bg-fg/10 pointer-coarse:size-10';
+    'hit relative flex size-8 cursor-pointer items-center justify-center hover:bg-fg/10 pointer-coarse:size-10';
 
   async function refresh() {
     if (refreshing) return;
@@ -707,7 +707,7 @@
       onclick={stopSelecting}
       aria-label="Cancel selection"
     >
-      <X size={16} />
+      <X size={18} />
     </button>
     <span class="text-sm font-bold tabular-nums">{selectedRows.length} selected</span>
     <span class="ml-auto flex items-center gap-2">
@@ -731,14 +731,16 @@
     {#if tabs.length === 1 && serverEnabled}{@render serverDot()}{/if}
     <span class="ml-auto flex items-center gap-1">
       {#if native && tab && (lists[tab].rows.length > 0 || (refreshing && hadRows[tab]))}
-        <button
-          class="{ICON_BUTTON} opacity-40 hover:opacity-90"
-          onclick={() => startSelecting()}
-          aria-label="Select"
-          transition:grow
-        >
-          <ListChecks size={14} />
-        </button>
+        <!-- On a wrapper: grow's opacity would override the button's own. -->
+        <span class="flex" transition:grow>
+          <button
+            class="{ICON_BUTTON} opacity-40 hover:opacity-90"
+            onclick={() => startSelecting()}
+            aria-label="Select"
+          >
+            <ListChecks size={18} />
+          </button>
+        </span>
       {/if}
       <!-- Comes and goes with the tab (no refresh for an unset device folder). -->
       {#if tab && !(tab === 'device' && !mangaDir)}
@@ -748,7 +750,7 @@
             onclick={refresh}
             aria-label="Refresh"
           >
-            <RefreshCw size={13} class={refreshing ? 'animate-spin' : ''} />
+            <RefreshCw size={17} class={refreshing ? 'animate-spin' : ''} />
           </button>
         </span>
       {/if}

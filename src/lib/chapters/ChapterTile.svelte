@@ -1,6 +1,7 @@
 <script lang="ts">
   import { getReaderContext } from '$lib/context';
-  import { chapterThumbnail } from './thumbnails';
+  import { nearViewport } from '$lib/ui/near-viewport';
+  import { chapterThumbnail, knownThumbnail } from './thumbnails';
 
   let {
     name,
@@ -20,23 +21,24 @@
 
   const reader = getReaderContext();
 
+  let near = $state(false);
   let src: string | null = $state(null);
 
-  // Tiles only exist while near the viewport (the grid is virtualized), so the
-  // thumbnail is requested on mount and cancelled when the tile goes away.
+  // The grid keeps tiles mounted well past the screen; the image only comes
+  // and goes while the tile is within a screen of the viewport. One already
+  // in memory shows at once.
   $effect(() => {
     const provider = reader.provider;
-    if (!provider) return;
+    if (!provider || !near) return;
+    const known = knownThumbnail(provider, name);
+    src = known;
+    if (known) return () => (src = null);
     const controller = new AbortController();
-    let url: string | null = null;
-    chapterThumbnail(provider, name, controller.signal).then((blob) => {
-      if (controller.signal.aborted || !blob) return;
-      url = URL.createObjectURL(blob);
-      src = url;
+    chapterThumbnail(provider, name, controller.signal).then((url) => {
+      if (!controller.signal.aborted && url) src = url;
     });
     return () => {
       controller.abort();
-      if (url) URL.revokeObjectURL(url);
       src = null;
     };
   });
@@ -47,6 +49,7 @@
     {highlighted ? 'border-fg' : 'border-border/12 hover:border-border/40'}"
   {title}
   {onclick}
+  use:nearViewport={(v) => (near = v)}
 >
   {#if src}
     <img {src} alt="" class="absolute inset-0 h-full w-full object-cover object-top" />

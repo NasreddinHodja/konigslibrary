@@ -1,13 +1,13 @@
 /// Runs at most `max` jobs at once; the rest wait their turn, first come
-/// first served.
-export function createLimiter(max: number) {
+/// first served, or with `newestFirst` the latest waiting job goes next.
+export function createLimiter(max: number, { newestFirst = false } = {}) {
   let active = 0;
   const queue: (() => void)[] = [];
 
   function pump() {
     while (active < max && queue.length > 0) {
       active++;
-      queue.shift()!();
+      (newestFirst ? queue.pop() : queue.shift())!();
     }
   }
 

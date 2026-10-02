@@ -7,6 +7,9 @@ import { createLimiter } from '$lib/utils/limit';
 
 const WIDTH = 240;
 const CONCURRENCY = 3;
+/// Thumbnails kept as object URLs in memory, so a tile that mounts again shows
+/// its image on its first frame. Far more than the grid has mounted at once.
+const MEMORY_CAP = 200;
 const DB_NAME = 'kl-thumbnails';
 const STORE = 'thumbs';
 
@@ -76,7 +79,9 @@ async function render(page: Blob): Promise<Blob> {
   );
 }
 
-const limit = createLimiter(CONCURRENCY);
+// Newest first: after a fast scroll the tiles now on screen go before the ones
+// still waiting from further back.
+const limit = createLimiter(CONCURRENCY, { newestFirst: true });
 
 /// Runs `job` when a slot is free. A job whose `signal` has fired by then is
 /// dropped, so tiles scrolled past quickly never render.
@@ -84,20 +89,59 @@ function queued<T>(job: () => Promise<T>, signal: AbortSignal): Promise<T> {
   return limit(() => (signal.aborted ? Promise.reject(new Error('aborted')) : job()));
 }
 
-/// A thumbnail of the chapter's first page as a Blob, or `null` if it could not
-/// be made. The caller owns any object URL it creates from it.
+/// Object URLs by key, least recently used first. The URLs belong to this
+/// cache: an evicted one is revoked, which an <img> that already loaded it
+/// does not notice.
+const memory = new Map<string, string>();
+
+function remember(key: string, blob: Blob): string {
+  const url = URL.createObjectURL(blob);
+  memory.set(key, url);
+  for (const [old, oldUrl] of memory) {
+    if (memory.size <= MEMORY_CAP) break;
+    memory.delete(old);
+    URL.revokeObjectURL(oldUrl);
+  }
+  return url;
+}
+
+function recall(key: string): string | null {
+  const url = memory.get(key);
+  if (!url) return null;
+  memory.delete(key);
+  memory.set(key, url);
+  return url;
+}
+
+const thumbKey = (provider: SourceProvider, chapter: string) =>
+  `${provider.kind}\u0000${provider.mangaName}\u0000${chapter}`;
+
+/// The chapter's thumbnail if it is already in memory.
+export function knownThumbnail(provider: SourceProvider, chapter: string): string | null {
+  return recall(thumbKey(provider, chapter));
+}
+
+/// An object URL of a thumbnail of the chapter's first page, or `null` if it
+/// could not be made. The URL stays owned by this module; don't revoke it.
 export async function chapterThumbnail(
   provider: SourceProvider,
   chapter: string,
   signal: AbortSignal
-): Promise<Blob | null> {
-  const key = `${provider.kind}\u0000${provider.mangaName}\u0000${chapter}`;
+): Promise<string | null> {
+  const key = thumbKey(provider, chapter);
   try {
+    const known = recall(key);
+    if (known) return known;
     const cached = await readCached(key);
-    if (cached) return cached;
-    const thumb = await queued(async () => render(await firstPage(provider, chapter)), signal);
-    await writeCached(key, thumb);
-    return thumb;
+    if (cached) return recall(key) ?? remember(key, cached);
+    return await queued(async () => {
+      // A tile that left and came back while its first request was running.
+      const known = recall(key);
+      if (known) return known;
+      const thumb = await render(await firstPage(provider, chapter));
+      await writeCached(key, thumb);
+      return recall(key) ?? remember(key, thumb);
+    }, signal);
   } catch {
     return null;
   }

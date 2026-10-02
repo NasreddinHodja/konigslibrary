@@ -3,7 +3,7 @@
   import { MediaQuery } from 'svelte/reactivity';
   import { fade } from 'svelte/transition';
   import { ANIM_DURATION, ANIM_EASE } from '$lib/utils/constants';
-  import { BookOpen, Download } from 'lucide-svelte';
+  import { ArrowDown01, ArrowDown10, BookOpen, Download } from 'lucide-svelte';
   import ListPanel from '$lib/ui/ListPanel.svelte';
   import { TILE, TILE_DESKTOP_QUERY } from '$lib/ui/tile-grid';
   import Skeleton from '$lib/ui/Skeleton.svelte';
@@ -91,15 +91,25 @@
     el.style.transition = '';
   }
 
-  const filteredChapters = $derived(
-    search.trim()
+  const LS_CHAPTER_SORT = 'kl:chapterSort';
+  // Newest first or oldest first, the same for every manga, kept across
+  // launches.
+  let descending = $state(localStorage.getItem(LS_CHAPTER_SORT) === 'desc');
+  function toggleSort() {
+    descending = !descending;
+    localStorage.setItem(LS_CHAPTER_SORT, descending ? 'desc' : 'asc');
+  }
+
+  const filteredChapters = $derived.by(() => {
+    const matching = search.trim()
       ? chapters.filter((c) =>
           [c.name, chapterNumber(c.name) ?? ''].some((s) =>
             s.toLowerCase().includes(search.trim().toLowerCase())
           )
         )
-      : chapters
-  );
+      : chapters;
+    return descending ? [...matching].reverse() : matching;
+  });
 
   const chapterIndex = $derived(new Map(chapters.map((c, i) => [c.name, i])));
 
@@ -301,10 +311,15 @@
       No chapters match "{search}"
     </p>
   {:else}
+    <!-- Android scrolls ahead of the main thread, so rows added from a
+         scroll handler can arrive late on a fling: tiles are kept five
+         screens out, and the frames under them show past that. -->
     <VirtualGrid
       items={filteredChapters}
       minItemWidth={isDesktop ? TILE.desktop.min : TILE.phone.min}
       gap={isDesktop ? TILE.desktop.gap : TILE.phone.gap}
+      overscan={5}
+      frameClass="bg-border/12"
       key={(c) => c.name}
     >
       {#snippet item(chapter)}
@@ -378,6 +393,16 @@
        rest of PageContainer's md:px-8, so the edges line up. -->
   <div class="mx-auto mt-6 flex w-full max-w-4xl flex-1 flex-col md:px-4">
     <ListPanel label="CHAPTERS ({chapters.length})" bind:search placeholder="Search chapters…">
+      {#snippet actions()}
+        <button
+          class="hit relative flex size-8 cursor-pointer items-center justify-center opacity-40 hover:bg-fg/10 hover:opacity-90 pointer-coarse:size-10"
+          onclick={toggleSort}
+          aria-label={descending ? 'Sort oldest first' : 'Sort newest first'}
+          title={descending ? 'Newest first' : 'Oldest first'}
+        >
+          {#if descending}<ArrowDown10 size={18} />{:else}<ArrowDown01 size={18} />{/if}
+        </button>
+      {/snippet}
       {@render chapterGrid()}
     </ListPanel>
   </div>

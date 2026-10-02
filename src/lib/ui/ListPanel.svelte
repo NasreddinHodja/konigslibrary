@@ -22,6 +22,7 @@
     placeholder,
     fill = false,
     pageClass = '',
+    actions,
     children
   }: {
     /// `badge` is shown after the label, inside the tab.
@@ -35,6 +36,8 @@
     fill?: boolean;
     /// Added to each page's content in `fill` mode, for room under page chrome.
     pageClass?: string;
+    /// Buttons at the end of the label's row.
+    actions?: Snippet;
     /// The list for one tab; given null when there are no tabs.
     children: Snippet<[string | null]>;
   } = $props();
@@ -129,6 +132,7 @@
           <span class="flex items-center gap-2">
             <span class="text-xs font-bold tracking-widest opacity-50">{label}</span>
           </span>
+          {@render actions?.()}
         </div>
       {/if}
 
