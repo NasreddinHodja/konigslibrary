@@ -1,6 +1,7 @@
 <script lang="ts">
+  import { fadeOut } from '$lib/ui/transitions';
   import { fade } from 'svelte/transition';
-  import { ANIM_DURATION, ANIM_EXIT_DURATION, ANIM_EASE, ANIM_EASE_IN } from '$lib/utils/constants';
+  import { ANIM_DURATION, ANIM_EASE } from '$lib/utils/constants';
   import { getReaderContext } from '$lib/context';
 
   let { ondismiss }: { ondismiss: () => void } = $props();
@@ -22,7 +23,7 @@
   onclick={ondismiss}
   onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && ondismiss()}
   in:fade={{ duration: ANIM_DURATION, easing: ANIM_EASE }}
-  out:fade={{ duration: ANIM_EXIT_DURATION, easing: ANIM_EASE_IN }}
+  out:fadeOut
 >
   {#if !manga.scrollMode}
     <div class="flex flex-1">

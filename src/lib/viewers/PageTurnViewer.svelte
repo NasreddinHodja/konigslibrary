@@ -63,11 +63,13 @@
   });
 
   let containerEl: HTMLDivElement | undefined = $state();
-  const getW = () =>
-    containerEl?.offsetWidth ?? (typeof window !== 'undefined' ? window.innerWidth : 375);
+  const getW = () => containerEl?.offsetWidth ?? window.innerWidth;
 
   const canNext = () => !(showEndScreen && !reader.getNextChapter());
   const canPrev = () => !(!showEndScreen && manga.currentPage <= 0 && !reader.getPrevChapter());
+  // Left and right on screen: reversed for right-to-left reading.
+  const canTurnLeft = () => (manga.rtl ? canNext() : canPrev());
+  const canTurnRight = () => (manga.rtl ? canPrev() : canNext());
 
   const commitNext = () => {
     if (showEndScreen) {
@@ -250,6 +252,9 @@
     if (canPrev()) turn(-1);
   };
 
+  const turnLeft = () => (manga.rtl ? next() : prev());
+  const turnRight = () => (manga.rtl ? prev() : next());
+
   // Touch
   let tracking = false;
   let axisDecided = false;
@@ -307,8 +312,9 @@
     let loc = startLocation + dx;
     // Moving the strip left brings in the panel on the right, which is the
     // next page in LTR and the previous one in RTL.
-    const blockedLeft = manga.rtl ? !canPrev() : !canNext();
-    const blockedRight = manga.rtl ? !canNext() : !canPrev();
+    // Dragging left brings in the page on the right, and the other way round.
+    const blockedLeft = !canTurnRight();
+    const blockedRight = !canTurnLeft();
     if ((loc < 0 && blockedLeft) || (loc > 0 && blockedRight)) loc *= RUBBER;
     location = previous = offset = loc;
   };
@@ -321,13 +327,9 @@
     if (maxDrag < DRAG_THRESHOLD) {
       animateTo(0);
       const x = e.changedTouches[0].clientX;
-      if (x < W * TAP_ZONE) {
-        if (manga.rtl) next();
-        else prev();
-      } else if (x > W * (1 - TAP_ZONE)) {
-        if (manga.rtl) prev();
-        else next();
-      } else {
+      if (x < W * TAP_ZONE) turnLeft();
+      else if (x > W * (1 - TAP_ZONE)) turnRight();
+      else {
         ontap?.();
       }
       return;
@@ -405,16 +407,26 @@
   };
 
   const handleClickLeft = () => {
-    if (zoomHeld) return;
-    if (manga.rtl) next();
-    else prev();
+    if (!zoomHeld) turnLeft();
   };
 
   const handleClickRight = () => {
-    if (zoomHeld) return;
-    if (manga.rtl) prev();
-    else next();
+    if (!zoomHeld) turnRight();
   };
+
+  /// A click zone's handlers: a mouse click or Enter/Space runs `action`;
+  /// touches are left to the swipe handling.
+  const zoneEvents = (action: () => void) => ({
+    onpointerdown: (e: PointerEvent) => {
+      if (e.pointerType === 'mouse') e.preventDefault();
+    },
+    onpointerup: (e: PointerEvent) => {
+      if (e.pointerType === 'mouse') action();
+    },
+    onkeydown: (e: KeyboardEvent) => {
+      if (e.key === 'Enter' || e.key === ' ') action();
+    }
+  });
 
   const handleClickCenter = () => {
     if (zoomHeld) return;
@@ -492,18 +504,9 @@
       class:cursor-zoom-in={zoomHeld}
       class:cursor-w-resize={!zoomHeld}
       aria-label="Previous page"
-      onpointerdown={(e) => {
-        if (e.pointerType === 'mouse') e.preventDefault();
-      }}
-      onpointerup={(e) => {
-        if (e.pointerType !== 'mouse') return;
-        handleClickLeft();
-      }}
-      onkeydown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') handleClickLeft();
-      }}
+      {...zoneEvents(handleClickLeft)}
     >
-      {#if !zoomHeld && (manga.rtl ? canNext() : canPrev())}
+      {#if !zoomHeld && canTurnLeft()}
         {@render arrow(ChevronLeft)}
       {/if}
     </div>
@@ -516,16 +519,7 @@
       style:right="{TAP_ZONE * 100}%"
       class:cursor-zoom-in={zoomHeld}
       aria-label="Toggle menu"
-      onpointerdown={(e) => {
-        if (e.pointerType === 'mouse') e.preventDefault();
-      }}
-      onpointerup={(e) => {
-        if (e.pointerType !== 'mouse') return;
-        handleClickCenter();
-      }}
-      onkeydown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') handleClickCenter();
-      }}
+      {...zoneEvents(handleClickCenter)}
     ></div>
 
     <div
@@ -536,18 +530,9 @@
       class:cursor-zoom-in={zoomHeld}
       class:cursor-e-resize={!zoomHeld}
       aria-label="Next page"
-      onpointerdown={(e) => {
-        if (e.pointerType === 'mouse') e.preventDefault();
-      }}
-      onpointerup={(e) => {
-        if (e.pointerType !== 'mouse') return;
-        handleClickRight();
-      }}
-      onkeydown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') handleClickRight();
-      }}
+      {...zoneEvents(handleClickRight)}
     >
-      {#if !zoomHeld && (manga.rtl ? canPrev() : canNext())}
+      {#if !zoomHeld && canTurnRight()}
         {@render arrow(ChevronRight)}
       {/if}
     </div>

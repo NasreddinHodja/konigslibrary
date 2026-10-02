@@ -1,4 +1,4 @@
-import { invoke } from '@tauri-apps/api/core';
+import { invoke, Channel } from '@tauri-apps/api/core';
 import type { Page } from '$lib/utils/types';
 import { isAndroid } from '$lib/utils/platform';
 
@@ -51,6 +51,30 @@ export async function listDeviceManga(
   const mangaDir = getMangaDir();
   if (mangaDir) await invoke('set_manga_dir', { dir: mangaDir });
   return invoke('list_device_manga', { query, after });
+}
+
+/// A manga downloaded from the server, by the slug it was downloaded under.
+export type OfflineManga = { slug: string; name: string; path: string };
+
+/// Progress of a copy or delete, in files.
+export type FileProgress = { current: number; total: number };
+
+export function listOfflineManga(): Promise<OfflineManga[]> {
+  return invoke('list_offline_manga');
+}
+
+export function deleteOfflineManga(
+  slug: string,
+  channel = new Channel<FileProgress>()
+): Promise<void> {
+  return invoke('delete_offline_manga', { slug, channel });
+}
+
+export function deleteImportedManga(
+  name: string,
+  channel = new Channel<FileProgress>()
+): Promise<void> {
+  return invoke('delete_imported_manga', { name, channel });
 }
 
 /// Every chapter archive in a manga folder, listed in one call.

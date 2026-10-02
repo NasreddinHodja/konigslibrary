@@ -6,6 +6,31 @@ export function normalizeServerUrl(url: string): string {
   return /^[a-z][a-z0-9+.-]*:\/\//i.test(trimmed) ? trimmed : `http://${trimmed}`;
 }
 
+/// The `konigslibrary://connect` link another device opens (or scans) to
+/// connect to the server at `url`; empty if `url` doesn't parse.
+export function connectLink(url: string): string {
+  try {
+    const { hostname, port } = new URL(url);
+    return `konigslibrary://connect?host=${hostname}&port=${port}`;
+  } catch {
+    return '';
+  }
+}
+
+/// The server URL a `connectLink` points at, or `null` if `raw` isn't one.
+export function parseConnectLink(raw: string): string | null {
+  try {
+    const parsed = new URL(raw);
+    if (parsed.protocol !== 'konigslibrary:' || parsed.hostname !== 'connect') return null;
+    const host = parsed.searchParams.get('host');
+    const port = parsed.searchParams.get('port');
+    if (!host || !port) return null;
+    return `http://${host}:${port}`;
+  } catch {
+    return null;
+  }
+}
+
 export function isProbeable(url: string): boolean {
   return URL.canParse(url);
 }

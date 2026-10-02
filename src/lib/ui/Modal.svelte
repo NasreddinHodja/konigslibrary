@@ -1,7 +1,8 @@
 <script lang="ts">
+  import { fadeOut } from '$lib/ui/transitions';
   import type { Snippet } from 'svelte';
-  import { fly, fade } from 'svelte/transition';
-  import { ANIM_DURATION, ANIM_EXIT_DURATION, ANIM_EASE, ANIM_EASE_IN } from '$lib/utils/constants';
+  import { fly } from 'svelte/transition';
+  import { ANIM_DURATION, ANIM_EASE } from '$lib/utils/constants';
   import Backdrop from './Backdrop.svelte';
   import { focusTrap } from './focus-trap';
 
@@ -32,7 +33,7 @@
   <div
     class="pointer-events-auto w-full border-2 {panelClass}"
     in:fly={{ y: 10, duration: ANIM_DURATION, easing: ANIM_EASE }}
-    out:fade={{ duration: ANIM_EXIT_DURATION, easing: ANIM_EASE_IN }}
+    out:fadeOut
   >
     {@render children()}
   </div>

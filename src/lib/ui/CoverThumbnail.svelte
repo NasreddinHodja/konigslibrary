@@ -11,7 +11,6 @@
     loading = false,
     objectPosition = 'center',
     onclick,
-    onImgError,
     overlay,
     placeholder
   }: {
@@ -22,10 +21,15 @@
     loading?: boolean;
     objectPosition?: 'center' | 'top';
     onclick: () => void;
-    onImgError?: () => void;
     overlay?: Snippet;
     placeholder?: Snippet;
   } = $props();
+
+  // A broken image falls back like a missing one; a new `src` gets a new try.
+  let failed = $derived.by(() => {
+    void src;
+    return false;
+  });
 </script>
 
 <div
@@ -39,7 +43,7 @@
     aria-label={alt}
     aria-current={active ? 'true' : undefined}
   >
-    {#if src}
+    {#if src && !failed}
       <img
         {src}
         alt=""
@@ -47,7 +51,7 @@
           ? 'object-top'
           : ''}"
         loading="lazy"
-        onerror={onImgError}
+        onerror={() => (failed = true)}
       />
     {:else if loading}
       <Skeleton class="absolute inset-0" />

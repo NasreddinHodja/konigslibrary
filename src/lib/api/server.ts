@@ -24,3 +24,19 @@ export async function fetchServerRawMeta(slug: string): Promise<RawMangaMeta | n
     return null;
   }
 }
+
+/// The local server's settings (only a server on this machine has them).
+export async function fetchServerSettings(): Promise<{ mangaDir?: string }> {
+  const res = await fetch(apiUrl('/api/settings'));
+  if (!res.ok) throw new Error(`Failed to load settings (${res.status})`);
+  return res.json();
+}
+
+export async function saveServerSettings(mangaDir: string): Promise<void> {
+  const res = await fetch(apiUrl('/api/settings'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ mangaDir })
+  });
+  if (!res.ok) throw new Error(`Failed to save settings (${res.status})`);
+}

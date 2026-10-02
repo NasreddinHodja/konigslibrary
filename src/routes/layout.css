@@ -25,8 +25,6 @@
 
 @theme {
   --ease-anim: cubic-bezier(0, 0, 0.2, 1);
-  --ease-in-anim: cubic-bezier(0.4, 0, 1, 1);
-  --ease-snappy: cubic-bezier(0.4, 0, 0.2, 1);
   --duration-anim: 120ms;
   --color-bg: oklch(0% 0 0);
   --color-fg: oklch(100% 0 0);
@@ -39,11 +37,9 @@
 }
 
 :root {
-  --sidebar-peek: 3.25rem;
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-right: env(safe-area-inset-right, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
-  --safe-left: env(safe-area-inset-left, 0px);
 }
 
 body {

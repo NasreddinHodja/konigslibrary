@@ -1,10 +1,9 @@
 <script lang="ts">
   import { convertFileSrc } from '@tauri-apps/api/core';
   import { getReaderContext } from '$lib/context';
-  import { NativeFilesystemProvider } from '$lib/sources';
+  import { openNativeManga } from '$lib/sources';
   import { openUpload, pickedFolder } from '$lib/sources/upload';
   import { importFiles, importFolder, nameForFiles } from '$lib/sources/import';
-  import { listNativeChapters } from '$lib/sources/native-library';
   import { showError } from '$lib/ui/toast.svelte';
   import { ZIP_EXT } from '$lib/utils/constants';
   import { isAndroid, isNative } from '$lib/utils/platform';
@@ -13,10 +12,9 @@
 
   let {
     isDragOver = false,
-    compact = false,
     iconOnly = false,
     tab = false
-  }: { isDragOver?: boolean; compact?: boolean; iconOnly?: boolean; tab?: boolean } = $props();
+  }: { isDragOver?: boolean; iconOnly?: boolean; tab?: boolean } = $props();
 
   const reader = getReaderContext();
   // The dialog plugin has no folder picker on mobile, so Android picks a
@@ -27,12 +25,6 @@
   const label = pickFiles ? 'ADD CHAPTERS' : isNative() ? 'ADD FOLDER' : 'OPEN FOLDER';
 
   let folderInput = $state<HTMLInputElement | null>(null);
-
-  async function openImported(path: string) {
-    const chapters = await listNativeChapters(path);
-    const name = path.split(/[\\/]/).pop() ?? path;
-    await reader.setSource(new NativeFilesystemProvider(chapters, name, path));
-  }
 
   /// Picked files arrive as content URIs on Android, readable through the
   /// asset protocol only until the device restarts — hence the import. Some
@@ -75,7 +67,7 @@
     // A failed import has already said so in its toast.
     if (!imported) return;
     try {
-      await openImported(imported);
+      await openNativeManga(reader, imported);
     } catch (err) {
       showError(`Failed to open: ${describeOpenFileError(err)}`);
     }
@@ -122,45 +114,7 @@
       ? 'border-fg bg-fg/10'
       : 'border-fg/30 bg-bg hover:border-fg hover:bg-fg/10'}"
   >
-    <svg
-      width="14"
-      height="14"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      stroke-width="2"
-      stroke-linecap="square"
-      stroke-linejoin="miter"
-    >
-      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-      <polyline points="17 8 12 3 7 8" />
-      <line x1="12" y1="3" x2="12" y2="15" />
-    </svg>
-  </button>
-{:else if compact}
-  <button
-    type="button"
-    onclick={handleClick}
-    class="hit relative flex cursor-pointer items-center gap-1.5 text-xs tracking-widest transition-opacity {isDragOver
-      ? 'opacity-90'
-      : 'opacity-40 hover:opacity-70'}"
-  >
-    <svg
-      width="12"
-      height="12"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      stroke-width="1.5"
-      stroke-linecap="square"
-      stroke-linejoin="miter"
-      class="shrink-0"
-    >
-      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-      <polyline points="17 8 12 3 7 8" />
-      <line x1="12" y1="3" x2="12" y2="15" />
-    </svg>
-    {label}
+    <Upload size={14} stroke-linecap="square" stroke-linejoin="miter" />
   </button>
 {:else}
   <button
@@ -170,23 +124,15 @@
       {isDragOver ? 'border-fg bg-fg/5' : 'border-fg/25 hover:border-fg/70 hover:bg-fg/[0.03]'}"
   >
     <div class="flex items-center gap-4">
-      <svg
-        width="18"
-        height="18"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="1.5"
+      <Upload
+        size={18}
+        strokeWidth={1.5}
         stroke-linecap="square"
         stroke-linejoin="miter"
         class="shrink-0 transition-opacity {isDragOver
           ? 'opacity-80'
           : 'opacity-40 group-hover:opacity-70'}"
-      >
-        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-        <polyline points="17 8 12 3 7 8" />
-        <line x1="12" y1="3" x2="12" y2="15" />
-      </svg>
+      />
       <span class="text-sm font-bold tracking-widest">{label}</span>
     </div>
     <span class="text-xs tracking-widest opacity-40"

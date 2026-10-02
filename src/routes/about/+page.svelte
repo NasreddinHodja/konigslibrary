@@ -1,13 +1,9 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { ArrowLeft } from 'lucide-svelte';
-  import { fetchDownloadLinks, RELEASES_URL, type DownloadLinks } from '$lib/utils/update';
+  import BackLink from '$lib/ui/BackLink.svelte';
+  import { fetchDownloadLinks, DEFAULT_DOWNLOAD_LINKS } from '$lib/utils/update';
 
-  let downloads = $state<DownloadLinks>({
-    windows: RELEASES_URL,
-    linux: RELEASES_URL,
-    android: RELEASES_URL
-  });
+  let downloads = $state(DEFAULT_DOWNLOAD_LINKS);
 
   onMount(async () => {
     downloads = await fetchDownloadLinks();
@@ -37,13 +33,7 @@
 </script>
 
 <div class="mx-auto max-w-2xl space-y-10 p-8">
-  <a
-    href="/"
-    class="hit relative inline-flex items-center gap-2 text-sm opacity-60 hover:opacity-100"
-  >
-    <ArrowLeft size={16} />
-    Back
-  </a>
+  <BackLink label="BACK" href="/" />
 
   <h1 class="text-2xl font-bold">How to use konigslibrary</h1>
 

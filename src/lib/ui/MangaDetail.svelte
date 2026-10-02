@@ -14,7 +14,7 @@
   import { isNative } from '$lib/utils/platform';
   import { chapterLabel, chapterNumber } from '$lib/utils/chapters';
   import { isLocalServer } from '$lib/utils/constants';
-  import { invoke } from '@tauri-apps/api/core';
+  import { listOfflineManga } from '$lib/sources/native-library';
   import { ServerLibraryProvider } from '$lib/sources';
   import { saveManga } from '$lib/sources/download.svelte';
   import ConfirmDialog from '$lib/ui/ConfirmDialog.svelte';
@@ -122,7 +122,7 @@
     if (!source) return;
     downloaded = true;
     const check = () =>
-      invoke<{ slug: string }[]>('list_offline_manga')
+      listOfflineManga()
         .then((list) => (downloaded = list.some((m) => m.slug === source.slug)))
         .catch(() => {});
     check();

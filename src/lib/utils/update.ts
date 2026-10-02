@@ -64,14 +64,29 @@ export function dismissUpdate(version: string) {
   localStorage.setItem(LS_DISMISSED, version);
 }
 
-export const RELEASES_URL = `https://github.com/${GITHUB_REPO}/releases/latest`;
+const RELEASES_URL = `https://github.com/${GITHUB_REPO}/releases/latest`;
 
 export type DownloadLinks = { windows: string; linux: string; android: string };
 
+/// The releases page for every platform, until the direct links are known.
+export const DEFAULT_DOWNLOAD_LINKS: DownloadLinks = {
+  windows: RELEASES_URL,
+  linux: RELEASES_URL,
+  android: RELEASES_URL
+};
+
+let downloadLinks: Promise<DownloadLinks> | null = null;
+
 // Direct links to the latest release's assets, matched by extension since the
-// file names carry the version. Falls back to the releases page.
-export async function fetchDownloadLinks(): Promise<DownloadLinks> {
-  const links = { windows: RELEASES_URL, linux: RELEASES_URL, android: RELEASES_URL };
+// file names carry the version. Falls back to the releases page. Fetched once
+// per session: the GitHub API is rate-limited for anonymous callers.
+export function fetchDownloadLinks(): Promise<DownloadLinks> {
+  downloadLinks ??= loadDownloadLinks();
+  return downloadLinks;
+}
+
+async function loadDownloadLinks(): Promise<DownloadLinks> {
+  const links = DEFAULT_DOWNLOAD_LINKS;
   try {
     const data = await fetchLatestRelease();
     if (!data) return links;

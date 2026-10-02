@@ -11,8 +11,4 @@ export class ViewerRegistry {
   resolve(state: { scrollMode: boolean }): ViewerDefinition | null {
     return this.viewers.find((v) => v.match(state)) ?? null;
   }
-
-  getAll(): ViewerDefinition[] {
-    return [...this.viewers];
-  }
 }

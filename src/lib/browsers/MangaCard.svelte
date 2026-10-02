@@ -73,13 +73,13 @@
       endPress();
   }
 
-  // Cards are keyed by manga, so the key never changes for a given card.
+  // Read once: a Server-tab card's key does change when its download
+  // completes (`server:` → `path:`), but it keeps the meta it already has.
   const hit = knownMeta(untrack(() => metaKey));
 
   let el: HTMLDivElement | undefined = $state();
   let cover: string | null = $state(hit?.coverUrl ?? null);
   let title: string | null = $state(hit?.title ?? null);
-  let coverFailed = $state(false);
   let loading = $state(hit === undefined);
   let requested = hit !== undefined;
 
@@ -88,10 +88,9 @@
   });
 
   const displayName = $derived(title || name);
-  const src = $derived(coverFailed ? null : cover);
 
   $effect(() => {
-    if (!el) return;
+    if (!el || requested) return;
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (!entry.isIntersecting || requested) return;
@@ -131,13 +130,12 @@
   oncontextmenu={(e) => onlongpress && e.preventDefault()}
 >
   <CoverThumbnail
-    {src}
+    src={cover}
     caption={displayName}
     alt="Open {displayName}"
     {loading}
     active={selection === 'selected'}
     onclick={onopen}
-    onImgError={() => (coverFailed = true)}
   >
     {#snippet overlay()}
       {#if progress}

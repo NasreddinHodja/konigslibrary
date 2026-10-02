@@ -1,13 +1,10 @@
 import { invoke, Channel } from '@tauri-apps/api/core';
-import { addToast, updateToast } from '$lib/ui/toast.svelte';
+import { withProgressToast } from '$lib/ui/toast.svelte';
 import { mangaMetaWorker } from '$lib/zip/worker-client';
 import type { EventBus } from '$lib/events';
-import { errorMessage } from '$lib/utils/errors';
 import { ZIP_EXT } from '$lib/utils/constants';
 
 const COVER = /^cover\.(jpe?g|png|webp|gif|avif|bmp)$/i;
-
-let nextId = 0;
 
 /// A folder name for a manga: separators and NULs can't be part of one, and a
 /// name of only dots would point somewhere else.
@@ -33,54 +30,29 @@ export async function importFiles(name: string, picked: File[], events: EventBus
   const files = picked.filter(
     (f) => !f.name.startsWith('.') && (ZIP_EXT.test(f.name) || COVER.test(f.name))
   );
-  const id = `import-${nextId++}`;
-  addToast({ id, label: manga, current: 0, total: files.length, phase: 'fetching' });
-
-  try {
+  const path = await withProgressToast(manga, 'fetching', async (progress) => {
+    const total = files.length;
+    progress({ current: 0, total });
     if (!files.some((f) => ZIP_EXT.test(f.name))) throw new Error('No chapter archives');
-    let path = '';
+    let dest = '';
     for (const [i, file] of files.entries()) {
-      path = await invoke<string>('import_file', new Uint8Array(await file.arrayBuffer()), {
+      dest = await invoke<string>('import_file', new Uint8Array(await file.arrayBuffer()), {
         headers: { manga: encodeURIComponent(manga), file: encodeURIComponent(file.name) }
       });
-      updateToast(id, { current: i + 1 });
+      progress({ current: i + 1, total });
     }
-    updateToast(id, { phase: 'done' });
-    events.emit('import:complete', { path });
-    return path;
-  } catch (err) {
-    updateToast(id, {
-      phase: 'error',
-      errorMessage: errorMessage(err)
-    });
-    throw err;
-  }
+    return dest;
+  });
+  events.emit('import:complete', { path });
+  return path;
 }
 
 /// Copies a manga folder picked on desktop into the library. Returns the
 /// manga's new folder.
 export async function importFolder(path: string, events: EventBus): Promise<string> {
-  const id = `import-${nextId++}`;
-  addToast({
-    id,
-    label: path.split(/[\\/]/).pop() ?? path,
-    current: 0,
-    total: 0,
-    phase: 'fetching'
-  });
-
-  try {
-    const channel = new Channel<{ current: number; total: number }>();
-    channel.onmessage = ({ current, total }) => updateToast(id, { current, total });
-    const dest = await invoke<string>('import_manga_folder', { path, channel });
-    updateToast(id, { phase: 'done' });
-    events.emit('import:complete', { path: dest });
-    return dest;
-  } catch (err) {
-    updateToast(id, {
-      phase: 'error',
-      errorMessage: errorMessage(err)
-    });
-    throw err;
-  }
+  const dest = await withProgressToast(path.split(/[\\/]/).pop() ?? path, 'fetching', (progress) =>
+    invoke<string>('import_manga_folder', { path, channel: new Channel(progress) })
+  );
+  events.emit('import:complete', { path: dest });
+  return dest;
 }

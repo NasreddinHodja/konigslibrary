@@ -6,21 +6,14 @@
   import { errorMessage } from '$lib/utils/errors';
   import { getMangaDir } from '$lib/sources/native-library';
   import { startLanServer, stopLanServer, getLanServerStatus } from '$lib/sources/lan-server';
+  import { connectLink } from '$lib/sources/server-connect';
 
   let status = $state<'idle' | 'starting' | 'running' | 'stopping' | 'error'>('idle');
   let url = $state<string | null>(null);
   let error: string | null = $state(null);
   let copied = $state(false);
 
-  const deepLink = $derived.by(() => {
-    if (!url) return '';
-    try {
-      const parsed = new URL(url);
-      return `konigslibrary://connect?host=${parsed.hostname}&port=${parsed.port}`;
-    } catch {
-      return '';
-    }
-  });
+  const deepLink = $derived(url ? connectLink(url) : '');
 
   onMount(() => {
     getLanServerStatus()

@@ -1,10 +1,8 @@
 <script lang="ts">
-  import { fade } from 'svelte/transition';
-  import { ANIM_DURATION, ANIM_EXIT_DURATION, ANIM_EASE, ANIM_EASE_IN } from '$lib/utils/constants';
+  import { fadeOut, fadeInAfter } from '$lib/ui/transitions';
   import { droppedUpload, openUpload } from '$lib/sources/upload';
   import { importFiles } from '$lib/sources/import';
-  import { listNativeChapters } from '$lib/sources/native-library';
-  import { NativeFilesystemProvider } from '$lib/sources';
+  import { openNativeManga } from '$lib/sources';
   import { resolveKey } from '$lib/keyboard/keybindings.svelte';
   import type { ViewerCommands } from '$lib/commands';
   import { getReaderContext } from '$lib/context';
@@ -23,7 +21,7 @@
   import UpdateBanner from '$lib/ui/UpdateBanner.svelte';
   import { showError } from '$lib/ui/toast.svelte';
   import { describeOpenFileError } from '$lib/utils/errors';
-  import { fetchDownloadLinks, RELEASES_URL, type DownloadLinks } from '$lib/utils/update';
+  import { fetchDownloadLinks, DEFAULT_DOWNLOAD_LINKS } from '$lib/utils/update';
   import { onMount } from 'svelte';
 
   const reader = getReaderContext();
@@ -36,11 +34,7 @@
   let viewerCommands: ViewerCommands | null = $state(null);
   let readerEl: HTMLDivElement | undefined = $state();
 
-  let downloads = $state<DownloadLinks>({
-    windows: RELEASES_URL,
-    linux: RELEASES_URL,
-    android: RELEASES_URL
-  });
+  let downloads = $state(DEFAULT_DOWNLOAD_LINKS);
 
   onMount(async () => {
     if (!native && !isLocalServer) downloads = await fetchDownloadLinks();
@@ -63,33 +57,35 @@
       // Native builds keep what is dropped, like what is picked.
       const path = await importFiles(upload.name, upload.files, reader.events).catch(() => null);
       if (!path) return;
-      const chapters = await listNativeChapters(path);
-      await reader.setSource(new NativeFilesystemProvider(chapters, upload.name, path));
+      await openNativeManga(reader, path, upload.name);
     } catch (err) {
       showError(`Failed to open file: ${describeOpenFileError(err)}`);
     }
   };
 
+  /// Closes the topmost thing open, for browser and Android back alike;
+  /// false when there was nothing to close.
+  function back(): boolean {
+    if (pz.overlayActive) pz.deactivateOverlay();
+    else if (helpOpen) helpOpen = false;
+    else if (manga.selectedChapter !== null) manga.selectedChapter = null;
+    else if (chapters.length > 0) reader.clearManga();
+    else return false;
+    return true;
+  }
+
+  // A boolean, so opening another manga while one is open doesn't push a
+  // second history entry.
+  const hasManga = $derived(chapters.length > 0);
+
   $effect(() => {
-    if (chapters.length === 0) return;
+    if (!hasManga) return;
 
     pushState('', { kl: 'reader' });
 
     const onPopState = () => {
-      if (pz.overlayActive) {
-        pz.deactivateOverlay();
-        pushState('', { kl: 'reader' });
-        return;
-      }
-      if (helpOpen) {
-        helpOpen = false;
-        pushState('', { kl: 'reader' });
-      } else if (manga.selectedChapter !== null) {
-        manga.selectedChapter = null;
-        pushState('', { kl: 'reader' });
-      } else {
-        reader.clearManga();
-      }
+      back();
+      if (chapters.length > 0) pushState('', { kl: 'reader' });
     };
 
     window.addEventListener('popstate', onPopState);
@@ -99,20 +95,7 @@
   $effect(() => {
     if (!native) return;
     const onNativeBack = (e: Event) => {
-      if (helpOpen) {
-        helpOpen = false;
-        e.preventDefault();
-        return;
-      }
-      if (manga.selectedChapter !== null) {
-        manga.selectedChapter = null;
-        e.preventDefault();
-        return;
-      }
-      if (chapters.length > 0) {
-        reader.clearManga();
-        e.preventDefault();
-      }
+      if (back()) e.preventDefault();
     };
     window.addEventListener('nativeback', onNativeBack);
     return () => window.removeEventListener('nativeback', onNativeBack);
@@ -193,8 +176,8 @@
       <div
         class="flex h-dvh w-full flex-col md:pl-14"
         style="padding-top: var(--safe-top)"
-        out:fade={{ duration: ANIM_EXIT_DURATION, easing: ANIM_EASE_IN }}
-        in:fade={{ duration: ANIM_DURATION, delay: ANIM_EXIT_DURATION, easing: ANIM_EASE }}
+        out:fadeOut
+        in:fadeInAfter
       >
         <!-- The library scrolls inside its own tab pages (ListPanel's fill
              layout), so this only gives it the height left under the status
@@ -205,21 +188,13 @@
         </div>
       </div>
     {:else}
-      <div
-        class="md:pl-14"
-        out:fade={{ duration: ANIM_EXIT_DURATION, easing: ANIM_EASE_IN }}
-        in:fade={{ duration: ANIM_DURATION, delay: ANIM_EXIT_DURATION, easing: ANIM_EASE }}
-      >
+      <div class="md:pl-14" out:fadeOut in:fadeInAfter>
         <MangaDetail />
       </div>
     {/if}
   </AppShell>
 {:else if chapters.length === 0}
-  <div
-    class="flex h-dvh w-full flex-col items-center"
-    out:fade={{ duration: ANIM_EXIT_DURATION, easing: ANIM_EASE_IN }}
-    in:fade={{ duration: ANIM_DURATION, delay: ANIM_EXIT_DURATION, easing: ANIM_EASE }}
-  >
+  <div class="flex h-dvh w-full flex-col items-center" out:fadeOut in:fadeInAfter>
     <a
       href="/about"
       class="hit fixed z-10 opacity-60 hover:opacity-100"
@@ -267,10 +242,7 @@
     </div>
   </div>
 {:else}
-  <div
-    out:fade={{ duration: ANIM_EXIT_DURATION, easing: ANIM_EASE_IN }}
-    in:fade={{ duration: ANIM_DURATION, delay: ANIM_EXIT_DURATION, easing: ANIM_EASE }}
-  >
+  <div out:fadeOut in:fadeInAfter>
     <MangaDetail />
   </div>
 {/if}

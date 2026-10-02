@@ -1,9 +1,10 @@
 import { invoke, Channel } from '@tauri-apps/api/core';
 import { SvelteMap, SvelteSet } from 'svelte/reactivity';
-import { addToast, updateToast, removeToast } from '$lib/ui/toast.svelte';
+import { addToast, updateToast, removeToast, finishBatchToast } from '$lib/ui/toast.svelte';
 import type { ServerChapter } from '$lib/utils/types';
 import type { EventBus } from '$lib/events';
 import { errorMessage } from '$lib/utils/errors';
+import { deleteOfflineManga } from './native-library';
 import { nativeBridge } from '$lib/utils/bridge';
 import { fetchServerChapters, fetchServerRawMeta, serverFileUrl } from '$lib/api/server';
 
@@ -40,7 +41,7 @@ export const downloadsDiscarding = new SvelteSet<string>();
 async function discard(slug: string, events?: EventBus) {
   downloadsDiscarding.add(slug);
   try {
-    await invoke('delete_offline_manga', { slug, channel: new Channel() });
+    await deleteOfflineManga(slug);
     events?.emit('download:deleted', { slug });
   } catch {
     // Left on disk; it can still be deleted from the Device tab.
@@ -266,12 +267,7 @@ export function saveMangas(
       removeToast(id);
       return;
     }
-    updateToast(
-      id,
-      failed
-        ? { phase: 'error', cancel: undefined, errorMessage: `${failed} of ${total} failed` }
-        : { phase: 'done', cancel: undefined }
-    );
+    finishBatchToast(id, failed, total, { cancel: undefined });
   };
 
   run().finally(() => {

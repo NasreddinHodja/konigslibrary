@@ -1,15 +1,18 @@
 <script lang="ts">
-  import { invoke, Channel } from '@tauri-apps/api/core';
+  import { Channel } from '@tauri-apps/api/core';
   import { untrack } from 'svelte';
   import type { TransitionConfig } from 'svelte/transition';
   import { SvelteMap, SvelteSet } from 'svelte/reactivity';
   import { getReaderContext } from '$lib/context';
-  import { NativeFilesystemProvider, ServerLibraryProvider } from '$lib/sources';
+  import { openNativeManga, ServerLibraryProvider } from '$lib/sources';
   import { fetchLibraryPage } from '$lib/sources/library';
   import {
     listDeviceManga,
-    listNativeChapters,
+    listOfflineManga,
+    deleteOfflineManga,
+    deleteImportedManga,
     getMangaDir,
+    type FileProgress,
     type Origin
   } from '$lib/sources/native-library';
   import { fetchNativeMeta, fetchServerMeta, serverCoverUrl, type CardMeta } from '$lib/api/meta';
@@ -28,8 +31,15 @@
   } from '$lib/sources/connection.svelte';
   import { isLocalServer, getServerUrl, ANIM_DURATION, ANIM_EASE } from '$lib/utils/constants';
   import { isNative } from '$lib/utils/platform';
-  import { showError, addToast, updateToast } from '$lib/ui/toast.svelte';
-  import { describeOpenFileError, errorMessage } from '$lib/utils/errors';
+  import {
+    showError,
+    addToast,
+    updateToast,
+    toastId,
+    withProgressToast,
+    finishBatchToast
+  } from '$lib/ui/toast.svelte';
+  import { describeOpenFileError } from '$lib/utils/errors';
   import { Download, Trash2, RefreshCw, LibraryBig, ListChecks, X } from 'lucide-svelte';
   import ListPanel from '$lib/ui/ListPanel.svelte';
   import Skeleton from '$lib/ui/Skeleton.svelte';
@@ -111,12 +121,10 @@
   let pendingDelete: DeleteTarget | null = $state(null);
   let pendingDownload: { slug: string; name: string } | null = $state(null);
 
-  const tabs = $derived.by(() => {
-    const list: Tab[] = [];
-    if (native) list.push('device');
-    if (serverEnabled) list.push('server');
-    return list;
-  });
+  const tabs: Tab[] = [
+    ...(native ? ['device' as const] : []),
+    ...(serverEnabled ? ['server' as const] : [])
+  ];
   const tab = $derived(selectedTab && tabs.includes(selectedTab) ? selectedTab : (tabs[0] ?? null));
   /// Skeletons until a tab's first page lands, unless it never will: the
   /// server is known to be down.
@@ -197,10 +205,12 @@
 
   function loadDownloads() {
     if (!native) return;
-    return invoke<{ slug: string; path: string }[]>('list_offline_manga').then((list) => {
-      downloads.clear();
-      for (const d of list) downloads.set(d.slug, d.path);
-    });
+    return listOfflineManga()
+      .then((list) => {
+        downloads.clear();
+        for (const d of list) downloads.set(d.slug, d.path);
+      })
+      .catch(() => {});
   }
 
   $effect(() => {
@@ -371,8 +381,7 @@
     try {
       const path = localPath(row);
       if (path) {
-        const chapters = await listNativeChapters(path);
-        await setSource(new NativeFilesystemProvider(chapters, row.name, path));
+        await openNativeManga({ setSource }, path, row.name);
       } else if (row.slug) {
         await setSource(new ServerLibraryProvider(row.slug, row.name));
       }
@@ -403,15 +412,12 @@
     }
   }
 
-  async function deleteOne(
-    target: DeleteTarget,
-    channel = new Channel<{ current: number; total: number }>()
-  ) {
+  async function deleteOne(target: DeleteTarget, channel = new Channel<FileProgress>()) {
     if ('slug' in target) {
-      await invoke('delete_offline_manga', { slug: target.slug, channel });
+      await deleteOfflineManga(target.slug, channel);
       events.emit('download:deleted', { slug: target.slug });
     } else {
-      await invoke('delete_imported_manga', { name: target.folder, channel });
+      await deleteImportedManga(target.folder, channel);
       reset('device');
     }
   }
@@ -422,20 +428,11 @@
     const { name } = target;
     pendingDelete = null;
 
-    const id = `del-${Date.now()}`;
-    addToast({ id, label: name, current: 0, total: 0, phase: 'deleting' });
-
-    try {
-      const channel = new Channel<{ current: number; total: number }>();
-      channel.onmessage = ({ current, total }) => updateToast(id, { current, total });
-      await deleteOne(target, channel);
-      updateToast(id, { phase: 'done' });
-    } catch (err) {
-      updateToast(id, {
-        phase: 'error',
-        errorMessage: errorMessage(err)
-      });
-    }
+    await withProgressToast(name, 'deleting', (progress) =>
+      deleteOne(target, new Channel<FileProgress>(progress))
+    ).catch(() => {
+      // Its toast says so.
+    });
   }
 
   // Selection mode: picked cards get downloaded (Server tab) or deleted (Device
@@ -506,7 +503,7 @@
 
   /// Deletes one after another under one toast, which counts manga.
   async function deleteMany(targets: DeleteTarget[]) {
-    const id = `del-${Date.now()}`;
+    const id = toastId('del');
     const total = targets.length;
     addToast({ id, label: `Deleting ${total} manga`, current: 0, total, phase: 'deleting' });
     let done = 0;
@@ -519,10 +516,7 @@
       }
       updateToast(id, { current: ++done });
     }
-    updateToast(
-      id,
-      failed ? { phase: 'error', errorMessage: `${failed} of ${total} failed` } : { phase: 'done' }
-    );
+    finishBatchToast(id, failed, total);
   }
 
   // Another tab's cards take other actions, so switching tabs ends selecting.
@@ -545,6 +539,9 @@
 
   /// A small title-row button, drawn as tall as the icon buttons on touch.
   const TOUCH_BUTTON = 'pointer-coarse:h-10 pointer-coarse:px-4 pointer-coarse:text-sm';
+  /// The bar's square icon buttons, without their opacity.
+  const ICON_BUTTON =
+    'hit relative flex size-7 cursor-pointer items-center justify-center hover:bg-fg/10 pointer-coarse:size-10';
 
   async function refresh() {
     if (refreshing) return;
@@ -638,16 +635,6 @@
   </span>
 {/snippet}
 
-{#snippet refreshButton()}
-  <button
-    class="hit relative flex size-7 cursor-pointer items-center justify-center opacity-40 hover:bg-fg/10 hover:opacity-90 pointer-coarse:size-10"
-    onclick={refresh}
-    aria-label="Refresh"
-  >
-    <RefreshCw size={13} class={refreshing ? 'animate-spin' : ''} />
-  </button>
-{/snippet}
-
 {#snippet body(t: Tab | null)}
   {#if t === 'device' && deviceError}
     <p class="mb-2 text-xs opacity-60">{deviceError}</p>
@@ -716,7 +703,7 @@
 <div class="box-content flex h-8 shrink-0 items-center gap-3 px-4 pt-8 pb-2 pointer-coarse:h-10">
   {#if selecting && tab}
     <button
-      class="hit relative flex size-7 cursor-pointer items-center justify-center opacity-60 hover:bg-fg/10 hover:opacity-100 pointer-coarse:size-10"
+      class="{ICON_BUTTON} opacity-60 hover:opacity-100"
       onclick={stopSelecting}
       aria-label="Cancel selection"
     >
@@ -745,7 +732,7 @@
     <span class="ml-auto flex items-center gap-1">
       {#if native && tab && (lists[tab].rows.length > 0 || (refreshing && hadRows[tab]))}
         <button
-          class="hit relative flex size-7 cursor-pointer items-center justify-center opacity-40 hover:bg-fg/10 hover:opacity-90 pointer-coarse:size-10"
+          class="{ICON_BUTTON} opacity-40 hover:opacity-90"
           onclick={() => startSelecting()}
           aria-label="Select"
           transition:grow
@@ -755,7 +742,15 @@
       {/if}
       <!-- Comes and goes with the tab (no refresh for an unset device folder). -->
       {#if tab && !(tab === 'device' && !mangaDir)}
-        <span class="flex" transition:grow>{@render refreshButton()}</span>
+        <span class="flex" transition:grow>
+          <button
+            class="{ICON_BUTTON} opacity-40 hover:opacity-90"
+            onclick={refresh}
+            aria-label="Refresh"
+          >
+            <RefreshCw size={13} class={refreshing ? 'animate-spin' : ''} />
+          </button>
+        </span>
       {/if}
     </span>
   {/if}

@@ -1,40 +1,24 @@
 <script lang="ts">
-  let {
-    active,
-    closing,
-    src,
-    imgLeft,
-    imgTop,
-    imgWidth,
-    imgHeight,
-    scale,
-    tx,
-    ty
-  }: {
-    active: boolean;
-    closing: boolean;
-    src: string;
-    imgLeft: number;
-    imgTop: number;
-    imgWidth: number;
-    imgHeight: number;
-    scale: number;
-    tx: number;
-    ty: number;
-  } = $props();
+  import type { PinchZoomController } from '$lib/utils/pinch-zoom-controller.svelte';
+
+  let { pz }: { pz: PinchZoomController } = $props();
 
   // Background fades in as you zoom — no mode-switch feel
-  const bgOpacity = $derived(Math.min(0.97, (scale - 1) * 1.5));
+  const bgOpacity = $derived(Math.min(0.97, (pz.scale - 1) * 1.5));
   // closing only installs a transform transition; opacity is purely driven by active
   // so the image stays fully visible during the snap-back animation
-  const imgOpacity = $derived(active ? 1 : 0);
+  const imgOpacity = $derived(pz.overlayActive ? 1 : 0);
   const imgTransition = $derived(
-    closing ? 'transform 0.12s cubic-bezier(0.3, 0, 0, 1)' : active ? 'none' : 'opacity 0.15s'
+    pz.overlayClosing
+      ? 'transform 0.12s cubic-bezier(0.3, 0, 0, 1)'
+      : pz.overlayActive
+        ? 'none'
+        : 'opacity 0.15s'
   );
   // Always emit an explicit transform while closing so CSS has a concrete from→to pair
   const transformStyle = $derived(
-    closing || scale > 1.001 || tx !== 0 || ty !== 0
-      ? `translate(${tx}px, ${ty}px) scale(${scale})`
+    pz.overlayClosing || pz.scale > 1.001 || pz.tx !== 0 || pz.ty !== 0
+      ? `translate(${pz.tx}px, ${pz.ty}px) scale(${pz.scale})`
       : undefined
   );
 </script>
@@ -49,14 +33,14 @@
   style:background="color-mix(in oklab, var(--color-reader-bg) {bgOpacity * 100}%, transparent)"
 >
   <img
-    {src}
+    src={pz.overlayImgSrc}
     alt=""
     draggable="false"
     class="absolute select-none"
-    style:left="{imgLeft}px"
-    style:top="{imgTop}px"
-    style:width="{imgWidth}px"
-    style:height="{imgHeight}px"
+    style:left="{pz.overlayLeft}px"
+    style:top="{pz.overlayTop}px"
+    style:width="{pz.overlayWidth}px"
+    style:height="{pz.overlayHeight}px"
     style:object-fit="contain"
     style:opacity={imgOpacity}
     style:transition={imgTransition}

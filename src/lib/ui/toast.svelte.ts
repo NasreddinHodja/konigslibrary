@@ -1,4 +1,5 @@
 import { SvelteMap } from 'svelte/reactivity';
+import { errorMessage } from '$lib/utils/errors';
 
 export type Toast = {
   id: string;
@@ -68,10 +69,47 @@ export function removeToast(id: string): void {
   refold();
 }
 
-let flashSeq = 0;
+let seq = 0;
+
+/// A toast id that no other toast has, e.g. `del-3`.
+export const toastId = (prefix: string): string => `${prefix}-${++seq}`;
+
+/// Runs `work` under a toast that counts what it reports through `progress`,
+/// then ends done, or as an error with the message (and rethrows).
+export async function withProgressToast<T>(
+  label: string,
+  phase: Toast['phase'],
+  work: (progress: (p: { current: number; total: number }) => void) => Promise<T>
+): Promise<T> {
+  const id = toastId('progress');
+  addToast({ id, label, current: 0, total: 0, phase });
+  try {
+    const result = await work((p) => updateToast(id, p));
+    updateToast(id, { phase: 'done' });
+    return result;
+  } catch (err) {
+    updateToast(id, { phase: 'error', errorMessage: errorMessage(err) });
+    throw err;
+  }
+}
+
+/// Ends a toast that counted a batch: done, or an error saying how many failed.
+export function finishBatchToast(
+  id: string,
+  failed: number,
+  total: number,
+  extra: Partial<Toast> = {}
+): void {
+  updateToast(
+    id,
+    failed
+      ? { ...extra, phase: 'error', errorMessage: `${failed} of ${total} failed` }
+      : { ...extra, phase: 'done' }
+  );
+}
 
 function flash(phase: 'done' | 'error', message: string): void {
-  const id = `flash-${++flashSeq}`;
+  const id = toastId('flash');
   addToast({ id, label: message, current: 0, total: 0, phase });
   dismissTimers.set(
     id,

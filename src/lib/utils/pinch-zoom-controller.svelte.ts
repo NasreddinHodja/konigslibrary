@@ -218,3 +218,5 @@ export function createPinchZoomController(
     deactivateOverlay
   };
 }
+
+export type PinchZoomController = ReturnType<typeof createPinchZoomController>;

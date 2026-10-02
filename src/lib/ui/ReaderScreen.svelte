@@ -1,8 +1,7 @@
 <script lang="ts">
-  import { fade } from 'svelte/transition';
-  import { ANIM_DURATION, ANIM_EXIT_DURATION, ANIM_EASE, ANIM_EASE_IN } from '$lib/utils/constants';
+  import { fadeOut, fadeInAfter } from '$lib/ui/transitions';
   import type { ViewerCommands } from '$lib/commands';
-  import type { createPinchZoomController } from '$lib/utils/pinch-zoom-controller.svelte';
+  import type { PinchZoomController } from '$lib/utils/pinch-zoom-controller.svelte';
   import { getReaderContext } from '$lib/context';
   import { useChapter } from '$lib/chapter-loader';
   import { isNative } from '$lib/utils/platform';
@@ -19,7 +18,7 @@
   }: {
     el?: HTMLDivElement;
     viewerCommands?: ViewerCommands | null;
-    pz: ReturnType<typeof createPinchZoomController>;
+    pz: PinchZoomController;
   } = $props();
 
   const reader = getReaderContext();
@@ -127,18 +126,14 @@
   bind:this={el}
   class="flex h-dvh bg-reader-bg select-none"
   role="presentation"
-  out:fade={{ duration: ANIM_EXIT_DURATION, easing: ANIM_EASE_IN }}
-  in:fade={{ duration: ANIM_DURATION, delay: ANIM_EXIT_DURATION, easing: ANIM_EASE }}
+  out:fadeOut
+  in:fadeInAfter
 >
   <!-- Switching mode crossfades the viewers: both sit in the one grid cell
        while the old fades out and the new fades in after it. -->
   <div class="grid min-w-0 flex-1 grid-cols-1 grid-rows-1">
     {#key activeViewer}
-      <div
-        class="col-start-1 row-start-1 flex min-h-0 min-w-0"
-        in:fade={{ duration: ANIM_DURATION, delay: ANIM_EXIT_DURATION, easing: ANIM_EASE }}
-        out:fade={{ duration: ANIM_EXIT_DURATION, easing: ANIM_EASE_IN }}
-      >
+      <div class="col-start-1 row-start-1 flex min-h-0 min-w-0" in:fadeInAfter out:fadeOut>
         {#if activeViewer}
           <activeViewer.component {chapter} bind:commands={viewerCommands} ontap={toggleHud} />
         {/if}
@@ -159,16 +154,5 @@
     <ReaderTutorial ondismiss={() => (tutorialVisible = false)} />
   {/if}
 
-  <PinchZoomOverlay
-    active={pz.overlayActive}
-    closing={pz.overlayClosing}
-    src={pz.overlayImgSrc}
-    imgLeft={pz.overlayLeft}
-    imgTop={pz.overlayTop}
-    imgWidth={pz.overlayWidth}
-    imgHeight={pz.overlayHeight}
-    scale={pz.scale}
-    tx={pz.tx}
-    ty={pz.ty}
-  />
+  <PinchZoomOverlay {pz} />
 </div>

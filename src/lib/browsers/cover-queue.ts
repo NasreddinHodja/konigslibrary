@@ -1,8 +1,7 @@
 import type { CardMeta } from '$lib/api/meta';
+import { createLimiter } from '$lib/utils/limit';
 
-const CONCURRENCY = 2;
-let active = 0;
-const queue: (() => void)[] = [];
+const limit = createLimiter(2);
 
 /// Card metadata already known this session, by card key. A card that mounts
 /// again — back from a manga, or switching tabs — starts from this instead of
@@ -20,32 +19,16 @@ export function forgetMeta() {
   known.clear();
 }
 
-function pump() {
-  while (active < CONCURRENCY && queue.length > 0) {
-    active++;
-    const job = queue.shift()!;
-    job();
-  }
-}
-
 export function queueMeta(
   key: string,
   load: () => Promise<CardMeta | null>
 ): Promise<CardMeta | null> {
-  return new Promise((resolve) => {
-    queue.push(async () => {
-      try {
-        const meta = await load();
-        known.set(key, meta);
-        resolve(meta);
-      } catch {
-        // Not remembered: the next mount should try again.
-        resolve(null);
-      } finally {
-        active--;
-        pump();
-      }
-    });
-    pump();
-  });
+  return limit(load).then(
+    (meta) => {
+      known.set(key, meta);
+      return meta;
+    },
+    // Not remembered: the next mount should try again.
+    () => null
+  );
 }

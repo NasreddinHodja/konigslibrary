@@ -64,6 +64,7 @@ export function createReader(): Reader {
     state.currentPage = 0;
     state.shouldScroll = false;
 
+    if (_provider !== provider) _provider?.dispose?.();
     _provider = provider;
     _meta = null;
     _metaState = 'loading';

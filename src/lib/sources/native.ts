@@ -1,6 +1,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import type { Chapter } from '$lib/utils/types';
-import type { NativeChapter } from '$lib/sources/native-library';
+import { listNativeChapters, type NativeChapter } from '$lib/sources/native-library';
+import type { Reader } from '$lib/context/types';
 import type { LazyPageProvider } from './types';
 import { fetchNativeMeta, type MangaMeta } from '$lib/api/meta';
 
@@ -37,4 +38,15 @@ export class NativeFilesystemProvider implements LazyPageProvider {
     });
     return URL.createObjectURL(new Blob([bytes]));
   }
+}
+
+/// Opens a manga folder on this device, named after the folder unless told
+/// otherwise.
+export async function openNativeManga(
+  reader: Pick<Reader, 'setSource'>,
+  path: string,
+  name = path.split(/[\\/]/).pop() ?? path
+) {
+  const chapters = await listNativeChapters(path);
+  await reader.setSource(new NativeFilesystemProvider(chapters, name, path));
 }

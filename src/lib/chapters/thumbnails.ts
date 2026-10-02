@@ -3,6 +3,7 @@
 // in IndexedDB so each chapter is only rendered once.
 import type { SourceProvider } from '$lib/sources';
 import { isLazyProvider } from '$lib/sources';
+import { createLimiter } from '$lib/utils/limit';
 
 const WIDTH = 240;
 const CONCURRENCY = 3;
@@ -75,30 +76,12 @@ async function render(page: Blob): Promise<Blob> {
   );
 }
 
-let active = 0;
-const queue: (() => void)[] = [];
-
-function pump() {
-  while (active < CONCURRENCY && queue.length > 0) {
-    active++;
-    queue.shift()!();
-  }
-}
+const limit = createLimiter(CONCURRENCY);
 
 /// Runs `job` when a slot is free. A job whose `signal` has fired by then is
 /// dropped, so tiles scrolled past quickly never render.
 function queued<T>(job: () => Promise<T>, signal: AbortSignal): Promise<T> {
-  return new Promise((resolve, reject) => {
-    queue.push(() =>
-      (signal.aborted ? Promise.reject(new Error('aborted')) : job())
-        .then(resolve, reject)
-        .finally(() => {
-          active--;
-          pump();
-        })
-    );
-    pump();
-  });
+  return limit(() => (signal.aborted ? Promise.reject(new Error('aborted')) : job()));
 }
 
 /// A thumbnail of the chapter's first page as a Blob, or `null` if it could not

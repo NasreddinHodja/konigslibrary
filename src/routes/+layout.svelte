@@ -8,7 +8,7 @@
   import { isNative } from '$lib/utils/platform';
   import { showSuccess, showError } from '$lib/ui/toast.svelte';
   import { errorMessage } from '$lib/utils/errors';
-  import { validateAndConnect } from '$lib/sources/server-connect';
+  import { parseConnectLink, validateAndConnect } from '$lib/sources/server-connect';
   import { goto, onNavigate } from '$app/navigation';
 
   let { children } = $props();
@@ -42,21 +42,8 @@
     });
   });
 
-  function parseConnectUrl(raw: string): string | null {
-    try {
-      const parsed = new URL(raw);
-      if (parsed.protocol !== 'konigslibrary:' || parsed.hostname !== 'connect') return null;
-      const host = parsed.searchParams.get('host');
-      const port = parsed.searchParams.get('port');
-      if (!host || !port) return null;
-      return `http://${host}:${port}`;
-    } catch {
-      return null;
-    }
-  }
-
   async function handleDeepLink(raw: string) {
-    const url = parseConnectUrl(raw);
+    const url = parseConnectLink(raw);
     if (!url) return;
     try {
       await validateAndConnect(url);

@@ -2,4 +2,4 @@ export type { SourceProvider, BulkPageProvider, LazyPageProvider, PageResult } f
 export { isLazyProvider } from './types';
 export { UploadProvider } from './upload';
 export { ServerLibraryProvider } from './library';
-export { NativeFilesystemProvider } from './native';
+export { NativeFilesystemProvider, openNativeManga } from './native';

@@ -3,8 +3,7 @@
   import type { ViewerProps } from './types';
   import { DEFAULT_PAGE_RATIO } from '$lib/utils/constants';
   import Loader from '$lib/ui/Loader.svelte';
-  import Button from '$lib/ui/Button.svelte';
-  import { ChevronRight } from 'lucide-svelte';
+  import EndOfChapter from '$lib/chapters/EndOfChapter.svelte';
 
   let { chapter, commands = $bindable(), ontap }: ViewerProps = $props();
 
@@ -14,14 +13,10 @@
   let containerEl: HTMLDivElement | undefined = $state();
   let containerHeight = $state(0);
   let containerWidth = $state(0);
-  let ratios: number[] = $state([]);
+  // Height/width per page: a guess per chapter until each image loads.
+  let ratios: number[] = $derived(Array(chapter.pageUrls.length).fill(DEFAULT_PAGE_RATIO));
 
   const GAP = 8;
-
-  $effect(() => {
-    const len = chapter.pageUrls.length;
-    ratios = Array(len).fill(DEFAULT_PAGE_RATIO);
-  });
 
   function pageHeight(i: number): number {
     return (ratios[i] ?? DEFAULT_PAGE_RATIO) * containerWidth * manga.zoom;
@@ -43,7 +38,10 @@
   function captureRatio(i: number, e: Event) {
     const img = e.currentTarget as HTMLImageElement;
     if (img.naturalWidth > 0 && img.naturalHeight > 0) {
-      ratios[i] = img.naturalHeight / img.naturalWidth;
+      // Reassigned, not mutated: a derived isn't deeply reactive.
+      const next = [...ratios];
+      next[i] = img.naturalHeight / img.naturalWidth;
+      ratios = next;
     }
   }
 
@@ -79,17 +77,16 @@
     }
   });
 
-  let prevZoom = $state(manga.zoom);
+  // Keeps the current page in view when the zoom changes.
+  let prevZoom = manga.zoom;
   $effect(() => {
     const z = manga.zoom;
-    if (z !== prevZoom && containerEl) {
-      prevZoom = z;
-      requestAnimationFrame(() => {
-        if (!containerEl) return;
-        containerEl.scrollTop = scrollOffsetFor(manga.currentPage);
-      });
-    }
+    if (z === prevZoom) return;
     prevZoom = z;
+    requestAnimationFrame(() => {
+      if (!containerEl) return;
+      containerEl.scrollTop = scrollOffsetFor(manga.currentPage);
+    });
   });
 
   const scrollNext = () => {
@@ -113,8 +110,6 @@
   };
 
   commands = { nextPage: scrollNext, prevPage: scrollPrev };
-
-  const nextChapter = $derived(reader.getNextChapter());
 
   let tapStartX = 0;
   let tapStartY = 0;
@@ -175,18 +170,6 @@
         {/if}
       </div>
     {/each}
-    <div class="grid h-chapter-end w-full place-items-center select-text">
-      <div class="flex flex-col items-center gap-4">
-        <p class="text-lg opacity-50">End of {manga.selectedChapter}</p>
-        {#if nextChapter}
-          <Button size="lg" variant="primary" onclick={() => reader.goToNextChapter()}>
-            {nextChapter}
-            <ChevronRight size={16} />
-          </Button>
-        {:else}
-          <span class="text-sm opacity-50">No next chapter</span>
-        {/if}
-      </div>
-    </div>
+    <EndOfChapter class="h-chapter-end select-text" />
   {/if}
 </div>

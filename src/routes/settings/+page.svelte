@@ -13,7 +13,9 @@
     formatKey,
     DEFAULT_BINDINGS
   } from '$lib/keyboard/keybindings.svelte';
-  import { apiUrl, isLocalServer, getServerUrl, reducedMotion } from '$lib/utils/constants';
+  import { onMount } from 'svelte';
+  import { isLocalServer, getServerUrl, reducedMotion } from '$lib/utils/constants';
+  import { fetchServerSettings, saveServerSettings } from '$lib/api/server';
   import { isAndroid, isNative } from '$lib/utils/platform';
   import { goto } from '$app/navigation';
   import { showSuccess } from '$lib/ui/toast.svelte';
@@ -44,15 +46,7 @@
   let theme = $state(getTheme());
 
   const activePresetId = $derived(
-    PRESETS.find(
-      (p) =>
-        p.bg === theme.bg &&
-        p.fg === theme.fg &&
-        p.surface === theme.surface &&
-        p.border === theme.border &&
-        p.muted === theme.muted &&
-        p.readerBg === theme.readerBg
-    )?.id ?? null
+    PRESETS.find((p) => TOKEN_LABELS.every(([key]) => p[key] === theme[key]))?.id ?? null
   );
 
   function applyPreset(preset: (typeof PRESETS)[number]) {
@@ -62,11 +56,6 @@
 
   function updateToken(key: keyof Theme, value: string) {
     theme = { ...theme, [key]: value };
-    setTheme(theme);
-  }
-
-  function resetTheme() {
-    theme = { ...PRESETS[0] };
     setTheme(theme);
   }
 
@@ -121,6 +110,14 @@
 
   const native = isNative();
   const android = isAndroid();
+
+  // The page's sections, for the jump links; some only exist on some builds.
+  const sections = [
+    { id: 'sources', label: 'Sources', show: isLocalServer },
+    { id: 'theme', label: 'Theme', show: true },
+    { id: 'shortcuts', label: 'Shortcuts', show: !isMobile },
+    { id: 'providers', label: 'Providers', show: native }
+  ].filter((s) => s.show);
   let deviceDir = $state(getMangaDir());
 
   async function browseDeviceDir() {
@@ -202,36 +199,22 @@
   let mangaDir = $state('');
   let saved = $state(false);
   let error: string | null = $state(null);
-  let loadingDir = $state(true);
+  let loadingDir = $state(isLocalServer);
   let browsingDir = $state(false);
 
-  $effect(() => {
-    if (!isLocalServer) {
-      loadingDir = false;
-      return;
-    }
-    fetch(apiUrl('/api/settings'))
-      .then((r) => r.json())
-      .then((data: { mangaDir?: string }) => {
-        mangaDir = data.mangaDir || '';
-        loadingDir = false;
-      })
-      .catch(() => {
-        error = 'Could not load settings';
-        loadingDir = false;
-      });
+  onMount(() => {
+    if (!isLocalServer) return;
+    fetchServerSettings()
+      .then((data) => (mangaDir = data.mangaDir || ''))
+      .catch(() => (error = 'Could not load settings'))
+      .finally(() => (loadingDir = false));
   });
 
   const saveDir = async () => {
     saved = false;
     error = null;
     try {
-      const res = await fetch(apiUrl('/api/settings'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mangaDir })
-      });
-      if (!res.ok) throw new Error();
+      await saveServerSettings(mangaDir);
       saved = true;
     } catch {
       error = 'Failed to save settings';
@@ -252,6 +235,12 @@
     document.getElementById(id)?.scrollIntoView({ behavior: reducedMotion ? 'auto' : 'smooth' });
   }
 </script>
+
+{#snippet sectionHeader(label: string)}
+  <div class="border-b border-border/15 py-3">
+    <span class="text-xs font-bold tracking-widest opacity-50">{label}</span>
+  </div>
+{/snippet}
 
 <svelte:window onkeydown={handleKeyCapture} />
 
@@ -274,47 +263,20 @@
   </div>
 
   <div class="flex items-center gap-2 overflow-x-auto">
-    {#if isLocalServer}
+    {#each sections as { id, label } (id)}
       <a
-        href="#settings-sources"
+        href="#settings-{id}"
         onclick={jumpTo}
         class="cursor-pointer border-2 border-border/20 px-3 py-1.5 text-xs font-bold tracking-wide whitespace-nowrap opacity-60 hover:border-border/50 hover:opacity-100 pointer-coarse:py-3.5"
       >
-        Sources
+        {label}
       </a>
-    {/if}
-    <a
-      href="#settings-theme"
-      onclick={jumpTo}
-      class="cursor-pointer border-2 border-border/20 px-3 py-1.5 text-xs font-bold tracking-wide whitespace-nowrap opacity-60 hover:border-border/50 hover:opacity-100 pointer-coarse:py-3.5"
-    >
-      Theme
-    </a>
-    {#if !isMobile}
-      <a
-        href="#settings-shortcuts"
-        onclick={jumpTo}
-        class="cursor-pointer border-2 border-border/20 px-3 py-1.5 text-xs font-bold tracking-wide whitespace-nowrap opacity-60 hover:border-border/50 hover:opacity-100 pointer-coarse:py-3.5"
-      >
-        Shortcuts
-      </a>
-    {/if}
-    {#if native}
-      <a
-        href="#settings-providers"
-        onclick={jumpTo}
-        class="cursor-pointer border-2 border-border/20 px-3 py-1.5 text-xs font-bold tracking-wide whitespace-nowrap opacity-60 hover:border-border/50 hover:opacity-100 pointer-coarse:py-3.5"
-      >
-        Providers
-      </a>
-    {/if}
+    {/each}
   </div>
 
   {#if isLocalServer}
     <section id="settings-sources" class="scroll-mt-[calc(1rem+var(--safe-top))]">
-      <div class="border-b border-border/15 py-3">
-        <span class="text-xs font-bold tracking-widest opacity-50">SOURCES</span>
-      </div>
+      {@render sectionHeader('SOURCES')}
 
       <div class="py-4">
         <h3 class="mb-3 text-sm font-bold opacity-60">Manga directory</h3>
@@ -351,9 +313,7 @@
   {/if}
 
   <section id="settings-theme" class="scroll-mt-[calc(1rem+var(--safe-top))]">
-    <div class="border-b border-border/15 py-3">
-      <span class="text-xs font-bold tracking-widest opacity-50">THEME</span>
-    </div>
+    {@render sectionHeader('THEME')}
 
     <div class="flex flex-col gap-5 py-4">
       <div>
@@ -395,7 +355,7 @@
       <div>
         <div class="mb-1 flex items-center justify-between gap-3">
           <h3 class="text-sm font-bold opacity-60">Customize</h3>
-          <Button size="sm" onclick={resetTheme}>Reset to default</Button>
+          <Button size="sm" onclick={() => applyPreset(PRESETS[0])}>Reset to default</Button>
         </div>
         <div class="divide-y divide-border/10">
           {#each TOKEN_LABELS as [key, label] (key)}
@@ -458,9 +418,7 @@
 
   {#if native}
     <section id="settings-providers" class="scroll-mt-[calc(1rem+var(--safe-top))]">
-      <div class="border-b border-border/15 py-3">
-        <span class="text-xs font-bold tracking-widest opacity-50">PROVIDERS</span>
-      </div>
+      {@render sectionHeader('PROVIDERS')}
 
       <div class="flex flex-col gap-5 py-4">
         <!-- Android can't read shared storage by path; manga come in through Upload. -->
