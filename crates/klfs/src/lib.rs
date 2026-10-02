@@ -71,7 +71,8 @@ pub struct ArchiveChapter {
   pub number: ChapterNumber,
 }
 
-/// An archive's pages and ComicInfo number; no pages if it can't be read.
+/// An archive's pages and ComicInfo number; no pages if it can't be read or
+/// holds more than [`klparse::zip::MAX_PAGES`].
 pub fn read_chapter(path: &Path) -> ArchiveChapter {
   let Ok(reader) = FileReader::open(path) else {
     return ArchiveChapter::default();
@@ -83,10 +84,10 @@ pub fn read_chapter(path: &Path) -> ArchiveChapter {
     .and_then(|e| klparse::zip::extract_entry(&reader, e).ok())
     .map(|xml| klparse::chapters::comic_info_number(&String::from_utf8_lossy(&xml)))
     .unwrap_or_default();
-  let pages = klparse::page_entries(entries)
-    .into_iter()
-    .map(|e| e.name)
-    .collect();
+  let Ok(pages) = klparse::page_entries(entries) else {
+    return ArchiveChapter::default();
+  };
+  let pages = pages.into_iter().map(|e| e.name).collect();
   ArchiveChapter { pages, number }
 }
 

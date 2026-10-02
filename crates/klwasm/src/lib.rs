@@ -116,6 +116,12 @@ pub fn tail_size() -> f64 {
   zip::TAIL_SIZE as f64
 }
 
+/// The most chapter archives a manga may hold.
+#[wasm_bindgen]
+pub fn max_chapters() -> f64 {
+  klparse::MAX_CHAPTERS as f64
+}
+
 /// Rejects a central directory over the size limit. Called before fetching it.
 #[wasm_bindgen]
 pub fn check_central_directory_size(cd_size: f64) -> Result<(), JsValue> {
@@ -127,7 +133,7 @@ pub fn check_central_directory_size(cd_size: f64) -> Result<(), JsValue> {
 /// JavaScript once.
 #[wasm_bindgen]
 pub fn page_entries(cd: &[u8]) -> Result<JsValue, JsValue> {
-  to_js(&klparse::page_entries(zip::parse_central_directory(cd)))
+  to_js(&klparse::page_entries(zip::parse_central_directory(cd)).map_err(zip_error)?)
 }
 
 #[derive(Serialize)]
@@ -144,7 +150,7 @@ pub fn chapter_entries(cd: &[u8]) -> Result<JsValue, JsValue> {
   let entries = zip::parse_central_directory(cd);
   let comic_info = comicinfo::comic_info_entry(&entries).cloned();
   to_js(&ChapterEntries {
-    pages: klparse::page_entries(entries),
+    pages: klparse::page_entries(entries).map_err(zip_error)?,
     comic_info,
   })
 }

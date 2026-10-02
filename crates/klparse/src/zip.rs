@@ -36,6 +36,10 @@ pub(crate) const MAX_CD_BYTES: u64 = 8 * 1024 * 1024;
 /// 64MiB per entry — enough for any manga page, blocks zip bombs.
 pub(crate) const MAX_UNCOMPRESSED_BYTES: u64 = 64 * 1024 * 1024;
 
+/// The most pages a chapter archive may hold. The scroll reader lays out every
+/// page of a chapter at once, and froze the desktop app at 100,000.
+pub const MAX_PAGES: usize = 10_000;
+
 pub(crate) const METHOD_STORE: u16 = 0;
 pub(crate) const METHOD_DEFLATE: u16 = 8;
 
@@ -62,6 +66,7 @@ pub enum ZipError {
     name: String,
     size: u64,
   },
+  TooManyPages(usize),
   Crc32Mismatch {
     name: String,
     expected: u32,
@@ -81,6 +86,7 @@ impl ZipError {
       Self::InvalidLocalHeader => "invalid-local-header",
       Self::UnsupportedCompressionMethod(_) => "unsupported-compression-method",
       Self::EntryTooLarge { .. } => "entry-too-large",
+      Self::TooManyPages(_) => "too-many-pages",
       Self::Crc32Mismatch { .. } => "crc32-mismatch",
       Self::Inflate(_) => "inflate",
       Self::Io(_) => "io",
@@ -103,6 +109,7 @@ impl fmt::Display for ZipError {
           "Entry \"{name}\" uncompressed size ({size}) exceeds limit"
         )
       }
+      Self::TooManyPages(n) => write!(f, "{n} pages; a chapter can have at most {MAX_PAGES}"),
       Self::Crc32Mismatch {
         name,
         expected,
@@ -491,14 +498,18 @@ pub fn extract_entry<R: ReadAt + ?Sized>(r: &R, entry: &ZipEntry) -> Result<Vec<
   )
 }
 
-/// The image entries of a chapter archive, in reading order.
-pub fn page_entries(entries: Vec<ZipEntry>) -> Vec<ZipEntry> {
+/// The image entries of a chapter archive, in reading order; an error past
+/// [`MAX_PAGES`].
+pub fn page_entries(entries: Vec<ZipEntry>) -> Result<Vec<ZipEntry>> {
   let mut pages: Vec<ZipEntry> = entries
     .into_iter()
     .filter(|e| crate::is_image_name(&e.name))
     .collect();
+  if pages.len() > MAX_PAGES {
+    return Err(ZipError::TooManyPages(pages.len()));
+  }
   pages.sort_by(|a, b| crate::natural_cmp(&a.name, &b.name));
-  pages
+  Ok(pages)
 }
 
 #[cfg(test)]
@@ -828,6 +839,19 @@ mod tests {
     assert!(check_entry_size("edge.png", 0, MAX_UNCOMPRESSED_BYTES).is_ok());
     assert!(check_entry_size("edge.png", 0, MAX_UNCOMPRESSED_BYTES + 1).is_err());
     assert!(check_entry_size("edge.png", u64::MAX, 10).is_err());
+  }
+
+  #[test]
+  fn a_chapter_over_the_page_limit_is_an_error() {
+    let zip = Fixture::new().entry(stored("p.png", b"x")).build();
+    let page = index_zip(&zip).unwrap().remove(0);
+    let pages = |n: usize| vec![page.clone(); n];
+
+    assert_eq!(page_entries(pages(MAX_PAGES)).unwrap().len(), MAX_PAGES);
+    assert_eq!(
+      page_entries(pages(MAX_PAGES + 1)).unwrap_err(),
+      ZipError::TooManyPages(MAX_PAGES + 1)
+    );
   }
 
   // --- malformed input must not panic ---

@@ -207,8 +207,13 @@ async fn get_chapters(State(state): State<SharedState>, params: RawPathParams) -
   let Some(manga) = raw_param(&params, "manga").and_then(decode_param) else {
     return Json(Vec::<library::ServerChapter>::new()).into_response();
   };
-  blocking(move || Json(library::list_chapters(&state.config, &state.db, &manga)).into_response())
-    .await
+  blocking(
+    move || match library::list_chapters(&state.config, &state.db, &manga) {
+      Ok(chapters) => Json(chapters).into_response(),
+      Err(e) => (StatusCode::UNPROCESSABLE_ENTITY, e).into_response(),
+    },
+  )
+  .await
 }
 
 async fn get_meta(State(state): State<SharedState>, params: RawPathParams) -> Response {

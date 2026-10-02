@@ -15,6 +15,10 @@ use crate::pathutil::{is_inside, parent_of, resolve, resolve_from};
 use klfs::expand_home_with;
 use klfs::ZipCache;
 
+/// The largest loose image served, such as a cover: the per-page limit
+/// archives are held to.
+const MAX_IMAGE_BYTES: u64 = 64 * 1024 * 1024;
+
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct ServerChapter {
@@ -98,10 +102,14 @@ pub fn manga_path(cfg: &Config, manga_name: &str) -> Option<(PathBuf, PathBuf)> 
 
 /// One chapter per archive in the manga folder, through the database's store
 /// of chapter lists. Every image in an archive is a page, whatever folders it
-/// is nested under.
-pub fn list_chapters(cfg: &Config, db: &Db, manga_name: &str) -> Vec<ServerChapter> {
+/// is nested under. An error for a folder of too many archives.
+pub fn list_chapters(
+  cfg: &Config,
+  db: &Db,
+  manga_name: &str,
+) -> Result<Vec<ServerChapter>, String> {
   let Some((_, path)) = manga_path(cfg, manga_name) else {
-    return Vec::new();
+    return Ok(Vec::new());
   };
   db.chapters(&path, manga_name)
 }
@@ -140,6 +148,10 @@ pub fn get_file(
 
   // Allowlist by extension: the library must never serve arbitrary files.
   if !rest.is_empty() || !is_image_name(first) {
+    return None;
+  }
+  // Read into memory whole, so a huge "cover" is refused rather than loaded.
+  if std::fs::metadata(&resolved).ok()?.len() > MAX_IMAGE_BYTES {
     return None;
   }
   Some(Served::Bytes(ImageResult {
@@ -224,15 +236,18 @@ mod tests {
     mkdir(&outside, "");
     write_zip(&outside, "ch1.cbz", &[("p.png", b"x")]);
 
-    assert_eq!(list_chapters(&l.cfg, &l.db, "../secret"), Vec::new());
-    assert_eq!(list_chapters(&l.cfg, &l.db, "/etc"), Vec::new());
-    assert_eq!(list_chapters(&l.cfg, &l.db, ""), Vec::new());
+    assert_eq!(
+      list_chapters(&l.cfg, &l.db, "../secret").unwrap(),
+      Vec::new()
+    );
+    assert_eq!(list_chapters(&l.cfg, &l.db, "/etc").unwrap(), Vec::new());
+    assert_eq!(list_chapters(&l.cfg, &l.db, "").unwrap(), Vec::new());
   }
 
   #[test]
   fn list_chapters_returns_empty_for_a_missing_manga() {
     let l = lib();
-    assert_eq!(list_chapters(&l.cfg, &l.db, "Nope"), Vec::new());
+    assert_eq!(list_chapters(&l.cfg, &l.db, "Nope").unwrap(), Vec::new());
   }
 
   #[test]
@@ -248,7 +263,7 @@ mod tests {
     );
     touch(&berserk, "cover.jpg", b"cover");
 
-    let chapters = list_chapters(&l.cfg, &l.db, "Berserk");
+    let chapters = list_chapters(&l.cfg, &l.db, "Berserk").unwrap();
     assert_eq!(chapters.len(), 2);
     assert_eq!(chapters[0].name, "ch01");
     assert_eq!(chapters[0].slug, "ch01.zip");
@@ -283,9 +298,15 @@ mod tests {
       chapters.into_iter().map(|c| c.name).collect()
     };
     let expected = ["ch2", "a", "ch10", "Extras"];
-    assert_eq!(names(list_chapters(&l.cfg, &l.db, "Berserk")), expected);
+    assert_eq!(
+      names(list_chapters(&l.cfg, &l.db, "Berserk").unwrap()),
+      expected
+    );
     // The second listing comes from the store.
-    assert_eq!(names(list_chapters(&l.cfg, &l.db, "Berserk")), expected);
+    assert_eq!(
+      names(list_chapters(&l.cfg, &l.db, "Berserk").unwrap()),
+      expected
+    );
   }
 
   #[test]
@@ -299,7 +320,7 @@ mod tests {
     touch(&berserk, "broken.cbz", b"not a zip");
     write_zip(&berserk, ".hidden.cbz", &[("p1.png", b"b")]);
 
-    let chapters = list_chapters(&l.cfg, &l.db, "Berserk");
+    let chapters = list_chapters(&l.cfg, &l.db, "Berserk").unwrap();
     let names: Vec<&str> = chapters.iter().map(|c| c.name.as_str()).collect();
     assert_eq!(names, ["ch01"]);
   }
@@ -311,7 +332,7 @@ mod tests {
     mkdir(&berserk, "");
     write_zip(&berserk, "Chapter 01.cbz", &[("p1.png", b"b")]);
 
-    let chapters = list_chapters(&l.cfg, &l.db, "Berserk");
+    let chapters = list_chapters(&l.cfg, &l.db, "Berserk").unwrap();
     assert_eq!(chapters[0].name, "Chapter 01");
     assert_eq!(chapters[0].slug, "Chapter%2001.cbz");
   }
@@ -323,14 +344,17 @@ mod tests {
     mkdir(&berserk, "");
     write_zip(&berserk, "ch01.cbz", &[("p1.png", b"a")]);
     write_zip(&berserk, "ch02.cbz", &[("p1.png", b"a")]);
-    assert_eq!(list_chapters(&l.cfg, &l.db, "Berserk")[0].page_count, 1);
+    assert_eq!(
+      list_chapters(&l.cfg, &l.db, "Berserk").unwrap()[0].page_count,
+      1
+    );
 
     // Rewritten in place with another page, and its sibling removed.
     std::thread::sleep(std::time::Duration::from_millis(20));
     write_zip(&berserk, "ch01.cbz", &[("p1.png", b"a"), ("p2.png", b"b")]);
     std::fs::remove_file(berserk.join("ch02.cbz")).unwrap();
 
-    let chapters = list_chapters(&l.cfg, &l.db, "Berserk");
+    let chapters = list_chapters(&l.cfg, &l.db, "Berserk").unwrap();
     assert_eq!(chapters.len(), 1);
     assert_eq!(chapters[0].pages, ["p1.png", "p2.png"]);
   }
@@ -341,7 +365,7 @@ mod tests {
     let berserk = l.root.join("Berserk");
     mkdir(&berserk, "");
     write_zip(&berserk, "ch01.cbz", &[("p1.png", b"a")]);
-    list_chapters(&l.cfg, &l.db, "Berserk");
+    list_chapters(&l.cfg, &l.db, "Berserk").unwrap();
 
     // Same size and mtime, different bytes: only a stored list survives this.
     let path = berserk.join("ch01.cbz");
@@ -358,7 +382,10 @@ mod tests {
       .set_modified(mtime)
       .unwrap();
 
-    assert_eq!(list_chapters(&l.cfg, &l.db, "Berserk")[0].pages, ["p1.png"]);
+    assert_eq!(
+      list_chapters(&l.cfg, &l.db, "Berserk").unwrap()[0].pages,
+      ["p1.png"]
+    );
   }
 
   // --- getFile ---

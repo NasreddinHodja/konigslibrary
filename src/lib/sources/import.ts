@@ -2,9 +2,11 @@ import { invoke, Channel } from '@tauri-apps/api/core';
 import { withProgressToast } from '$lib/ui/toast.svelte';
 import { mangaMetaWorker } from '$lib/zip/worker-client';
 import type { EventBus } from '$lib/events';
-import { ZIP_EXT } from '$lib/utils/constants';
+import { checkChapterCount, COVER, ZIP_EXT } from '$lib/utils/constants';
 
-const COVER = /^cover\.(jpe?g|png|webp|gif|avif|bmp)$/i;
+/// The largest file that can be imported: each is read into memory whole to
+/// cross to the backend.
+const MAX_IMPORT_BYTES = 1024 * 1024 * 1024;
 
 /// A folder name for a manga: separators and NULs can't be part of one, and a
 /// name of only dots would point somewhere else.
@@ -33,7 +35,14 @@ export async function importFiles(name: string, picked: File[], events: EventBus
   const path = await withProgressToast(manga, 'fetching', async (progress) => {
     const total = files.length;
     progress({ current: 0, total });
-    if (!files.some((f) => ZIP_EXT.test(f.name))) throw new Error('No chapter archives');
+    const archives = files.filter((f) => ZIP_EXT.test(f.name)).length;
+    if (archives === 0) throw new Error('No chapter archives');
+    checkChapterCount(archives);
+    const big = files.find((f) => f.size > MAX_IMPORT_BYTES);
+    if (big)
+      throw new Error(
+        `${big.name} is ${Math.round(big.size / 2 ** 20)} MB; files over ${MAX_IMPORT_BYTES / 2 ** 20} MB can't be imported`
+      );
     let dest = '';
     for (const [i, file] of files.entries()) {
       dest = await invoke<string>('import_file', new Uint8Array(await file.arrayBuffer()), {

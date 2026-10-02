@@ -13,6 +13,21 @@ use crate::collate::natural_cmp;
 use crate::comicinfo::element;
 use crate::names::strip_zip_ext;
 
+/// The most chapter archives a manga folder may hold. Opening a manga reads
+/// every archive's directory, so a folder holding a whole library would hang.
+pub const MAX_CHAPTERS: usize = 5000;
+
+/// An error for a manga folder of `count` chapter archives, past
+/// [`MAX_CHAPTERS`].
+pub fn check_chapter_count(count: usize) -> Result<(), String> {
+  if count > MAX_CHAPTERS {
+    return Err(format!(
+      "{count} chapter archives; a manga can have at most {MAX_CHAPTERS}"
+    ));
+  }
+  Ok(())
+}
+
 /// Where a chapter falls in its manga. Either field may be missing: volume
 /// archives have no chapter, loose chapters no volume.
 #[derive(Debug, Clone, Copy, Default, Serialize, PartialEq)]

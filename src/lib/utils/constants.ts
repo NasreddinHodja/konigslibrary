@@ -15,6 +15,19 @@ export const LS_PROGRESS_PREFIX = 'kl:progress:';
 /// Chapter archives, by file name.
 export const ZIP_EXT = /\.(zip|cbz)$/i;
 
+/// A manga folder's cover, by file name.
+export const COVER = /^cover\.(jpe?g|png|webp|gif|avif|bmp)$/i;
+
+/// The most chapter archives a manga may hold: klparse's `MAX_CHAPTERS`,
+/// checked here before any archive is read.
+export const MAX_CHAPTERS = 5000;
+
+/// An error for a manga of `count` chapter archives, past `MAX_CHAPTERS`.
+export function checkChapterCount(count: number) {
+  if (count > MAX_CHAPTERS)
+    throw new Error(`${count} chapter archives; a manga can have at most ${MAX_CHAPTERS}`);
+}
+
 export const DEFAULT_PAGE_RATIO = 1.5; // height / width, typical manga page
 
 export const PAGE_TURN_ZOOM = 2;

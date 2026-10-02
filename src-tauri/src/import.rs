@@ -98,9 +98,11 @@ pub async fn import_manga_folder(
     .map(|e| e.file_name().to_string_lossy().into_owned())
     .filter(|n| is_manga_file(n))
     .collect();
-  if !files.iter().any(|n| klparse::is_zip_name(n)) {
+  let archives = files.iter().filter(|n| klparse::is_chapter_name(n)).count();
+  if archives == 0 {
     return Err(format!("No chapter archives in {name}"));
   }
+  klparse::check_chapter_count(archives)?;
 
   let dir = import_dir(&app)?.join(&name);
   std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;

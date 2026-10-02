@@ -23,7 +23,7 @@ pub mod zip;
 #[cfg(any(test, feature = "fixtures"))]
 pub mod fixture;
 
-pub use chapters::{chapter_cmp, chapter_number, ChapterNumber};
+pub use chapters::{chapter_cmp, chapter_number, check_chapter_count, ChapterNumber, MAX_CHAPTERS};
 pub use collate::{locale_cmp, natural_cmp};
 pub use comicinfo::{manga_meta, MangaMeta};
 pub use names::{

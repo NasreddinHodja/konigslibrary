@@ -9,6 +9,8 @@ import {
   sortChapters,
   initParser
 } from './index';
+import { max_chapters } from './wasm/klwasm.js';
+import { MAX_CHAPTERS } from '$lib/utils/constants';
 
 // Exercises the browser parser end to end: the same wasm module the reader
 // loads, driven through the same byte-range plumbing. The Rust unit tests in
@@ -103,4 +105,8 @@ describe('wasm zip parser', () => {
       ])
     ).toEqual(['ch2', 'a', 'ch10', 'Extras']);
   });
+});
+
+it('checks the same chapter limit as the native readers', () => {
+  expect(MAX_CHAPTERS).toBe(max_chapters());
 });

@@ -9,7 +9,7 @@ import {
 } from '$lib/zip/worker-client';
 import type { LazyPageProvider } from './types';
 import type { Reader } from '$lib/context/types';
-import { ZIP_EXT } from '$lib/utils/constants';
+import { checkChapterCount, COVER, ZIP_EXT } from '$lib/utils/constants';
 
 /// A manga folder opened in the browser: its chapter archives and cover, the
 /// same layout the library uses. A single chapter archive is a folder of one.
@@ -32,6 +32,7 @@ export class UploadProvider implements LazyPageProvider {
         .filter((f) => !f.name.startsWith('.') && ZIP_EXT.test(f.name))
         .map((f) => [f.name, f])
     );
+    checkChapterCount(archives.size);
     const chapters = await Promise.all(
       [...archives].map(async ([fileName, file]) => {
         // A corrupt archive is skipped, unless it is the only one.
@@ -108,9 +109,14 @@ export async function droppedUpload(data: DataTransfer): Promise<Upload | null> 
   const entry = data.items[0]?.webkitGetAsEntry();
   if (entry?.isDirectory) {
     const children = await readAllEntries(entry as FileSystemDirectoryEntry);
+    // Only what a manga folder holds, so a huge folder of anything else
+    // isn't turned into files one by one.
     const files = await Promise.all(
       children
-        .filter((c): c is FileSystemFileEntry => c.isFile)
+        .filter(
+          (c): c is FileSystemFileEntry =>
+            c.isFile && !c.name.startsWith('.') && (ZIP_EXT.test(c.name) || COVER.test(c.name))
+        )
         .map((c) => new Promise<File>((resolve, reject) => c.file(resolve, reject)))
     );
     return files.length ? { files, name: entry.name, single: false } : null;

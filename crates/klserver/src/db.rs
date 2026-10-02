@@ -495,9 +495,11 @@ impl Db {
   /// least one page, in chapter order. Each archive's pages are stored once read
   /// and read again only when its size or mtime changes, so opening a long
   /// series costs a directory listing and a `stat` per chapter, not a parse.
-  pub fn chapters(&self, path: &Path, folder: &str) -> Vec<ServerChapter> {
+  /// An error for a folder of more than [`klparse::MAX_CHAPTERS`] archives.
+  pub fn chapters(&self, path: &Path, folder: &str) -> Result<Vec<ServerChapter>, String> {
     let mut files = klfs::file_names(path).unwrap_or_default();
     files.retain(|n| is_chapter_name(n));
+    klparse::check_chapter_count(files.len())?;
 
     let mut stored = self.stored_chapters(folder).unwrap_or_else(|e| {
       eprintln!("[konigslibrary] Cannot read stored chapters of \"{folder}\": {e}");
@@ -545,7 +547,7 @@ impl Db {
     }
 
     chapters.sort_by(|(a, an), (b, bn)| chapter_cmp((&a.name, *an), (&b.name, *bn)));
-    chapters.into_iter().map(|(c, _)| c).collect()
+    Ok(chapters.into_iter().map(|(c, _)| c).collect())
   }
 
   fn stored_chapters(

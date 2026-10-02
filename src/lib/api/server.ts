@@ -9,7 +9,11 @@ export function serverFileUrl(slug: string, file: string): string {
 
 export async function fetchServerChapters(slug: string): Promise<ServerChapter[]> {
   const res = await fetch(apiUrl(`/api/library/${slug}/chapters`));
-  if (!res.ok) throw new Error(`Failed to fetch chapters (${res.status})`);
+  // 422 carries why the manga can't be listed, such as too many chapters.
+  if (!res.ok)
+    throw new Error(
+      (res.status === 422 && (await res.text())) || `Failed to fetch chapters (${res.status})`
+    );
   return res.json();
 }
 
