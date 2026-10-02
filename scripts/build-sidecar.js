@@ -52,8 +52,9 @@ if (!existsSync(SERVER_BIN)) {
 rmSync(ASSETS_DIR, { recursive: true, force: true });
 mkdirSync(ASSETS_DIR, { recursive: true });
 
-// static_dir() in crates/klserver/src/main.rs finds this next to the binary
-// when KL_STATIC_DIR isn't set (as it isn't for the bundled desktop sidecar).
+// The desktop app points the sidecar at this through KL_STATIC_DIR
+// (src-tauri/src/lan_server.rs); static_dir() in crates/klserver/src/main.rs
+// falls back to looking next to the binary when it isn't set.
 cpSync('build-local', `${ASSETS_DIR}/client`, { recursive: true });
 
 const out = `${ASSETS_DIR}/konigslibrary-server${EXE}`;

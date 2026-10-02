@@ -75,9 +75,8 @@ pub fn scan(dir: &Path) -> Vec<OfflineManga> {
 /// Every downloaded manga with at least one finished chapter.
 #[tauri::command]
 pub async fn list_offline_manga(app: AppHandle) -> Result<Vec<OfflineManga>, String> {
-  let mut results = scan(&offline_dir(&app)?);
-  results.sort_by(|a, b| a.name.cmp(&b.name));
-  Ok(results)
+  // Unsorted: callers only look manga up by slug.
+  Ok(scan(&offline_dir(&app)?))
 }
 
 /// Deletes a downloaded manga one file at a time, reporting how many are gone.

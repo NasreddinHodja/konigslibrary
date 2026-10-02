@@ -23,23 +23,45 @@ pub struct LanServerStatus {
   port: Option<u16>,
 }
 
+impl Running {
+  fn status(&self) -> LanServerStatus {
+    LanServerStatus {
+      running: true,
+      url: Some(format!("http://{}:{}", self.lan_ip, self.port)),
+      port: Some(self.port),
+    }
+  }
+}
+
+/// Stops the server, if one is running.
+fn stop(state: &LanServerState) -> std::io::Result<()> {
+  match state.0.lock().unwrap().take() {
+    Some(mut running) => running.child.start_kill(),
+    None => Ok(()),
+  }
+}
+
 fn free_port() -> Result<u16, String> {
   let listener = TcpListener::bind("0.0.0.0:0").map_err(|e| e.to_string())?;
   Ok(listener.local_addr().map_err(|e| e.to_string())?.port())
 }
 
+/// The address other devices on the LAN reach this machine at.
+///
+/// No packet is actually sent; connecting a UDP socket only picks the route
+/// out, whose local address is the LAN-facing one. A public address is tried
+/// first; on a network with no internet route, private ranges are, so sharing
+/// over a LAN doesn't depend on being online.
 fn lan_ip() -> Result<String, String> {
-  // No packet is actually sent; connect() just picks the outbound route so we
-  // can read back the LAN-facing local address.
-  let socket = UdpSocket::bind("0.0.0.0:0").map_err(|e| e.to_string())?;
-  socket.connect("8.8.8.8:80").map_err(|e| e.to_string())?;
-  Ok(
-    socket
-      .local_addr()
-      .map_err(|e| e.to_string())?
-      .ip()
-      .to_string(),
-  )
+  ["8.8.8.8:80", "192.168.0.1:9", "10.0.0.1:9", "172.16.0.1:9"]
+    .into_iter()
+    .find_map(|target| {
+      let socket = UdpSocket::bind("0.0.0.0:0").ok()?;
+      socket.connect(target).ok()?;
+      let ip = socket.local_addr().ok()?.ip();
+      (!ip.is_unspecified() && !ip.is_loopback()).then(|| ip.to_string())
+    })
+    .ok_or_else(|| "no network to share the library on".to_string())
 }
 
 #[tauri::command]
@@ -50,11 +72,7 @@ pub async fn start_lan_server(
   port: Option<u16>,
 ) -> Result<LanServerStatus, String> {
   if let Some(running) = &*state.0.lock().unwrap() {
-    return Ok(LanServerStatus {
-      running: true,
-      url: Some(format!("http://{}:{}", running.lan_ip, running.port)),
-      port: Some(running.port),
-    });
+    return Ok(running.status());
   }
 
   let port = match port {
@@ -162,36 +180,25 @@ pub async fn start_lan_server(
     return Err(detail);
   }
 
-  let url = format!("http://{ip}:{port}");
-  *state.0.lock().unwrap() = Some(Running {
+  let running = Running {
     child,
     port,
     lan_ip: ip,
-  });
-
-  Ok(LanServerStatus {
-    running: true,
-    url: Some(url),
-    port: Some(port),
-  })
+  };
+  let status = running.status();
+  *state.0.lock().unwrap() = Some(running);
+  Ok(status)
 }
 
 #[tauri::command]
 pub fn stop_lan_server(state: State<'_, LanServerState>) -> Result<(), String> {
-  if let Some(mut running) = state.0.lock().unwrap().take() {
-    running.child.start_kill().map_err(|e| e.to_string())?;
-  }
-  Ok(())
+  stop(&state).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub fn lan_server_status(state: State<'_, LanServerState>) -> LanServerStatus {
   match &*state.0.lock().unwrap() {
-    Some(running) => LanServerStatus {
-      running: true,
-      url: Some(format!("http://{}:{}", running.lan_ip, running.port)),
-      port: Some(running.port),
-    },
+    Some(running) => running.status(),
     None => LanServerStatus {
       running: false,
       url: None,
@@ -201,7 +208,5 @@ pub fn lan_server_status(state: State<'_, LanServerState>) -> LanServerStatus {
 }
 
 pub fn kill_if_running(state: &LanServerState) {
-  if let Some(mut running) = state.0.lock().unwrap().take() {
-    let _ = running.child.start_kill();
-  }
+  let _ = stop(state);
 }

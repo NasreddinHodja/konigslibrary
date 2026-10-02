@@ -1,7 +1,6 @@
 mod archive;
 mod device_library;
 mod download;
-mod immersive;
 mod import;
 mod lan_server;
 mod offline;
@@ -125,7 +124,6 @@ pub fn run() {
     .manage(MangaDirState(Mutex::new(Roots::default())))
     .manage(device_library::DeviceIndex::default())
     .manage(lan_server::LanServerState::default())
-    .plugin(immersive::init())
     .plugin(tauri_plugin_dialog::init())
     .plugin(tauri_plugin_opener::init())
     .plugin(tauri_plugin_deep_link::init())
