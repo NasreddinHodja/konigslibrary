@@ -124,7 +124,8 @@ class DownloadService : Service() {
       stopForeground(true)
     }
     notificationManager.cancel(NOTIFICATION_ID)
-    wakeLock?.release()
+    // The lock times out after 30 minutes; only release one still held.
+    if (wakeLock?.isHeld == true) wakeLock?.release()
     wakeLock = null
     super.onDestroy()
   }

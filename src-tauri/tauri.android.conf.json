@@ -3,7 +3,8 @@
     "externalBin": null,
     "resources": null,
     "android": {
-      "debugApplicationIdSuffix": ".dev"
+      "debugApplicationIdSuffix": ".dev",
+      "minSdkVersion": 26
     }
   }
 }

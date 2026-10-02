@@ -2,8 +2,9 @@ use serde::Serialize;
 use std::collections::HashMap;
 use std::sync::{
   atomic::{AtomicBool, Ordering},
-  Arc, Mutex,
+  Arc, Mutex, OnceLock,
 };
+use std::time::Duration;
 use tauri::ipc::Channel;
 use tauri::{AppHandle, State};
 
@@ -19,6 +20,23 @@ pub struct DownloadState(pub Mutex<HashMap<String, Arc<AtomicBool>>>);
 
 /// Progress is reported at most once per this many bytes.
 const PROGRESS_STEP: u64 = 256 * 1024;
+
+/// How often a download waiting on the network checks whether it was cancelled.
+const CANCEL_POLL: Duration = Duration::from_millis(250);
+
+/// One client for every download. Without the timeouts (reqwest has none by
+/// default) a server that stops sending mid-file would leave the download
+/// waiting forever.
+fn client() -> &'static reqwest::Client {
+  static CLIENT: OnceLock<reqwest::Client> = OnceLock::new();
+  CLIENT.get_or_init(|| {
+    reqwest::Client::builder()
+      .connect_timeout(Duration::from_secs(10))
+      .read_timeout(Duration::from_secs(30))
+      .build()
+      .unwrap_or_default()
+  })
+}
 
 /// Downloads one file of a manga (a chapter archive or the cover) into
 /// `offline/<slug>/<file_name>`, so the downloads folder is laid out like the
@@ -90,7 +108,7 @@ async fn fetch(
 ) -> Result<(), String> {
   use std::io::Write;
 
-  let mut resp = reqwest::get(url).await.map_err(|e| e.to_string())?;
+  let mut resp = client().get(url).send().await.map_err(|e| e.to_string())?;
   if !resp.status().is_success() {
     return Err(format!("HTTP {} for {}", resp.status(), url));
   }
@@ -99,10 +117,19 @@ async fn fetch(
 
   let mut current = 0u64;
   let mut reported = 0u64;
-  while let Some(chunk) = resp.chunk().await.map_err(|e| e.to_string())? {
+  loop {
     if cancelled.load(Ordering::Relaxed) {
       return Err("Cancelled".to_string());
     }
+    // Waited on in short slices so a cancel lands while nothing arrives. A
+    // slice running out drops the wait, which loses nothing: reqwest only
+    // takes a chunk off the body once it is there.
+    let Ok(next) = tokio::time::timeout(CANCEL_POLL, resp.chunk()).await else {
+      continue;
+    };
+    let Some(chunk) = next.map_err(|e| e.to_string())? else {
+      break;
+    };
     file.write_all(&chunk).map_err(|e| e.to_string())?;
     current += chunk.len() as u64;
     if current - reported >= PROGRESS_STEP {

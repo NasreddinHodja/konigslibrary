@@ -128,6 +128,26 @@ export async function startDownload(slug: string, name: string, events?: EventBu
   saveManga(slug, name, chapters, events);
 }
 
+/// Downloads holding the native download service (Android's foreground
+/// service and wake lock). There is one service for all of them, so it is
+/// started by the first and stopped only by the last: a download that ends
+/// must not stop it under another still running.
+let nativeHolds = 0;
+
+/// Starts or relabels the native download service and holds it until the
+/// returned release is called. Releasing twice is harmless.
+function holdNativeDownload(label: string, total: number): () => void {
+  nativeHolds++;
+  nativeBridge()?.acquireWakeLock(label, total);
+  let held = true;
+  return () => {
+    if (!held) return;
+    held = false;
+    nativeHolds--;
+    if (nativeHolds === 0) nativeBridge()?.releaseWakeLock();
+  };
+}
+
 /// Copies a manga's chapter archives and cover from the server into the
 /// downloads folder, as-is. Progress counts chapters.
 export function saveManga(
@@ -138,18 +158,18 @@ export function saveManga(
 ): { cancel: () => void } {
   const id = `dl-${nextId++}`;
   const job: Job = { cancelled: false, fileId: '' };
+  const total = chapters.length;
+  const release = holdNativeDownload(name, total);
 
   const cancel = () => {
     cancelJob(job);
     removeToast(id);
-    nativeBridge()?.releaseWakeLock();
+    release();
   };
   cancellers.set(slug, cancel);
 
-  const total = chapters.length;
   setProgress(slug, 0, total, name);
   addToast({ id, label: name, current: 0, total, phase: 'fetching', cancel, group: 'download' });
-  nativeBridge()?.acquireWakeLock(name, total);
 
   copyManga(id, slug, chapters, job, events, {
     // Callers pass the best name they have; the metadata title wins.
@@ -177,7 +197,7 @@ export function saveManga(
     .finally(() => {
       cancellers.delete(slug);
       downloadProgress.delete(slug);
-      nativeBridge()?.releaseWakeLock();
+      release();
       if (job.cancelled) discard(slug, events);
     });
 
@@ -215,15 +235,15 @@ export function saveMangas(
     }
   };
 
+  const release = holdNativeDownload(label(), total);
   const cancel = () => {
     stopped = true;
     if (current) cancelJob(current.job);
     removeToast(id);
-    nativeBridge()?.releaseWakeLock();
+    release();
   };
 
   addToast({ id, label: label(), current: 0, total, phase: 'fetching', cancel, group: 'download' });
-  nativeBridge()?.acquireWakeLock(label(), total);
   // This batch's cancel per slug, to tell its entries from a later download's.
   // eslint-disable-next-line svelte/prefer-svelte-reactivity
   const mine = new Map<string, () => void>();
@@ -276,7 +296,7 @@ export function saveMangas(
       cancellers.delete(slug);
       downloadProgress.delete(slug);
     }
-    nativeBridge()?.releaseWakeLock();
+    release();
     // Stopped mid-copy: the manga being copied goes; finished ones stay.
     if (stopped && current) discard(current.slug, events);
   });

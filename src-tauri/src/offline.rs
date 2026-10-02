@@ -34,16 +34,23 @@ pub struct OfflineManga {
 }
 
 /// The folders in `dir` holding at least one finished chapter archive, as
-/// (folder name, path).
+/// (folder name, path). Dotfolders and dotfiles don't count, as in every
+/// other listing.
 pub fn manga_folders(dir: &Path) -> Vec<(String, String)> {
   let Ok(read) = std::fs::read_dir(dir) else {
     return vec![];
   };
   read
     .flatten()
+    .filter(|entry| !entry.file_name().to_string_lossy().starts_with('.'))
     .filter(|entry| {
       std::fs::read_dir(entry.path()).is_ok_and(|mut files| {
-        files.any(|f| f.is_ok_and(|f| klparse::is_zip_name(&f.file_name().to_string_lossy())))
+        files.any(|f| {
+          f.is_ok_and(|f| {
+            let name = f.file_name().to_string_lossy().into_owned();
+            !name.starts_with('.') && klparse::is_zip_name(&name)
+          })
+        })
       })
     })
     .map(|entry| {

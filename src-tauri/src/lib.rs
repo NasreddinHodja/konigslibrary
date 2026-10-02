@@ -27,7 +27,10 @@ fn home_dir() -> Result<String, String> {
     .map_err(|_| "could not determine home directory".to_string())
 }
 
-#[tauri::command]
+// The commands below read the disk (indexing archives, inflating pages), so
+// they run on the async runtime's threads: a plain command runs on the main
+// thread, where that work would stall the UI.
+#[tauri::command(async)]
 fn set_manga_dir(
   app: tauri::AppHandle,
   state: tauri::State<MangaDirState>,
@@ -57,7 +60,7 @@ fn allowed_path(state: &MangaDirState, path: &str) -> Result<PathBuf, String> {
   Ok(canonical)
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 fn list_manga_chapters(
   state: tauri::State<MangaDirState>,
   path: String,
@@ -65,7 +68,7 @@ fn list_manga_chapters(
   archive::list_chapters(&allowed_path(&state, &path)?)
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 fn read_archive_page(
   state: tauri::State<MangaDirState>,
   path: String,
@@ -75,7 +78,7 @@ fn read_archive_page(
   Ok(tauri::ipc::Response::new(bytes))
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 fn read_manga_meta(
   state: tauri::State<MangaDirState>,
   path: String,

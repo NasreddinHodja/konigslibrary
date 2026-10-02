@@ -133,7 +133,9 @@ pub async fn start_lan_server(
   }
 
   let client = reqwest::Client::new();
-  let ready_url = format!("http://127.0.0.1:{port}/api/library");
+  // `/api/ping` answers at once; `/api/library` would sync the whole library
+  // first, which on a big folder outlasts every probe.
+  let ready_url = format!("http://127.0.0.1:{port}/api/ping");
   let mut ready = false;
   for _ in 0..20 {
     let ok = client
@@ -141,8 +143,7 @@ pub async fn start_lan_server(
       .timeout(Duration::from_millis(300))
       .send()
       .await
-      .map(|r| r.status().is_success())
-      .unwrap_or(false);
+      .is_ok_and(|r| r.status().is_success());
     if ok {
       ready = true;
       break;
