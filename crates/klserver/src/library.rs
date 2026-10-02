@@ -11,7 +11,8 @@ use serde::Serialize;
 
 use crate::config::Config;
 use crate::db::Db;
-use crate::pathutil::{expand_home_with, is_inside, parent_of, resolve, resolve_from};
+use crate::pathutil::{is_inside, parent_of, resolve, resolve_from};
+use klfs::expand_home_with;
 use klfs::ZipCache;
 
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]

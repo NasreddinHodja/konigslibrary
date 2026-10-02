@@ -6,7 +6,8 @@
 use std::fs;
 use std::path::PathBuf;
 
-use crate::pathutil::{expand_home_with, resolve};
+use crate::pathutil::resolve;
+use klfs::expand_home_with;
 
 #[derive(Debug, Clone)]
 pub struct Config {
@@ -25,7 +26,7 @@ pub struct Config {
 impl Config {
   pub fn from_env() -> Self {
     let cwd = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
-    let home = crate::pathutil::home_dir()
+    let home = klfs::home_dir()
       .map(|h| h.to_string_lossy().into_owned())
       .unwrap_or_default();
     Self {

@@ -10,24 +10,6 @@
 
 use std::path::{Component, Path, PathBuf};
 
-/// Expands a leading `~`. Only a bare `~` or a `~/`-prefixed path is
-/// expanded; `~foo` is left alone.
-///
-/// The home directory is passed in rather than read from the environment, so
-/// tests never have to mutate process-global state.
-pub fn expand_home_with(path: &str, home: &str) -> String {
-  if path != "~" && !path.starts_with("~/") {
-    return path.to_string();
-  }
-  format!("{home}{}", &path[1..])
-}
-
-pub fn home_dir() -> Option<PathBuf> {
-  std::env::var_os("HOME")
-    .or_else(|| std::env::var_os("USERPROFILE"))
-    .map(PathBuf::from)
-}
-
 /// Equivalent of Node's `path.resolve(base, ...segments)`: an absolute segment
 /// discards everything before it, then the result is normalised lexically.
 pub fn resolve_from(base: &Path, segments: &[&str]) -> PathBuf {
@@ -169,15 +151,5 @@ mod tests {
     );
     assert_eq!(parent_of(Path::new("/a")).as_deref(), Some(Path::new("/")));
     assert_eq!(parent_of(Path::new("/")), None);
-  }
-
-  #[test]
-  fn expand_home_only_expands_a_leading_tilde() {
-    let home = "/home/tester";
-    assert_eq!(expand_home_with("~", home), "/home/tester");
-    assert_eq!(expand_home_with("~/Manga", home), "/home/tester/Manga");
-    assert_eq!(expand_home_with("~notme/Manga", home), "~notme/Manga");
-    assert_eq!(expand_home_with("/absolute/Manga", home), "/absolute/Manga");
-    assert_eq!(expand_home_with("relative/Manga", home), "relative/Manga");
   }
 }

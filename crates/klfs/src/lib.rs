@@ -9,13 +9,32 @@
 mod cache;
 mod reader;
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use klparse::zip::ZipError;
 use klparse::MangaMeta;
 
 pub use cache::{ZipCache, ZIP_CACHE_MAX};
 pub use reader::FileReader;
+
+/// The user's home directory, from `HOME` (or `USERPROFILE` on Windows).
+pub fn home_dir() -> Option<PathBuf> {
+  std::env::var_os("HOME")
+    .or_else(|| std::env::var_os("USERPROFILE"))
+    .map(PathBuf::from)
+}
+
+/// Expands a leading `~` to `home`. Only a bare `~` or a `~/`-prefixed path
+/// is expanded; `~foo` is left alone.
+///
+/// The home directory is passed in rather than read from the environment, so
+/// tests never have to mutate process-global state.
+pub fn expand_home_with(path: &str, home: &str) -> String {
+  if path != "~" && !path.starts_with("~/") {
+    return path.to_string();
+  }
+  format!("{home}{}", &path[1..])
+}
 
 /// The names of the entries in `dir` that `keep` accepts, by their type.
 fn entry_names(
@@ -72,4 +91,19 @@ pub fn read_entry(cache: &ZipCache, path: &Path, name: &str) -> Result<Option<Ve
   };
   let reader = FileReader::open(path).map_err(|e| ZipError::Io(e.to_string()))?;
   klparse::zip::extract_entry(&reader, entry).map(Some)
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn expand_home_only_expands_a_leading_tilde() {
+    let home = "/home/tester";
+    assert_eq!(expand_home_with("~", home), "/home/tester");
+    assert_eq!(expand_home_with("~/Manga", home), "/home/tester/Manga");
+    assert_eq!(expand_home_with("~notme/Manga", home), "~notme/Manga");
+    assert_eq!(expand_home_with("/absolute/Manga", home), "/absolute/Manga");
+    assert_eq!(expand_home_with("relative/Manga", home), "relative/Manga");
+  }
 }

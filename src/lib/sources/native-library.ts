@@ -23,13 +23,9 @@ export type NativeChapter = {
   archive: string;
 };
 
-async function homeDir(): Promise<string> {
-  return await invoke('home_dir');
-}
-
-export async function expandHome(path: string): Promise<string> {
-  if (path !== '~' && !path.startsWith('~/')) return path;
-  return path.replace(/^~/, await homeDir());
+/// `path` with a leading `~` expanded to the home directory.
+export function expandHome(path: string): Promise<string> {
+  return invoke('expand_home', { path });
 }
 
 /// The device's manga directory; never set on Android, where the app can't

@@ -19,11 +19,12 @@ struct Roots {
 
 struct MangaDirState(Mutex<Roots>);
 
+/// `path` with a leading `~` expanded to the home directory, as the server
+/// expands the manga directory it is given.
 #[tauri::command]
-fn home_dir() -> Result<String, String> {
-  std::env::var("HOME")
-    .or_else(|_| std::env::var("USERPROFILE"))
-    .map_err(|_| "could not determine home directory".to_string())
+fn expand_home(path: String) -> Result<String, String> {
+  let home = klfs::home_dir().ok_or("could not determine home directory")?;
+  Ok(klfs::expand_home_with(&path, &home.to_string_lossy()))
 }
 
 // The commands below read the disk (indexing archives, inflating pages), so
@@ -156,7 +157,7 @@ pub fn run() {
       Ok(())
     })
     .invoke_handler(tauri::generate_handler![
-      home_dir,
+      expand_home,
       set_manga_dir,
       list_device_manga,
       list_manga_chapters,
