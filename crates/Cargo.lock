@@ -339,6 +339,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "klfs"
+version = "0.6.0"
+dependencies = [
+ "klparse",
+ "tempfile",
+]
+
+[[package]]
 name = "klparse"
 version = "0.6.0"
 dependencies = [
@@ -352,6 +360,7 @@ version = "0.6.0"
 dependencies = [
  "axum",
  "http-body-util",
+ "klfs",
  "klparse",
  "rusqlite",
  "serde",

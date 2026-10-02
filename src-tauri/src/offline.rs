@@ -1,15 +1,16 @@
 use serde::Serialize;
-use std::path::{Component, Path, PathBuf};
+use std::path::{Path, PathBuf};
 use tauri::ipc::Channel;
 use tauri::{AppHandle, Manager};
 
 use crate::download::DownloadProgress;
 
+/// Rejects anything but one file or folder name (see `klparse::is_plain_name`).
 pub fn validate_path_component(s: &str) -> Result<(), String> {
-  let mut components = Path::new(s).components();
-  match (components.next(), components.next()) {
-    (Some(Component::Normal(_)), None) => Ok(()),
-    _ => Err(format!("Invalid path component: {s:?}")),
+  if klparse::is_plain_name(s) {
+    Ok(())
+  } else {
+    Err(format!("Invalid path component: {s:?}"))
   }
 }
 
@@ -46,10 +47,7 @@ pub fn manga_folders(dir: &Path) -> Vec<(String, String)> {
     .filter(|entry| {
       std::fs::read_dir(entry.path()).is_ok_and(|mut files| {
         files.any(|f| {
-          f.is_ok_and(|f| {
-            let name = f.file_name().to_string_lossy().into_owned();
-            !name.starts_with('.') && klparse::is_zip_name(&name)
-          })
+          f.is_ok_and(|f| klparse::is_chapter_name(&f.file_name().to_string_lossy()))
         })
       })
     })

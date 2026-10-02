@@ -24,6 +24,9 @@ pub mod fixture;
 
 pub use collate::{locale_cmp, natural_cmp};
 pub use comicinfo::{manga_meta, MangaMeta};
-pub use names::{content_type, ext_with_dot, is_image_name, is_zip_name, strip_zip_ext};
+pub use names::{
+  content_type, ext_with_dot, is_chapter_name, is_cover_name, is_image_name, is_plain_name,
+  is_zip_name, strip_zip_ext,
+};
 pub use uri::{decode_uri_component, encode_uri_component};
 pub use zip::{extract_entry, index_zip, page_entries, ReadAt, Result, ZipEntry, ZipError};

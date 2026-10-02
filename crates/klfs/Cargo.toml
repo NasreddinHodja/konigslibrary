@@ -1,0 +1,14 @@
+[package]
+name = "klfs"
+description = "Reading manga folders and chapter archives off disk, for konigslibrary's server and app"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+klparse = { workspace = true }
+
+[dev-dependencies]
+klparse = { workspace = true, features = ["fixtures"] }
+tempfile = "3"

@@ -7,7 +7,7 @@
 use serde::Serialize;
 
 use crate::collate::natural_cmp;
-use crate::names::{is_image_name, is_zip_name};
+use crate::names::{is_chapter_name, is_cover_name};
 use crate::zip::{extract_entry, index_zip, ReadAt};
 
 #[derive(Debug, Clone, Default, Serialize, PartialEq, Eq)]
@@ -171,10 +171,7 @@ pub struct MetaSources {
 }
 
 pub fn meta_sources(names: &[String]) -> MetaSources {
-  let mut archives: Vec<&String> = names
-    .iter()
-    .filter(|n| !n.starts_with('.') && is_zip_name(n))
-    .collect();
+  let mut archives: Vec<&String> = names.iter().filter(|n| is_chapter_name(n)).collect();
   archives.sort_by(|a, b| natural_cmp(a, b));
   let archives = match archives.as_slice() {
     [] => vec![],
@@ -182,15 +179,7 @@ pub fn meta_sources(names: &[String]) -> MetaSources {
     [first, .., last] => vec![(*first).clone(), (*last).clone()],
   };
 
-  let cover = names
-    .iter()
-    .find(|n| {
-      is_image_name(n)
-        && n
-          .rsplit_once('.')
-          .is_some_and(|(stem, _)| stem.eq_ignore_ascii_case("cover"))
-    })
-    .cloned();
+  let cover = names.iter().find(|n| is_cover_name(n)).cloned();
 
   MetaSources { archives, cover }
 }

@@ -21,7 +21,7 @@ use tower_http::services::{ServeDir, ServeFile};
 use crate::config::Config;
 use crate::db::Db;
 use crate::library;
-use crate::zipcache::ZipCache;
+use klfs::ZipCache;
 
 pub struct AppState {
   pub config: Config,

@@ -2,62 +2,16 @@
 //!
 //! Without it, every page request would re-read and re-parse the archive's
 //! central directory.
-//!
-//! Also holds the [`FileReader`] adapter that lets `klparse` read an archive
-//! through positional file reads instead of loading it into memory.
 
-use std::fs::File;
-use std::io::{Read, Seek, SeekFrom};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
-use klparse::zip::{ReadAt, ZipEntry, ZipError};
+use klparse::zip::{ZipEntry, ZipError};
+
+use crate::FileReader;
 
 /// How many archives' central directories are kept.
 pub const ZIP_CACHE_MAX: usize = 50;
-
-/// Reads an archive off disk without mapping or buffering the whole file.
-pub struct FileReader {
-  file: Mutex<File>,
-  size: u64,
-}
-
-impl FileReader {
-  pub fn open(path: &Path) -> std::io::Result<Self> {
-    let file = File::open(path)?;
-    let size = file.metadata()?.len();
-    Ok(Self {
-      file: Mutex::new(file),
-      size,
-    })
-  }
-}
-
-impl ReadAt for FileReader {
-  fn size(&self) -> u64 {
-    self.size
-  }
-
-  fn read_at(&self, offset: u64, len: usize) -> Result<Vec<u8>, ZipError> {
-    if offset >= self.size || len == 0 {
-      return Ok(Vec::new());
-    }
-    // Clamp rather than error: a truncated archive should surface as a parse
-    // failure, not as an I/O failure halfway through indexing.
-    let available = (self.size - offset) as usize;
-    let len = len.min(available);
-
-    let mut file = self.file.lock().expect("zip file mutex poisoned");
-    file
-      .seek(SeekFrom::Start(offset))
-      .map_err(|e| ZipError::Io(e.to_string()))?;
-    let mut buf = vec![0u8; len];
-    file
-      .read_exact(&mut buf)
-      .map_err(|e| ZipError::Io(e.to_string()))?;
-    Ok(buf)
-  }
-}
 
 #[derive(Debug, Clone)]
 struct CacheEntry {
@@ -98,7 +52,7 @@ impl ZipCache {
 
   /// A hit also reorders the entry to most-recently-used.
   fn take_fresh(&self, path: &Path, mtime: std::time::SystemTime) -> Option<Arc<Vec<ZipEntry>>> {
-    let mut cache = self.inner.lock().expect("zip cache mutex poisoned");
+    let mut cache = self.inner.lock().unwrap_or_else(|e| e.into_inner());
     let idx = cache.iter().position(|e| e.path == path)?;
     if cache[idx].mtime != mtime {
       cache.remove(idx);
@@ -111,7 +65,7 @@ impl ZipCache {
   }
 
   fn insert(&self, path: &Path, mtime: std::time::SystemTime, entries: Arc<Vec<ZipEntry>>) {
-    let mut cache = self.inner.lock().expect("zip cache mutex poisoned");
+    let mut cache = self.inner.lock().unwrap_or_else(|e| e.into_inner());
     cache.retain(|e| e.path != path);
     while cache.len() >= ZIP_CACHE_MAX {
       cache.remove(0);
@@ -144,6 +98,7 @@ impl ZipCache {
 mod tests {
   use super::*;
   use klparse::fixture::{stored, Fixture};
+  use std::fs::File;
 
   fn write_zip(dir: &Path, name: &str, pages: &[&str]) -> PathBuf {
     let mut fx = Fixture::new();

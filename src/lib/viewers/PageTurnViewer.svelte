@@ -106,9 +106,9 @@
   const LOG_INTERVAL = 170;
   const DRAG_THRESHOLD = 10;
   const SETTLE_PX = 0.1;
-  /// The most a settle may run past its page, as a share of the width: what
-  /// the tab pager overshoots by at the same settings, so both springs match.
-  const OVERSHOOT = 0.02;
+  /// The most a settle may run past its page, as a share of the width. None:
+  /// a page lands where it stops, like a photo gallery's, without a bounce.
+  const OVERSHOOT = 0;
   /// How much a strong flick shortens the settle. Embla's 25 - 10 * force is
   /// 0.4; higher lets fast swipes finish faster, only safe with the overshoot cap.
   const FLICK_SPEEDUP = 0.6;
@@ -147,8 +147,8 @@
     velocity += displacement / duration;
     velocity *= friction;
     location += velocity;
-    // Not in Embla: a fast flick's carried speed would spring well past the
-    // page before bouncing back, so the overshoot is capped to a small bounce.
+    // Not in Embla: a fast flick's carried speed would spring past the page
+    // and bounce back, so it is stopped at the page instead.
     if ((location - target) * settleDir > overshootCap) {
       location = target + settleDir * overshootCap;
       velocity = 0;

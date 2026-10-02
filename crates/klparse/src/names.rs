@@ -44,6 +44,37 @@ pub fn strip_zip_ext(name: &str) -> &str {
   }
 }
 
+/// A chapter archive in a manga folder: a `.zip`/`.cbz` that isn't a dotfile
+/// (macOS leaves `._name.cbz` resource forks next to the real ones).
+pub fn is_chapter_name(name: &str) -> bool {
+  !name.starts_with('.') && is_zip_name(name)
+}
+
+/// A manga folder's cover: an image named `cover`, in any case.
+pub fn is_cover_name(name: &str) -> bool {
+  is_image_name(name)
+    && name
+      .rsplit_once('.')
+      .is_some_and(|(stem, _)| stem.eq_ignore_ascii_case("cover"))
+}
+
+/// Whether `name` is one file or folder name: no separator, `.` or `..`.
+///
+/// Manga folders, and the archives and covers in them, are addressed by name
+/// alone. Anything else could reach the same folder under another spelling
+/// (`Berserk/.`, which a database would key as a different manga), a folder
+/// nested deeper than any listing shows, or somewhere outside it.
+pub fn is_plain_name(name: &str) -> bool {
+  use std::path::{Component, Path};
+  // `components` drops a trailing `/` and inner `.`s, so they're checked here.
+  let mut parts = Path::new(name).components();
+  !name.contains('/')
+    && matches!(
+      (parts.next(), parts.next()),
+      (Some(Component::Normal(_)), None)
+    )
+}
+
 /// Maps an extension (with dot) to a Content-Type, defaulting to
 /// `application/octet-stream` for anything unrecognised.
 pub fn content_type(ext_with_dot: &str) -> &'static str {
@@ -137,5 +168,35 @@ mod tests {
     assert_eq!(ext_with_dot("page01.PNG"), ".png");
     assert_eq!(ext_with_dot("a/b/page01.JpEg"), ".jpeg");
     assert_eq!(ext_with_dot("noext"), "");
+  }
+
+  #[test]
+  fn chapters_skip_dotfiles_and_covers_ignore_case() {
+    assert!(is_chapter_name("ch 1.cbz"));
+    assert!(!is_chapter_name("._ch 1.cbz"));
+    assert!(!is_chapter_name("cover.jpg"));
+    assert!(is_cover_name("Cover.JPG"));
+    assert!(is_cover_name("cover.webp"));
+    assert!(!is_cover_name("cover2.jpg"));
+    assert!(!is_cover_name("cover.txt"));
+  }
+
+  #[test]
+  fn only_plain_names_address_a_manga_or_its_files() {
+    for name in ["Berserk", "One Piece", "ch 1.cbz", ".hidden", "a..b"] {
+      assert!(is_plain_name(name), "{name}");
+    }
+    for name in [
+      "",
+      ".",
+      "..",
+      "Berserk/.",
+      "Berserk/",
+      "a/b",
+      "/abs",
+      "../x",
+    ] {
+      assert!(!is_plain_name(name), "{name:?}");
+    }
   }
 }

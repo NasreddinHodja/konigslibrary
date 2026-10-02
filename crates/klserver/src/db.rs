@@ -22,16 +22,14 @@ use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use klparse::collate::{fold, locale_cmp};
 use klparse::comicinfo::meta_sources;
+use klparse::is_chapter_name;
 use klparse::listing;
 use klparse::names::strip_zip_ext;
 use klparse::uri::encode_uri_component;
-use klparse::{is_zip_name, page_entries};
 use rusqlite::{params, Connection, OptionalExtension};
 use serde::Serialize;
 
 use crate::library::ServerChapter;
-use crate::pathutil::{file_names, subfolders};
-use crate::zipcache::FileReader;
 
 /// How often a request may trigger a pass over every manga's metadata even
 /// though the manga directory itself has not changed.
@@ -214,13 +212,13 @@ fn read_manga(path: &Path) -> Option<Read> {
   // Stamped before reading, so a change made mid-read shows up as stale next
   // time rather than being stamped over.
   let dir_mtime = nanos(mtime(path)?);
-  let names = file_names(path).ok()?;
+  let names = klfs::file_names(path).ok()?;
   let archives = meta_sources(&names).archives;
   let stamped =
     |name: Option<&String>| name.and_then(|n| stamp(&path.join(n)).map(|s| (n.clone(), s)));
   let first = stamped(archives.first());
   let last = stamped(archives.last()).filter(|_| archives.len() > 1);
-  let meta = klparse::manga_meta(&names, |name| FileReader::open(&path.join(name)).ok());
+  let meta = klfs::manga_meta(path, &names);
   let cover = stamped(meta.cover.as_ref());
   Some(Read {
     meta,
@@ -231,17 +229,6 @@ fn read_manga(path: &Path) -> Option<Read> {
       cover,
     },
   })
-}
-
-/// An archive's page entry names in reading order; none if it can't be read.
-fn archive_pages(path: &Path) -> Vec<String> {
-  let Ok(reader) = FileReader::open(path) else {
-    return Vec::new();
-  };
-  let Ok(entries) = klparse::zip::index_zip(&reader) else {
-    return Vec::new();
-  };
-  page_entries(entries).into_iter().map(|e| e.name).collect()
 }
 
 fn store(conn: &Connection, folder: &str, read: &Read) -> rusqlite::Result<()> {
@@ -388,7 +375,7 @@ impl Db {
   /// ones with no metadata yet. A different directory than last time starts
   /// over.
   fn sync_folders(&self, dir: &Path) -> rusqlite::Result<()> {
-    let folders = match subfolders(dir) {
+    let folders = match klfs::subfolders(dir) {
       Ok(f) => f,
       Err(e) => {
         eprintln!(
@@ -505,8 +492,8 @@ impl Db {
   /// and read again only when its size or mtime changes, so opening a long
   /// series costs a directory listing and a `stat` per chapter, not a parse.
   pub fn chapters(&self, path: &Path, folder: &str) -> Vec<ServerChapter> {
-    let mut files = file_names(path).unwrap_or_default();
-    files.retain(|n| !n.starts_with('.') && is_zip_name(n));
+    let mut files = klfs::file_names(path).unwrap_or_default();
+    files.retain(|n| is_chapter_name(n));
 
     let mut stored = self.stored_chapters(folder).unwrap_or_else(|e| {
       eprintln!("[konigslibrary] Cannot read stored chapters of \"{folder}\": {e}");
@@ -526,7 +513,7 @@ impl Db {
       let pages = match known {
         Some((s, pages)) if s == current => pages,
         _ => {
-          let pages = archive_pages(&path.join(file));
+          let pages = klfs::archive_pages(&path.join(file));
           changed.push((file.clone(), current, pages.clone()));
           pages
         }

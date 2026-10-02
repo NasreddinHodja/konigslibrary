@@ -10,15 +10,14 @@ mod db;
 mod library;
 mod pathutil;
 mod routes;
-mod zipcache;
 
 use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::sync::Arc;
 
 use config::Config;
+use klfs::ZipCache;
 use routes::{AppState, SharedState};
-use zipcache::ZipCache;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {

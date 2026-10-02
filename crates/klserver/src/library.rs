@@ -4,15 +4,15 @@
 //! Every path that leaves the configured manga directory is rejected here rather than at the route layer, so the
 //! guard cannot be bypassed by adding a route.
 
-use std::path::{Component, Path, PathBuf};
+use std::path::{Path, PathBuf};
 
-use klparse::{collate::locale_cmp, ext_with_dot, is_image_name, is_zip_name};
+use klparse::{collate::locale_cmp, ext_with_dot, is_image_name, is_plain_name, is_zip_name};
 use serde::Serialize;
 
 use crate::config::Config;
 use crate::db::Db;
-use crate::pathutil::{expand_home_with, is_inside, parent_of, resolve, resolve_from, subfolders};
-use crate::zipcache::{FileReader, ZipCache};
+use crate::pathutil::{expand_home_with, is_inside, parent_of, resolve, resolve_from};
+use klfs::ZipCache;
 
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -64,7 +64,7 @@ pub fn browse_dir(cfg: &Config, path: Option<&str>) -> Result<BrowseResult, Stri
     &expand_home_with(requested, cfg.home()),
   );
 
-  let mut entries: Vec<BrowseEntry> = subfolders(&dir)
+  let mut entries: Vec<BrowseEntry> = klfs::subfolders(&dir)
     .map_err(|e| format!("{}: {}", dir.display(), e))?
     .into_iter()
     .map(|name| BrowseEntry {
@@ -79,21 +79,6 @@ pub fn browse_dir(cfg: &Config, path: Option<&str>) -> Result<BrowseResult, Stri
     parent: parent_of(&dir).map(|p| p.to_string_lossy().into_owned()),
     entries,
   })
-}
-
-/// Whether `name` is one file or folder name: no separator, `.` or `..`.
-///
-/// Manga folders, and the archives and covers in them, are addressed by name
-/// alone. Anything else could reach the same folder under another spelling
-/// (`Berserk/.`) — which the database would key as a different manga — or a
-/// folder nested deeper than the library lists.
-fn is_plain_name(name: &str) -> bool {
-  let mut parts = Path::new(name).components();
-  !name.contains('/')
-    && matches!(
-      (parts.next(), parts.next()),
-      (Some(Component::Normal(_)), None)
-    )
 }
 
 /// Resolves a manga name against the configured directory, rejecting anything
@@ -166,12 +151,7 @@ fn read_zip_entry(cache: &ZipCache, zip_path: &Path, entry_path: &str) -> Option
   if !is_image_name(entry_path) {
     return None;
   }
-
-  let entries = cache.get(zip_path).ok()?;
-  let entry = entries.iter().find(|e| e.name == entry_path)?;
-
-  let reader = FileReader::open(zip_path).ok()?;
-  let bytes = klparse::zip::extract_entry(&reader, entry).ok()?;
+  let bytes = klfs::read_entry(cache, zip_path, entry_path).ok()??;
   Some(ImageResult {
     ext: ext_with_dot(entry_path),
     bytes,
@@ -517,24 +497,5 @@ mod tests {
   fn browse_reports_an_error_for_an_unreadable_directory() {
     let l = lib();
     assert!(browse_dir(&l.cfg, Some("/definitely/not/a/real/path")).is_err());
-  }
-
-  #[test]
-  fn only_plain_names_address_a_manga_or_its_files() {
-    for name in ["Berserk", "One Piece", "ch 1.cbz", ".hidden", "a..b"] {
-      assert!(is_plain_name(name), "{name}");
-    }
-    for name in [
-      "",
-      ".",
-      "..",
-      "Berserk/.",
-      "Berserk/",
-      "a/b",
-      "/abs",
-      "../x",
-    ] {
-      assert!(!is_plain_name(name), "{name:?}");
-    }
   }
 }

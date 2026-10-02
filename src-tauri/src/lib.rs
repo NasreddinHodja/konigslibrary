@@ -71,10 +71,11 @@ fn list_manga_chapters(
 #[tauri::command(async)]
 fn read_archive_page(
   state: tauri::State<MangaDirState>,
+  cache: tauri::State<klfs::ZipCache>,
   path: String,
   entry: String,
 ) -> Result<tauri::ipc::Response, String> {
-  let bytes = archive::read_page(&allowed_path(&state, &path)?, &entry)?;
+  let bytes = archive::read_page(&cache, &allowed_path(&state, &path)?, &entry)?;
   Ok(tauri::ipc::Response::new(bytes))
 }
 
@@ -120,6 +121,7 @@ pub fn run() {
 
   tauri::Builder::default()
     .manage(download::DownloadState(Default::default()))
+    .manage(klfs::ZipCache::new())
     .manage(MangaDirState(Mutex::new(Roots::default())))
     .manage(device_library::DeviceIndex::default())
     .manage(lan_server::LanServerState::default())

@@ -99,32 +99,6 @@ pub fn is_inside(root: &Path, candidate: &Path) -> bool {
   candidate.starts_with(root) && candidate != root
 }
 
-/// The names of the entries in `dir` that `keep` accepts, by their type.
-fn entry_names(
-  dir: &Path,
-  keep: impl Fn(std::fs::FileType) -> bool,
-) -> std::io::Result<Vec<String>> {
-  Ok(
-    std::fs::read_dir(dir)?
-      .flatten()
-      .filter(|item| item.file_type().is_ok_and(&keep))
-      .map(|item| item.file_name().to_string_lossy().into_owned())
-      .collect(),
-  )
-}
-
-/// The names of the regular files in `dir`.
-pub fn file_names(dir: &Path) -> std::io::Result<Vec<String>> {
-  entry_names(dir, |t| t.is_file())
-}
-
-/// The names of the folders in `dir`, dotfolders left out.
-pub fn subfolders(dir: &Path) -> std::io::Result<Vec<String>> {
-  let mut names = entry_names(dir, |t| t.is_dir())?;
-  names.retain(|name| !name.starts_with('.'));
-  Ok(names)
-}
-
 #[cfg(test)]
 mod tests {
   use super::*;

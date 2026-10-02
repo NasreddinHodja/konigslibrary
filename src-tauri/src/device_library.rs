@@ -52,20 +52,14 @@ fn sorted(mut entries: Vec<DeviceEntry>) -> Vec<DeviceEntry> {
 
 /// Every manga folder in the manga directory, dotfolders skipped.
 fn scan_manga_dir(dir: &Path) -> Vec<DeviceEntry> {
-  let Ok(read) = std::fs::read_dir(dir) else {
-    return Vec::new();
-  };
-  let entries = read
-    .flatten()
-    .filter(|item| item.file_type().is_ok_and(|t| t.is_dir()))
-    .filter_map(|item| {
-      let name = item.file_name().to_string_lossy().into_owned();
-      (!name.starts_with('.')).then(|| DeviceEntry {
-        path: dir.join(&name).to_string_lossy().into_owned(),
-        name,
-        origin: Origin::Folder,
-        slug: None,
-      })
+  let entries = klfs::subfolders(dir)
+    .unwrap_or_default()
+    .into_iter()
+    .map(|name| DeviceEntry {
+      path: dir.join(&name).to_string_lossy().into_owned(),
+      name,
+      origin: Origin::Folder,
+      slug: None,
     })
     .collect();
   sorted(entries)

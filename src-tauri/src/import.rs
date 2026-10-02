@@ -25,14 +25,7 @@ pub fn import_dir(app: &AppHandle) -> Result<PathBuf, String> {
 
 /// Whether a file belongs in a manga folder: a chapter archive or the cover.
 fn is_manga_file(name: &str) -> bool {
-  if name.starts_with('.') {
-    return false;
-  }
-  klparse::is_zip_name(name)
-    || (klparse::is_image_name(name)
-      && name
-        .rsplit_once('.')
-        .is_some_and(|(stem, _)| stem.eq_ignore_ascii_case("cover")))
+  klparse::is_chapter_name(name) || klparse::is_cover_name(name)
 }
 
 /// Writes `dir/name` through a `.part` file, so a manga folder never holds half

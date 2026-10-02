@@ -79,6 +79,7 @@ checksum = "7f202df86484c868dbad7eaa557ef785d5c66295e41b460ef922eca0723b842c"
 name = "app"
 version = "0.8.8"
 dependencies = [
+ "klfs",
  "klparse",
  "log",
  "reqwest 0.12.28",
@@ -2084,6 +2085,13 @@ dependencies = [
  "bitflags 2.11.1",
  "serde",
  "unicode-segmentation",
+]
+
+[[package]]
+name = "klfs"
+version = "0.6.0"
+dependencies = [
+ "klparse",
 ]
 
 [[package]]
