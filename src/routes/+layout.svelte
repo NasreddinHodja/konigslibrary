@@ -5,7 +5,7 @@
   import { readerActive } from '$lib/ui/reader-active.svelte';
   import { initTheme } from '$lib/theme';
   import { createReader, setReaderContext } from '$lib/context';
-  import { isNative } from '$lib/utils/platform';
+  import { isAndroid, isNative } from '$lib/utils/platform';
   import { showSuccess, showError } from '$lib/ui/toast.svelte';
   import { errorMessage } from '$lib/utils/errors';
   import { parseConnectLink, validateAndConnect } from '$lib/sources/server-connect';
@@ -32,8 +32,10 @@
   }
 
   // Crossfades between pages. Browsers without view transitions just navigate.
+  // The Linux app's WebKitGTK segfaults on startViewTransition, so it just navigates.
+  const webKitGtk = isNative() && !isAndroid() && /Linux/.test(navigator.userAgent);
   onNavigate((navigation) => {
-    if (!document.startViewTransition) return;
+    if (!document.startViewTransition || webKitGtk) return;
     return new Promise((resolve) => {
       document.startViewTransition(async () => {
         resolve();
