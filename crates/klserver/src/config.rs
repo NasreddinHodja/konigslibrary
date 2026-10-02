@@ -82,6 +82,12 @@ impl Config {
     Some(dir.to_string())
   }
 
+  /// Whether `MANGA_DIR` sets the manga directory, which then can't be
+  /// changed from the settings page.
+  pub fn manga_dir_is_from_env(&self) -> bool {
+    self.env_manga_dir.is_some()
+  }
+
   /// `None` when no manga directory has been configured at all.
   pub fn manga_dir(&self) -> Option<PathBuf> {
     let raw = match &self.env_manga_dir {

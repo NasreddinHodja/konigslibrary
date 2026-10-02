@@ -58,13 +58,24 @@ fn element(xml: &str, tag: &str) -> Option<String> {
   (!text.is_empty()).then_some(text)
 }
 
+/// How far past a `&` to look for the `;` that ends an entity: room for the
+/// longest valid one with some leading zeros.
+const ENTITY_MAX: usize = 32;
+
 fn decode_entities(s: &str) -> String {
   let mut out = String::with_capacity(s.len());
   let mut rest = s;
   while let Some(amp) = rest.find('&') {
     out.push_str(&rest[..amp]);
     rest = &rest[amp..];
-    let Some(semi) = rest.find(';') else { break };
+    // An entity's `;` is close by (`&#x10FFFF;` is the longest valid one).
+    // Searching the whole rest instead would rescan it for every `&` that
+    // isn't an entity, which is quadratic in a long run of them.
+    let Some(semi) = rest.bytes().take(ENTITY_MAX).position(|b| b == b';') else {
+      out.push('&');
+      rest = &rest[1..];
+      continue;
+    };
     let entity = &rest[1..semi];
     let decoded = match entity {
       "amp" => Some('&'),
@@ -277,6 +288,21 @@ mod tests {
   #[test]
   fn an_unknown_entity_is_left_as_is() {
     assert_eq!(decode_entities("a &nbsp; b & c"), "a &nbsp; b & c");
+  }
+
+  #[test]
+  fn entities_decode_next_to_ampersands_that_are_not_entities() {
+    assert_eq!(decode_entities("&&amp;&#x41;& &#66;"), "&&A& B");
+    assert_eq!(decode_entities("& no semicolon"), "& no semicolon");
+  }
+
+  #[test]
+  fn a_long_run_of_ampersands_decodes_in_linear_time() {
+    // Quadratic before the `;` search was bounded: seconds at this size.
+    let text = format!("{};", "&".repeat(400_000));
+    let start = std::time::Instant::now();
+    assert_eq!(decode_entities(&text), text);
+    assert!(start.elapsed() < std::time::Duration::from_secs(2));
   }
 
   fn archive(xml: Option<&str>) -> Bytes {

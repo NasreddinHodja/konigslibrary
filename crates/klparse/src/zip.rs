@@ -122,7 +122,10 @@ impl ReadAt for [u8] {
     self.len() as u64
   }
   fn read_at(&self, offset: u64, len: usize) -> Result<Vec<u8>> {
-    let start = (offset as usize).min(self.len());
+    // An offset past `usize` (on 32-bit targets) is past the end, not wrapped.
+    let start = usize::try_from(offset)
+      .unwrap_or(usize::MAX)
+      .min(self.len());
     let end = start.saturating_add(len).min(self.len());
     Ok(self[start..end].to_vec())
   }
@@ -269,19 +272,22 @@ pub fn parse_central_directory(cd: &[u8]) -> Vec<ZipEntry> {
           break;
         };
         if id == ZIP64_EXTRA_ID {
-          let mut fp = ex + 4;
+          // Fields are read from this record only, never from whatever
+          // follows a record that declares itself too short for them.
+          let record = &cd[ex + 4..(ex + 4 + sz).min(ex_end).min(cd.len())];
+          let mut fp = 0;
           if usize32 == ZIP64_SENTINEL_32 {
-            let Some(v) = u64le(cd, fp) else { break };
+            let Some(v) = u64le(record, fp) else { break };
             uncompressed_size = v;
             fp += 8;
           }
           if csize32 == ZIP64_SENTINEL_32 {
-            let Some(v) = u64le(cd, fp) else { break };
+            let Some(v) = u64le(record, fp) else { break };
             compressed_size = v;
             fp += 8;
           }
           if lho32 == ZIP64_SENTINEL_32 {
-            let Some(v) = u64le(cd, fp) else { break };
+            let Some(v) = u64le(record, fp) else { break };
             local_header_offset = v;
           }
           break;
@@ -323,19 +329,32 @@ pub fn local_header_data_offset(lh: &[u8]) -> Result<u64> {
   Ok(30 + name_len + extra_len)
 }
 
-/// Rejects an entry whose declared uncompressed size is over the zip-bomb limit.
-/// Checked before any bytes are read, so an inflate bomb never gets allocated.
-pub fn check_entry_size(name: &str, uncompressed_size: u64) -> Result<()> {
+/// Rejects an entry whose declared sizes are over the zip-bomb limit. Checked
+/// before any bytes are read, so neither a huge read nor a huge allocation
+/// happens on the archive's say-so.
+///
+/// The compressed size gets a little headroom: deflate can come out slightly
+/// larger than its input. What the entry really inflates to is capped
+/// separately, in [`decode_entry`], since the declared size can lie.
+pub fn check_entry_size(name: &str, compressed_size: u64, uncompressed_size: u64) -> Result<()> {
+  let too_large = |size| ZipError::EntryTooLarge {
+    name: name.to_string(),
+    size,
+  };
   if uncompressed_size > MAX_UNCOMPRESSED_BYTES {
-    return Err(ZipError::EntryTooLarge {
-      name: name.to_string(),
-      size: uncompressed_size,
-    });
+    return Err(too_large(uncompressed_size));
+  }
+  if compressed_size > MAX_UNCOMPRESSED_BYTES + MAX_UNCOMPRESSED_BYTES / 64 {
+    return Err(too_large(compressed_size));
   }
   Ok(())
 }
 
 /// Decompresses one entry's raw bytes and verifies its CRC32.
+///
+/// Inflating stops past `uncompressed_size`, the size the central directory
+/// declared (and [`check_entry_size`] bounded): an entry that claims to be
+/// small and inflates to more is an error, not an unbounded allocation.
 ///
 /// A stored CRC of 0 means "not recorded" and skips the check, matching the
 /// browser implementation.
@@ -343,11 +362,12 @@ pub fn decode_entry(
   raw: &[u8],
   compression_method: u16,
   expected_crc: u32,
+  uncompressed_size: u64,
   name: &str,
 ) -> Result<Vec<u8>> {
   let out = match compression_method {
     METHOD_STORE => raw.to_vec(),
-    METHOD_DEFLATE => inflate_raw(raw)?,
+    METHOD_DEFLATE => inflate_raw(raw, uncompressed_size, name)?,
     other => return Err(ZipError::UnsupportedCompressionMethod(other)),
   };
 
@@ -365,14 +385,23 @@ pub fn decode_entry(
   Ok(out)
 }
 
-fn inflate_raw(raw: &[u8]) -> Result<Vec<u8>> {
+fn inflate_raw(raw: &[u8], declared: u64, name: &str) -> Result<Vec<u8>> {
   use flate2::read::DeflateDecoder;
   use std::io::Read;
 
+  let cap = declared.min(MAX_UNCOMPRESSED_BYTES);
   let mut out = Vec::new();
+  // One byte past the cap is enough to tell an entry that inflates to more.
   DeflateDecoder::new(raw)
+    .take(cap + 1)
     .read_to_end(&mut out)
     .map_err(|e| ZipError::Inflate(e.to_string()))?;
+  if out.len() as u64 > cap {
+    return Err(ZipError::EntryTooLarge {
+      name: name.to_string(),
+      size: out.len() as u64,
+    });
+  }
   Ok(out)
 }
 
@@ -402,7 +431,7 @@ pub fn index_zip<R: ReadAt + ?Sized>(r: &R) -> Result<Vec<ZipEntry>> {
 
 /// Reads and decompresses a single entry.
 pub fn extract_entry<R: ReadAt + ?Sized>(r: &R, entry: &ZipEntry) -> Result<Vec<u8>> {
-  check_entry_size(&entry.name, entry.uncompressed_size)?;
+  check_entry_size(&entry.name, entry.compressed_size, entry.uncompressed_size)?;
 
   let lh = r.read_at(entry.local_header_offset, 30)?;
   let data_offset = local_header_data_offset(&lh)?;
@@ -411,7 +440,13 @@ pub fn extract_entry<R: ReadAt + ?Sized>(r: &R, entry: &ZipEntry) -> Result<Vec<
     entry.compressed_size as usize,
   )?;
 
-  decode_entry(&raw, entry.compression_method, entry.crc32, &entry.name)
+  decode_entry(
+    &raw,
+    entry.compression_method,
+    entry.crc32,
+    entry.uncompressed_size,
+    &entry.name,
+  )
 }
 
 /// The image entries of a chapter archive, in reading order.
@@ -441,6 +476,29 @@ mod tests {
     assert_eq!(entries[0].name, "hello.txt");
     assert_eq!(entries[0].uncompressed_size, data.len() as u64);
     assert_eq!(entries[0].compression_method, METHOD_STORE);
+  }
+
+  #[test]
+  fn an_entry_that_inflates_past_its_declared_size_is_rejected() {
+    let data = vec![0u8; 64 * 1024];
+    let zip = Fixture::new().entry(deflated("bomb.png", &data)).build();
+    let mut entries = index_zip(&zip).unwrap();
+    // What a lying central directory would say; the CRC still matches.
+    entries[0].uncompressed_size = 10;
+
+    let err = extract_entry(&zip, &entries[0]).unwrap_err();
+    assert!(
+      matches!(err, ZipError::EntryTooLarge { size: 11, .. }),
+      "{err:?}"
+    );
+  }
+
+  #[test]
+  fn an_entry_inflating_to_exactly_its_declared_size_is_kept() {
+    let data = pseudo_random(4096, 7);
+    let zip = Fixture::new().entry(deflated("page.png", &data)).build();
+    let entries = index_zip(&zip).unwrap();
+    assert_eq!(extract_entry(&zip, &entries[0]).unwrap(), data);
   }
 
   #[test]
@@ -725,8 +783,9 @@ mod tests {
 
   #[test]
   fn an_entry_exactly_at_the_limit_is_allowed() {
-    assert!(check_entry_size("edge.png", MAX_UNCOMPRESSED_BYTES).is_ok());
-    assert!(check_entry_size("edge.png", MAX_UNCOMPRESSED_BYTES + 1).is_err());
+    assert!(check_entry_size("edge.png", 0, MAX_UNCOMPRESSED_BYTES).is_ok());
+    assert!(check_entry_size("edge.png", 0, MAX_UNCOMPRESSED_BYTES + 1).is_err());
+    assert!(check_entry_size("edge.png", u64::MAX, 10).is_err());
   }
 
   // --- malformed input must not panic ---

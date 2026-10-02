@@ -34,10 +34,13 @@ pub fn decode_uri_component(s: &str) -> Option<String> {
   let mut i = 0;
   while i < bytes.len() {
     if bytes[i] == b'%' {
-      if i + 3 > bytes.len() {
+      // Two hex digits exactly: `from_str_radix` alone would also take a
+      // sign (`%+F`), which `decodeURIComponent` rejects.
+      let hex = bytes.get(i + 1..i + 3)?;
+      if !hex.iter().all(u8::is_ascii_hexdigit) {
         return None;
       }
-      let hex = std::str::from_utf8(&bytes[i + 1..i + 3]).ok()?;
+      let hex = std::str::from_utf8(hex).ok()?;
       out.push(u8::from_str_radix(hex, 16).ok()?);
       i += 3;
     } else {
@@ -88,6 +91,9 @@ mod tests {
     assert_eq!(decode_uri_component("%"), None);
     assert_eq!(decode_uri_component("%2"), None);
     assert_eq!(decode_uri_component("%zz"), None);
+    // A sign, which `from_str_radix` would take but `decodeURIComponent` throws on.
+    assert_eq!(decode_uri_component("%+F"), None);
+    assert_eq!(decode_uri_component("%-1"), None);
     // A valid escape that is not valid UTF-8.
     assert_eq!(decode_uri_component("%FF"), None);
   }

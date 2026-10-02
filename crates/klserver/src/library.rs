@@ -5,7 +5,7 @@
 //! manga directory is rejected here rather than at the route layer, so the
 //! guard cannot be bypassed by adding a route.
 
-use std::path::{Path, PathBuf};
+use std::path::{Component, Path, PathBuf};
 
 use klparse::{collate::locale_cmp, ext_with_dot, is_image_name, is_zip_name};
 use serde::Serialize;
@@ -80,9 +80,27 @@ pub fn browse_dir(cfg: &Config, path: Option<&str>) -> Result<BrowseResult, Stri
   })
 }
 
+/// Whether `name` is one file or folder name: no separator, `.` or `..`.
+///
+/// Manga folders, and the archives and covers in them, are addressed by name
+/// alone. Anything else could reach the same folder under another spelling
+/// (`Berserk/.`) — which the database would key as a different manga — or a
+/// folder nested deeper than the library lists.
+fn is_plain_name(name: &str) -> bool {
+  let mut parts = Path::new(name).components();
+  !name.contains('/')
+    && matches!(
+      (parts.next(), parts.next()),
+      (Some(Component::Normal(_)), None)
+    )
+}
+
 /// Resolves a manga name against the configured directory, rejecting anything
-/// that lands outside it.
+/// that isn't one of its folders' names.
 pub fn manga_path(cfg: &Config, manga_name: &str) -> Option<(PathBuf, PathBuf)> {
+  if !is_plain_name(manga_name) {
+    return None;
+  }
   let dir = cfg.manga_dir()?;
   let path = resolve_from(&dir, &[manga_name]);
   if !is_inside(&dir, &path) || path == dir {
@@ -114,6 +132,9 @@ pub fn get_file(
 ) -> Option<ImageResult> {
   let (_, manga) = manga_path(cfg, manga_name)?;
   let (first, rest) = path_parts.split_first()?;
+  if !is_plain_name(first) {
+    return None;
+  }
 
   let resolved = resolve_from(&manga, &[first]);
   if !is_inside(&manga, &resolved) || !std::fs::metadata(&resolved).is_ok_and(|m| m.is_file()) {
@@ -486,5 +507,24 @@ mod tests {
   fn browse_reports_an_error_for_an_unreadable_directory() {
     let l = lib();
     assert!(browse_dir(&l.cfg, Some("/definitely/not/a/real/path")).is_err());
+  }
+
+  #[test]
+  fn only_plain_names_address_a_manga_or_its_files() {
+    for name in ["Berserk", "One Piece", "ch 1.cbz", ".hidden", "a..b"] {
+      assert!(is_plain_name(name), "{name}");
+    }
+    for name in [
+      "",
+      ".",
+      "..",
+      "Berserk/.",
+      "Berserk/",
+      "a/b",
+      "/abs",
+      "../x",
+    ] {
+      assert!(!is_plain_name(name), "{name:?}");
+    }
   }
 }

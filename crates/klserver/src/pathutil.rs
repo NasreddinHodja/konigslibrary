@@ -92,16 +92,11 @@ pub fn parent_of(dir: &Path) -> Option<PathBuf> {
 
 /// True when `candidate` is strictly inside `root`.
 ///
-/// This is the string-prefix test the TypeScript used
-/// (`resolved.startsWith(resolve(dir) + sep)`), kept verbatim rather than
-/// swapped for `Path::starts_with`, which compares whole components and would
-/// accept `candidate == root`.
+/// Compared by path components, not as strings: a lossy string compare
+/// turns every non-UTF-8 byte into U+FFFD, so a sibling directory could
+/// match the root's prefix.
 pub fn is_inside(root: &Path, candidate: &Path) -> bool {
-  let mut prefix = root.to_string_lossy().into_owned();
-  if !prefix.ends_with(std::path::MAIN_SEPARATOR) {
-    prefix.push(std::path::MAIN_SEPARATOR);
-  }
-  candidate.to_string_lossy().starts_with(&prefix)
+  candidate.starts_with(root) && candidate != root
 }
 
 #[cfg(test)]

@@ -89,11 +89,15 @@ pub fn local_header_data_offset(lh: &[u8]) -> Result<f64, JsValue> {
     .map_err(to_js_error)
 }
 
-/// Rejects an entry whose declared uncompressed size is over the zip-bomb
-/// limit. Called before any bytes are fetched.
+/// Rejects an entry whose declared sizes are over the zip-bomb limit. Called
+/// before any bytes are fetched.
 #[wasm_bindgen]
-pub fn check_entry_size(name: &str, uncompressed_size: f64) -> Result<(), JsValue> {
-  zip::check_entry_size(name, uncompressed_size as u64).map_err(to_js_error)
+pub fn check_entry_size(
+  name: &str,
+  compressed_size: f64,
+  uncompressed_size: f64,
+) -> Result<(), JsValue> {
+  zip::check_entry_size(name, compressed_size as u64, uncompressed_size as u64).map_err(to_js_error)
 }
 
 /// Decompresses one entry's raw bytes and verifies its CRC32.
@@ -102,9 +106,17 @@ pub fn decode_entry(
   raw: &[u8],
   compression_method: u16,
   expected_crc: u32,
+  uncompressed_size: f64,
   name: &str,
 ) -> Result<Vec<u8>, JsValue> {
-  zip::decode_entry(raw, compression_method, expected_crc, name).map_err(to_js_error)
+  zip::decode_entry(
+    raw,
+    compression_method,
+    expected_crc,
+    uncompressed_size as u64,
+    name,
+  )
+  .map_err(to_js_error)
 }
 
 /// The maximum bytes worth reading from the end of a file to find the EOCD.

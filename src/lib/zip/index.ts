@@ -72,14 +72,20 @@ export async function extractEntry(file: File, entry: ZipEntry): Promise<Blob> {
   await initParser();
 
   // Checked before reading anything, so a zip bomb is rejected on its declared
-  // size rather than after it has been inflated.
-  wasm.check_entry_size(entry.name, entry.uncompressedSize);
+  // sizes rather than after a huge read; decode_entry caps the inflating.
+  wasm.check_entry_size(entry.name, entry.compressedSize, entry.uncompressedSize);
 
   const header = await bytes(file, entry.localHeaderOffset, entry.localHeaderOffset + 30);
   const dataStart = entry.localHeaderOffset + wasm.local_header_data_offset(header);
   const raw = await bytes(file, dataStart, dataStart + entry.compressedSize);
 
-  const data = wasm.decode_entry(raw, entry.compressionMethod, entry.crc32, entry.name);
+  const data = wasm.decode_entry(
+    raw,
+    entry.compressionMethod,
+    entry.crc32,
+    entry.uncompressedSize,
+    entry.name
+  );
   // wasm-bindgen hands back a fresh Uint8Array copied out of the wasm heap; the
   // cast only tells TypeScript its buffer is not a SharedArrayBuffer.
   return new Blob([data as Uint8Array<ArrayBuffer>]);

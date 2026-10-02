@@ -9,7 +9,7 @@ use std::sync::Arc;
 
 use axum::{
   extract::{ConnectInfo, Query, RawPathParams, RawQuery, State},
-  http::{header, HeaderValue, Method, StatusCode},
+  http::{header, HeaderMap, HeaderValue, Method, StatusCode},
   response::{IntoResponse, Response},
   routing::get,
   Json, Router,
@@ -54,6 +54,39 @@ fn is_local_client(addr: SocketAddr) -> bool {
   }
 }
 
+/// Whether a request comes from a page this server served to this machine,
+/// not from another site open in the same browser.
+///
+/// A loopback peer alone doesn't show that: any site the user visits can make
+/// their browser call `http://localhost:<port>`, and through DNS rebinding can
+/// even do it same-origin. Browsers always send `Host`, and `Origin` on a
+/// cross-origin or POST request, so a page of ours has a loopback `Host` and,
+/// if there is an `Origin`, the same one. Non-browser clients send neither
+/// header and are judged by their peer address alone.
+fn is_local_page(headers: &HeaderMap) -> bool {
+  let host = headers.get(header::HOST).and_then(|h| h.to_str().ok());
+  if let Some(host) = host {
+    let name = match host.strip_prefix('[') {
+      Some(v6) => v6.split_once(']').map_or(v6, |(addr, _)| addr),
+      None => host.rsplit_once(':').map_or(host, |(name, _)| name),
+    };
+    if !matches!(name, "localhost" | "127.0.0.1" | "::1") {
+      return false;
+    }
+  }
+  match headers.get(header::ORIGIN) {
+    None => true,
+    Some(origin) => {
+      let authority = origin
+        .to_str()
+        .ok()
+        .and_then(|o| o.split_once("://"))
+        .map(|(_, rest)| rest);
+      authority.is_some() && authority == host
+    }
+  }
+}
+
 fn forbidden() -> Response {
   (StatusCode::FORBIDDEN, Json(json!({ "error": "Forbidden" }))).into_response()
 }
@@ -63,34 +96,51 @@ pub fn router(state: SharedState) -> Router {
   // Unmatched paths fall through to the built SPA, which does its own routing.
   let static_files = ServeDir::new(&state.static_dir).fallback(ServeFile::new(index));
 
-  Router::new()
+  // The library is read cross-origin; see `cors`.
+  let library = Router::new()
     .route("/api/ping", get(get_ping))
     .route("/api/library", get(get_library))
     .route("/api/library/{manga}/chapters", get(get_chapters))
     .route("/api/library/{manga}/meta", get(get_meta))
     .route("/api/library/{manga}/{*path}", get(get_image))
+    .layer(cors());
+  // Settings are only for the SPA this server serves, which calls them
+  // same-origin, so they get no CORS headers: another site's page can't read
+  // them or send them JSON.
+  let settings = Router::new()
     .route("/api/settings", get(get_settings).post(post_settings))
-    .route("/api/settings/browse", get(get_browse))
+    .route("/api/settings/browse", get(get_browse));
+
+  library
+    .merge(settings)
     .fallback_service(static_files)
-    .layer(cors())
     .with_state(state)
 }
 
-/// The API is read cross-origin, so it has to opt in.
+/// The library API is read cross-origin, so it has to opt in.
 ///
 /// A phone paired over LAN runs the packaged app, whose webview origin is
 /// `tauri.localhost`, not this server — without these headers every `fetch`
 /// here fails as an opaque "Failed to fetch". Any origin is allowed because
 /// the backend-free web deployment can also be pointed at a self-hosted
-/// server from whatever domain it happens to be served from. That grants no
-/// new reach: `POST /api/settings` and `/api/settings/browse` stay gated on
-/// `is_local_client`, and no credentials are involved, which `allow_origin`
-/// of `Any` forbids anyway.
+/// server from whatever domain it happens to be served from. The settings
+/// routes are left out (see `router`), and no credentials are involved,
+/// which `allow_origin` of `Any` forbids anyway.
 fn cors() -> CorsLayer {
   CorsLayer::new()
     .allow_origin(Any)
     .allow_methods([Method::GET, Method::POST])
     .allow_headers(Any)
+}
+
+/// Runs a handler's file and database work on tokio's blocking pool. Syncing
+/// the library, parsing archives and reading files all block, and on a worker
+/// thread they would hold up every other request — `/api/ping` included,
+/// which the client then takes for the server being down.
+async fn blocking(work: impl FnOnce() -> Response + Send + 'static) -> Response {
+  tokio::task::spawn_blocking(work)
+    .await
+    .unwrap_or_else(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())
 }
 
 /// Reachability probe: the client polls this while offline, so it must stay
@@ -115,6 +165,10 @@ async fn get_library(
   State(state): State<SharedState>,
   Query(query): Query<LibraryQuery>,
 ) -> Response {
+  blocking(move || library_page(&state, &query)).await
+}
+
+fn library_page(state: &AppState, query: &LibraryQuery) -> Response {
   let limit = query
     .limit
     .unwrap_or(LIBRARY_PAGE)
@@ -155,23 +209,24 @@ async fn get_chapters(State(state): State<SharedState>, params: RawPathParams) -
   let Some(manga) = raw_param(&params, "manga").and_then(decode_param) else {
     return Json(Vec::<library::ServerChapter>::new()).into_response();
   };
-  Json(library::list_chapters(&state.config, &state.db, &manga)).into_response()
+  blocking(move || Json(library::list_chapters(&state.config, &state.db, &manga)).into_response())
+    .await
 }
 
 async fn get_meta(State(state): State<SharedState>, params: RawPathParams) -> Response {
-  let meta = raw_param(&params, "manga")
-    .and_then(decode_param)
-    .and_then(|manga| {
-      let (_, path) = library::manga_path(&state.config, &manga)?;
-      if !path.is_dir() {
-        return None;
-      }
-      state.db.meta(&path, &manga)
-    });
-  match meta {
-    Some(json) => ([(header::CONTENT_TYPE, "application/json")], json).into_response(),
-    None => (StatusCode::NOT_FOUND, "Not found").into_response(),
-  }
+  let Some(manga) = raw_param(&params, "manga").and_then(decode_param) else {
+    return (StatusCode::NOT_FOUND, "Not found").into_response();
+  };
+  blocking(move || {
+    let meta = library::manga_path(&state.config, &manga)
+      .filter(|(_, path)| path.is_dir())
+      .and_then(|(_, path)| state.db.meta(&path, &manga));
+    match meta {
+      Some(json) => ([(header::CONTENT_TYPE, "application/json")], json).into_response(),
+      None => (StatusCode::NOT_FOUND, "Not found").into_response(),
+    }
+  })
+  .await
 }
 
 async fn get_image(
@@ -198,35 +253,38 @@ async fn get_image(
     return not_found();
   };
 
-  let Some(image) = library::get_file(&state.config, &state.cache, &manga, &parts) else {
-    return not_found();
-  };
-  // Covers and whole archives can be replaced in place, so only pages are
-  // addressed by paths that never change — and a cover asked for by the
-  // version the library listed, which a replaced cover no longer matches.
-  let versioned = query
-    .as_deref()
-    .is_some_and(|q| q.split('&').any(|kv| kv.starts_with("v=")));
-  let cache_control = if parts.len() > 1 || versioned {
-    IMMUTABLE
-  } else {
-    "no-cache"
-  };
+  blocking(move || {
+    let Some(image) = library::get_file(&state.config, &state.cache, &manga, &parts) else {
+      return not_found();
+    };
+    // Covers and whole archives can be replaced in place, so only pages are
+    // addressed by paths that never change — and a cover asked for by the
+    // version the library listed, which a replaced cover no longer matches.
+    let versioned = query
+      .as_deref()
+      .is_some_and(|q| q.split('&').any(|kv| kv.starts_with("v=")));
+    let cache_control = if parts.len() > 1 || versioned {
+      IMMUTABLE
+    } else {
+      "no-cache"
+    };
 
-  (
-    [
-      (
-        header::CONTENT_TYPE,
-        HeaderValue::from_static(klparse::content_type(&image.ext)),
-      ),
-      (
-        header::CACHE_CONTROL,
-        HeaderValue::from_static(cache_control),
-      ),
-    ],
-    image.bytes,
-  )
-    .into_response()
+    (
+      [
+        (
+          header::CONTENT_TYPE,
+          HeaderValue::from_static(klparse::content_type(&image.ext)),
+        ),
+        (
+          header::CACHE_CONTROL,
+          HeaderValue::from_static(cache_control),
+        ),
+      ],
+      image.bytes,
+    )
+      .into_response()
+  })
+  .await
 }
 
 async fn get_settings(State(state): State<SharedState>) -> Response {
@@ -236,9 +294,10 @@ async fn get_settings(State(state): State<SharedState>) -> Response {
 async fn post_settings(
   State(state): State<SharedState>,
   ConnectInfo(addr): ConnectInfo<SocketAddr>,
+  headers: HeaderMap,
   body: Option<Json<serde_json::Value>>,
 ) -> Response {
-  if !is_local_client(addr) {
+  if !is_local_client(addr) || !is_local_page(&headers) {
     return forbidden();
   }
 
@@ -256,6 +315,15 @@ async fn post_settings(
     )
       .into_response();
   };
+
+  // Saving would succeed and change nothing: the variable wins.
+  if state.config.manga_dir_is_from_env() {
+    return (
+      StatusCode::CONFLICT,
+      Json(json!({ "error": "The manga directory is set by MANGA_DIR" })),
+    )
+      .into_response();
+  }
 
   if let Err(e) = state.config.save_manga_dir(manga_dir) {
     return (
@@ -276,16 +344,20 @@ pub struct BrowseQuery {
 async fn get_browse(
   State(state): State<SharedState>,
   ConnectInfo(addr): ConnectInfo<SocketAddr>,
+  headers: HeaderMap,
   Query(query): Query<BrowseQuery>,
 ) -> Response {
-  if !is_local_client(addr) {
+  if !is_local_client(addr) || !is_local_page(&headers) {
     return forbidden();
   }
 
-  match library::browse_dir(&state.config, query.path.as_deref()) {
-    Ok(result) => Json(result).into_response(),
-    Err(e) => (StatusCode::BAD_REQUEST, Json(json!({ "error": e }))).into_response(),
-  }
+  blocking(
+    move || match library::browse_dir(&state.config, query.path.as_deref()) {
+      Ok(result) => Json(result).into_response(),
+      Err(e) => (StatusCode::BAD_REQUEST, Json(json!({ "error": e }))).into_response(),
+    },
+  )
+  .await
 }
 
 #[cfg(test)]
@@ -431,6 +503,18 @@ mod tests {
       assert_eq!(status, StatusCode::OK, "peer {peer} should be allowed");
       assert_eq!(h.state.config.manga_dir().as_deref(), Some(&*target));
     }
+  }
+
+  #[tokio::test]
+  async fn post_settings_refuses_when_manga_dir_comes_from_the_environment() {
+    let h = harness();
+    let (status, _, _) = send(
+      &h,
+      post_from("/api/settings", LOCAL_V4, r#"{"mangaDir":"/elsewhere"}"#),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CONFLICT);
+    assert_eq!(h.state.config.manga_dir().as_deref(), Some(&*h.root));
   }
 
   #[tokio::test]
@@ -738,24 +822,114 @@ mod tests {
     );
   }
 
-  #[tokio::test]
-  async fn preflight_is_answered() {
-    let h = harness();
+  fn preflight(uri: &str) -> Request<Body> {
     let addr: SocketAddr = LAN.parse().unwrap();
     let mut req = Request::builder()
       .method("OPTIONS")
-      .uri("/api/settings")
+      .uri(uri)
       .header(header::ORIGIN, "http://tauri.localhost")
-      .header(header::ACCESS_CONTROL_REQUEST_METHOD, "POST")
+      .header(header::ACCESS_CONTROL_REQUEST_METHOD, "GET")
       .header(header::ACCESS_CONTROL_REQUEST_HEADERS, "content-type")
       .body(Body::empty())
       .unwrap();
     req.extensions_mut().insert(ConnectInfo(addr));
-    let (status, _, res) = send(&h, req).await;
+    req
+  }
+
+  #[tokio::test]
+  async fn preflight_is_answered() {
+    let h = harness();
+    let (status, _, res) = send(&h, preflight("/api/library")).await;
     assert!(status.is_success(), "preflight returned {status}");
     assert_eq!(
       res.headers().get(header::ACCESS_CONTROL_ALLOW_ORIGIN),
       Some(&HeaderValue::from_static("*"))
     );
+  }
+
+  // --- other sites in the host's browser (security-critical) ---
+
+  #[tokio::test]
+  async fn settings_are_not_opened_cross_origin() {
+    let h = harness();
+    for uri in ["/api/settings", "/api/settings/browse"] {
+      let (_, _, res) = send(&h, preflight(uri)).await;
+      assert_eq!(
+        res.headers().get(header::ACCESS_CONTROL_ALLOW_ORIGIN),
+        None,
+        "{uri} must not allow other origins"
+      );
+    }
+  }
+
+  fn with_headers(
+    mut req: Request<Body>,
+    headers: &[(header::HeaderName, &'static str)],
+  ) -> Request<Body> {
+    for (name, value) in headers {
+      req
+        .headers_mut()
+        .insert(name, HeaderValue::from_static(value));
+    }
+    req
+  }
+
+  #[tokio::test]
+  async fn browse_is_forbidden_to_another_site_on_this_machine() {
+    let h = harness();
+    let uri = format!("/api/settings/browse?path={}", h.root.to_string_lossy());
+    let cases: &[&[(header::HeaderName, &'static str)]] = &[
+      // A cross-origin fetch to localhost.
+      &[
+        (header::HOST, "localhost:3000"),
+        (header::ORIGIN, "https://evil.example"),
+      ],
+      // DNS rebinding: same-origin, but under the attacker's name.
+      &[
+        (header::HOST, "evil.example:3000"),
+        (header::ORIGIN, "http://evil.example:3000"),
+      ],
+      &[(header::HOST, "evil.example:3000")],
+    ];
+    for headers in cases {
+      let (status, _, _) = send(&h, with_headers(get_from(&uri, LOCAL_V4), headers)).await;
+      assert_eq!(status, StatusCode::FORBIDDEN, "{headers:?}");
+    }
+  }
+
+  #[tokio::test]
+  async fn browse_is_allowed_from_our_own_page() {
+    let h = harness();
+    let uri = format!("/api/settings/browse?path={}", h.root.to_string_lossy());
+    let cases: &[&[(header::HeaderName, &'static str)]] = &[
+      &[(header::HOST, "localhost:3000")],
+      &[
+        (header::HOST, "127.0.0.1:3000"),
+        (header::ORIGIN, "http://127.0.0.1:3000"),
+      ],
+      &[
+        (header::HOST, "[::1]:3000"),
+        (header::ORIGIN, "http://[::1]:3000"),
+      ],
+    ];
+    for headers in cases {
+      let (status, _, _) = send(&h, with_headers(get_from(&uri, LOCAL_V4), headers)).await;
+      assert_eq!(status, StatusCode::OK, "{headers:?}");
+    }
+  }
+
+  #[tokio::test]
+  async fn post_settings_is_forbidden_to_another_site_on_this_machine() {
+    let h = harness_unset();
+    let req = with_headers(
+      post_from("/api/settings", LOCAL_V4, r#"{"mangaDir":"/"}"#),
+      &[
+        (header::HOST, "localhost:3000"),
+        (header::ORIGIN, "https://evil.example"),
+      ],
+    );
+    let (status, _, _) = send(&h, req).await;
+    assert_eq!(status, StatusCode::FORBIDDEN);
+    assert!(!h.state.config.config_path().exists());
   }
 }

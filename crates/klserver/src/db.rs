@@ -17,8 +17,7 @@
 
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use klparse::collate::{fold, locale_cmp};
@@ -136,10 +135,25 @@ pub struct Db {
   path: PathBuf,
   /// Serves requests. Sweeps open their own, so reading never waits on them.
   conn: Mutex<Connection>,
-  sweeping: AtomicBool,
+  sweep_state: Mutex<SweepState>,
   /// The manga directory as of the last row-set sync: its path and mtime.
   synced: Mutex<Option<(PathBuf, SystemTime)>>,
   last_sweep: Mutex<Option<Instant>>,
+}
+
+/// Locks `m` even if a panic poisoned it. What these mutexes guard stays
+/// sound after one: a connection whose open transaction rolled back when it
+/// was dropped, or a plain value. Without this, one panic while parsing an
+/// archive would fail every later request until a restart.
+fn lock<T>(m: &Mutex<T>) -> MutexGuard<'_, T> {
+  m.lock().unwrap_or_else(PoisonError::into_inner)
+}
+
+#[derive(Default)]
+struct SweepState {
+  running: bool,
+  /// A directory synced while a sweep was running, to sweep once it ends.
+  next: Option<PathBuf>,
 }
 
 fn connect(path: &Path) -> rusqlite::Result<Connection> {
@@ -322,7 +336,7 @@ impl Db {
     Ok(Arc::new(Self {
       path: path.to_path_buf(),
       conn: Mutex::new(conn),
-      sweeping: AtomicBool::new(false),
+      sweep_state: Mutex::new(SweepState::default()),
       synced: Mutex::new(None),
       last_sweep: Mutex::new(None),
     }))
@@ -336,7 +350,7 @@ impl Db {
     // Held across the check and the sync, so a request arriving mid-sync
     // waits for it instead of starting a second one.
     let synced_now = {
-      let mut synced = self.synced.lock().unwrap();
+      let mut synced = lock(&self.synced);
       let current = mtime(dir);
       let stale = synced.as_ref().map(|(d, m)| (d.as_path(), Some(*m))) != Some((dir, current));
       // An unreadable directory still syncs, to an empty list, but is retried.
@@ -347,22 +361,42 @@ impl Db {
       ok
     };
 
-    let due = synced_now
-      || self
-        .last_sweep
-        .lock()
-        .unwrap()
-        .is_none_or(|at| at.elapsed() > RESWEEP);
-    if due && !self.sweeping.swap(true, Ordering::AcqRel) {
-      *self.last_sweep.lock().unwrap() = Some(Instant::now());
-      let db = Arc::clone(self);
-      let dir = dir.to_path_buf();
-      std::thread::spawn(move || {
-        if let Err(e) = db.sweep(&dir) {
-          eprintln!("[konigslibrary] Library sweep failed: {e}");
+    let due = synced_now || lock(&self.last_sweep).is_none_or(|at| at.elapsed() > RESWEEP);
+    if !due {
+      return;
+    }
+    let mut state = lock(&self.sweep_state);
+    if state.running {
+      // The running sweep may be of a directory just switched away from:
+      // this one goes next rather than waiting out RESWEEP.
+      if synced_now {
+        state.next = Some(dir.to_path_buf());
+      }
+      return;
+    }
+    state.running = true;
+    drop(state);
+    let db = Arc::clone(self);
+    let dir = dir.to_path_buf();
+    std::thread::spawn(move || db.sweep_until_done(dir));
+  }
+
+  /// Sweeps `dir`, then whatever directory was synced meanwhile, until none
+  /// is left.
+  fn sweep_until_done(&self, mut dir: PathBuf) {
+    loop {
+      *lock(&self.last_sweep) = Some(Instant::now());
+      if let Err(e) = self.sweep(&dir) {
+        eprintln!("[konigslibrary] Library sweep failed: {e}");
+      }
+      let mut state = lock(&self.sweep_state);
+      match state.next.take() {
+        Some(next) => dir = next,
+        None => {
+          state.running = false;
+          return;
         }
-        db.sweeping.store(false, Ordering::Release);
-      });
+      }
     }
   }
 
@@ -380,7 +414,7 @@ impl Db {
         Vec::new()
       }
     };
-    let mut conn = self.conn.lock().unwrap();
+    let mut conn = lock(&self.conn);
     let tx = conn.transaction()?;
 
     let dir_str = dir.to_string_lossy();
@@ -431,12 +465,29 @@ impl Db {
       .query_map([], |r| r.get(0))?
       .collect::<rusqlite::Result<_>>()?;
 
+    let dir_str = dir.to_string_lossy();
     for batch in folders.chunks(BATCH) {
       let tx = conn.transaction()?;
+      // The library was switched to another directory: its rows are no
+      // longer this sweep's to fill.
+      let current: Option<String> = tx
+        .query_row(
+          "SELECT value FROM settings WHERE key = 'manga_dir'",
+          [],
+          |r| r.get(0),
+        )
+        .optional()?;
+      if current.as_deref() != Some(&dir_str) {
+        return Ok(());
+      }
       for folder in batch {
         let path = dir.join(folder);
-        let fresh = sources_of(&tx, folder)?.is_some_and(|(s, _)| s.is_fresh(&path));
-        if fresh {
+        // A row gone since the list was taken stays gone: storing would
+        // bring back a manga the last sync removed.
+        let Some((sources, _)) = sources_of(&tx, folder)? else {
+          continue;
+        };
+        if sources.is_fresh(&path) {
           continue;
         }
         if let Some(read) = read_manga(&path) {
@@ -451,14 +502,15 @@ impl Db {
   /// The `/meta` response for the manga folder at `path`, as JSON: stored if
   /// still current, re-read otherwise.
   pub fn meta(&self, path: &Path, folder: &str) -> Option<String> {
-    let conn = self.conn.lock().unwrap();
-    if let Ok(Some((sources, Some(meta)))) = sources_of(&conn, folder) {
+    if let Ok(Some((sources, Some(meta)))) = sources_of(&lock(&self.conn), folder) {
       if sources.is_fresh(path) {
         return Some(meta);
       }
     }
+    // Read with the connection free, as `chapters` does, so other requests
+    // don't wait on the archives.
     let read = read_manga(path)?;
-    if let Err(e) = store(&conn, folder, &read) {
+    if let Err(e) = store(&lock(&self.conn), folder, &read) {
       eprintln!("[konigslibrary] Cannot store metadata of \"{folder}\": {e}");
     }
     Some(serde_json::to_string(&read.meta).expect("metadata serializes"))
@@ -526,7 +578,7 @@ impl Db {
     &self,
     folder: &str,
   ) -> rusqlite::Result<HashMap<String, (String, Vec<String>)>> {
-    let conn = self.conn.lock().unwrap();
+    let conn = lock(&self.conn);
     let mut stmt = conn.prepare("SELECT file, stamp, pages FROM chapters WHERE folder = ?1")?;
     let rows = stmt.query_map([folder], |r| {
       let pages: String = r.get(2)?;
@@ -547,7 +599,7 @@ impl Db {
     changed: &[(String, String, Vec<String>)],
     gone: &[&String],
   ) -> rusqlite::Result<()> {
-    let mut conn = self.conn.lock().unwrap();
+    let mut conn = lock(&self.conn);
     let tx = conn.transaction()?;
     {
       let mut upsert = tx.prepare(
@@ -607,7 +659,7 @@ impl Db {
       clauses.join(" AND ")
     );
 
-    let conn = self.conn.lock().unwrap();
+    let conn = lock(&self.conn);
     let mut stmt = conn.prepare(&sql)?;
     let mut rows: Vec<(LibraryEntry, String)> = stmt
       .query_map(&*args, |r| {
