@@ -1,6 +1,7 @@
 <script lang="ts">
   import { getReaderContext } from '$lib/context';
   import { nearViewport } from '$lib/ui/near-viewport';
+  import Skeleton from '$lib/ui/Skeleton.svelte';
   import { chapterThumbnail, knownThumbnail } from './thumbnails';
 
   let {
@@ -23,6 +24,7 @@
 
   let near = $state(false);
   let src: string | null = $state(null);
+  let pending = $state(false);
 
   // The grid keeps tiles mounted well past the screen; the image only comes
   // and goes while the tile is within a screen of the viewport. One already
@@ -34,11 +36,15 @@
     src = known;
     if (known) return () => (src = null);
     const controller = new AbortController();
+    pending = true;
     chapterThumbnail(provider, name, controller.signal).then((url) => {
-      if (!controller.signal.aborted && url) src = url;
+      if (controller.signal.aborted) return;
+      pending = false;
+      if (url) src = url;
     });
     return () => {
       controller.abort();
+      pending = false;
       src = null;
     };
   });
@@ -51,7 +57,9 @@
   {onclick}
   use:nearViewport={(v) => (near = v)}
 >
-  {#if src}
+  {#if pending}
+    <Skeleton class="absolute inset-0" />
+  {:else if src}
     <img {src} alt="" class="absolute inset-0 h-full w-full object-cover object-top" />
   {/if}
   <div

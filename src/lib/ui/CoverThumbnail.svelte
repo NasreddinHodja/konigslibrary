@@ -33,6 +33,11 @@
     void src;
     return false;
   });
+  // Until the image's bytes arrive, the skeleton shows through it.
+  let loaded = $derived.by(() => {
+    void src;
+    return false;
+  });
 </script>
 
 <div
@@ -50,6 +55,9 @@
     aria-current={active ? 'true' : undefined}
   >
     {#if src && !failed}
+      {#if !loaded}
+        <Skeleton class="absolute inset-0" />
+      {/if}
       <img
         {src}
         alt=""
@@ -57,6 +65,7 @@
           ? 'object-top'
           : ''}"
         loading="lazy"
+        onload={() => (loaded = true)}
         onerror={() => (failed = true)}
       />
     {:else if loading}
