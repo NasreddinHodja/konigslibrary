@@ -237,8 +237,8 @@
 </script>
 
 {#snippet sectionHeader(label: string)}
-  <div class="border-b border-border/15 py-3">
-    <span class="text-xs font-bold tracking-widest opacity-50">{label}</span>
+  <div class="border-b border-line py-3">
+    <span class="text-xs font-bold tracking-widest text-dim">{label}</span>
   </div>
 {/snippet}
 
@@ -254,7 +254,7 @@
     {#if !native}
       <a
         href="/about"
-        class="hit relative flex w-fit cursor-pointer items-center gap-1.5 text-xs tracking-widest opacity-50 hover:opacity-80"
+        class="hit relative flex w-fit cursor-pointer items-center gap-1.5 text-xs tracking-widest text-dim hover:text-soft"
       >
         <CircleQuestionMark size={12} />
         HOW TO USE
@@ -267,7 +267,7 @@
       <a
         href="#settings-{id}"
         onclick={jumpTo}
-        class="cursor-pointer border-2 border-border/20 px-3 py-1.5 text-xs font-bold tracking-wide whitespace-nowrap opacity-60 hover:border-border/50 hover:opacity-100 pointer-coarse:py-3.5"
+        class="cursor-pointer border-2 border-line px-3 py-1.5 text-xs font-bold tracking-wide whitespace-nowrap text-dim hover:border-border/50 hover:text-fg pointer-coarse:py-3.5"
       >
         {label}
       </a>
@@ -279,7 +279,7 @@
       {@render sectionHeader('SOURCES')}
 
       <div class="py-4">
-        <h3 class="mb-3 text-sm font-bold opacity-60">Manga directory</h3>
+        <h3 class="mb-3 text-sm font-bold text-dim">Manga directory</h3>
         {#if loadingDir}
           <Skeleton class="h-10 w-full border-2 border-transparent" />
         {:else}
@@ -288,10 +288,10 @@
               type="text"
               bind:value={mangaDir}
               placeholder="/path/to/manga"
-              class="flex-1 border-2 bg-bg px-3 py-2 text-sm text-fg placeholder:opacity-60 pointer-coarse:py-3"
+              class="flex-1 border-2 bg-bg px-3 py-2 text-sm text-fg placeholder:text-dim pointer-coarse:py-3"
             />
             <button
-              class="border-2 px-3 opacity-60 hover:opacity-100"
+              class="border-2 px-3 text-dim hover:text-fg"
               onclick={() => (browsingDir = true)}
               aria-label="Browse"
             >
@@ -301,7 +301,7 @@
           <div class="mt-3 flex items-center gap-3">
             <Button size="md" onclick={saveDir}>Save</Button>
             {#if saved}
-              <span class="text-sm opacity-60">Saved - reload to see library</span>
+              <span class="text-sm text-dim">Saved - reload to see library</span>
             {/if}
             {#if error}
               <span class="text-sm text-error">{error}</span>
@@ -317,19 +317,19 @@
 
     <div class="flex flex-col gap-5 py-4">
       <div>
-        <h3 class="mb-3 text-sm font-bold opacity-60">Presets</h3>
+        <h3 class="mb-3 text-sm font-bold text-dim">Presets</h3>
         <div class="grid grid-cols-3 gap-2">
           {#each PRESETS as preset (preset.id)}
             <button
               class="flex cursor-pointer flex-col gap-2 border-2 p-1.5 text-left {activePresetId ===
               preset.id
                 ? 'border-fg'
-                : 'border-border/20 hover:border-border/50'}"
+                : 'border-line hover:border-border/50'}"
               onclick={() => applyPreset(preset)}
             >
               <!-- The library page in the preset's colours: title, search box, covers. -->
               <div
-                class="flex aspect-[4/3] w-full flex-col gap-1.5 p-2 ring-1 ring-border/20"
+                class="flex aspect-[4/3] w-full flex-col gap-1.5 p-2 ring-1 ring-line"
                 style:background={preset.bg}
               >
                 <div class="h-1.5 w-1/2" style:background={preset.fg}></div>
@@ -354,18 +354,18 @@
 
       <div>
         <div class="mb-1 flex items-center justify-between gap-3">
-          <h3 class="text-sm font-bold opacity-60">Customize</h3>
+          <h3 class="text-sm font-bold text-dim">Customize</h3>
           <Button size="sm" onclick={() => applyPreset(PRESETS[0])}>Reset to default</Button>
         </div>
-        <div class="divide-y divide-border/10">
+        <div class="divide-y divide-line">
           {#each TOKEN_LABELS as [key, label] (key)}
             <div class="flex items-center justify-between py-2">
-              <span class="text-sm opacity-80">{label}</span>
+              <span class="text-sm text-soft">{label}</span>
               <input
                 type="color"
                 value={theme[key]}
                 oninput={(e) => updateToken(key, (e.currentTarget as HTMLInputElement).value)}
-                class="h-7 w-12 cursor-pointer border-2 border-border/20 bg-transparent p-0.5 pointer-coarse:h-12 pointer-coarse:w-16"
+                class="h-7 w-12 cursor-pointer border-2 border-line bg-transparent p-0.5 pointer-coarse:h-12 pointer-coarse:w-16"
               />
             </div>
           {/each}
@@ -376,34 +376,34 @@
 
   {#if !isMobile}
     <section id="settings-shortcuts" class="scroll-mt-[calc(1rem+var(--safe-top))]">
-      <div class="flex items-center justify-between gap-3 border-b border-border/15 py-3">
-        <span class="text-xs font-bold tracking-widest opacity-50">KEYBOARD SHORTCUTS</span>
+      <div class="flex items-center justify-between gap-3 border-b border-line py-3">
+        <span class="text-xs font-bold tracking-widest text-dim">KEYBOARD SHORTCUTS</span>
         <Button size="sm" onclick={handleReset}>Reset to defaults</Button>
       </div>
 
       <div class="flex flex-col gap-5 py-4">
         {#each categories as [category, items] (category)}
           <div>
-            <h3 class="mb-2 text-sm font-bold opacity-60">{category}</h3>
-            <div class="divide-y divide-border/10">
+            <h3 class="mb-2 text-sm font-bold text-dim">{category}</h3>
+            <div class="divide-y divide-line">
               {#each items as binding (binding.action)}
                 <div class="flex items-center justify-between py-2">
-                  <span class="text-sm opacity-80">{binding.label}</span>
+                  <span class="text-sm text-soft">{binding.label}</span>
                   <button
                     class="flex min-w-[5rem] cursor-pointer justify-center gap-1 border-2 px-2 py-1 pointer-coarse:py-3 {listening ===
                     binding.action
                       ? 'border-fg'
-                      : 'border-fg/20 hover:border-fg/50'}"
+                      : 'border-line hover:border-fg/50'}"
                     onclick={() => startListening(binding.action)}
                   >
                     {#if listening === binding.action}
-                      <span class="text-xs opacity-60">Press a key...</span>
+                      <span class="text-xs text-dim">Press a key...</span>
                     {:else}
                       {#each binding.keys as key (key)}
                         <kbd class="text-xs">{formatKey(key)}</kbd>
                       {/each}
                       {#if binding.keys.length === 0}
-                        <span class="text-xs opacity-50">unbound</span>
+                        <span class="text-xs text-dim">unbound</span>
                       {/if}
                     {/if}
                   </button>
@@ -424,16 +424,16 @@
         <!-- Android can't read shared storage by path; manga come in through Upload. -->
         {#if !android}
           <div class="space-y-3">
-            <h3 class="text-sm font-bold opacity-60">Local directory</h3>
+            <h3 class="text-sm font-bold text-dim">Local directory</h3>
             <div class="flex gap-2">
               <input
                 type="text"
                 bind:value={deviceDir}
                 placeholder="/home/user/Manga"
-                class="flex-1 border-2 bg-bg px-3 py-2 text-sm text-fg placeholder:opacity-60 pointer-coarse:py-3"
+                class="flex-1 border-2 bg-bg px-3 py-2 text-sm text-fg placeholder:text-dim pointer-coarse:py-3"
               />
               <button
-                class="border-2 px-3 opacity-60 hover:opacity-100"
+                class="border-2 px-3 text-dim hover:text-fg"
                 onclick={browseDeviceDir}
                 aria-label="Browse"
               >
@@ -447,7 +447,7 @@
         {/if}
 
         <div class="space-y-3">
-          <h3 class="text-sm font-bold opacity-60">Server URL</h3>
+          <h3 class="text-sm font-bold text-dim">Server URL</h3>
           <div class="relative">
             <input
               type="text"
@@ -455,7 +455,7 @@
               bind:value={serverUrl}
               placeholder="192.168.1.x:3000"
               onkeydown={handleServerUrlKey}
-              class="w-full border-2 bg-bg py-2 pr-9 pl-3 text-sm text-fg placeholder:opacity-60 pointer-coarse:py-3"
+              class="w-full border-2 bg-bg py-2 pr-9 pl-3 text-sm text-fg placeholder:text-dim pointer-coarse:py-3"
               style:border-color={probeStatus === 'ok'
                 ? 'color-mix(in oklab, var(--color-success) 60%, transparent)'
                 : probeStatus === 'error'
@@ -464,7 +464,7 @@
             />
             {#if serverUrl}
               <button
-                class="absolute inset-y-0 right-0 px-3 opacity-60 hover:opacity-100"
+                class="absolute inset-y-0 right-0 px-3 text-dim hover:text-fg"
                 onclick={clearServerUrl}
                 aria-label="Clear"
               >

@@ -147,7 +147,7 @@
   {#if chapter.loading}
     <Loader />
   {:else if chapter.error}
-    <p class="py-8 text-center text-sm opacity-60">Failed to load chapter: {chapter.error}</p>
+    <p class="py-8 text-center text-sm text-dim">Failed to load chapter: {chapter.error}</p>
   {:else}
     <div aria-hidden="true" style="height: {topPad}px; flex-shrink: 0"></div>
     {#each chapter.pageUrls as src, i (i)}
@@ -162,7 +162,7 @@
           />
         {:else}
           <div
-            class="flex items-center justify-center opacity-40"
+            class="flex items-center justify-center opacity-60"
             style="height: {pageHeight(i)}px"
           >
             <Loader />

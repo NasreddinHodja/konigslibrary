@@ -39,8 +39,8 @@
   class="relative aspect-[2/3] w-full overflow-hidden border-2 transition-colors {active
     ? 'border-fg'
     : disabled
-      ? 'border-border/10'
-      : 'border-border/10 hover:border-border/40'}"
+      ? 'border-line'
+      : 'border-line hover:border-line-strong'}"
 >
   <button
     class="absolute inset-0 h-full w-full cursor-pointer transition-opacity disabled:cursor-default disabled:opacity-40"

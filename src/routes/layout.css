@@ -32,6 +32,13 @@
   --color-border: oklch(100% 0 0);
   --color-muted: oklch(53% 0 0);
   --color-reader-bg: oklch(0% 0 0);
+  /* Secondary text and hairlines, as the theme's text and border colours
+     thinned out, so every theme gets them at the same strength. */
+  --color-soft: color-mix(in oklab, var(--color-fg) 82%, transparent);
+  --color-dim: color-mix(in oklab, var(--color-fg) 67%, transparent);
+  --color-faint: color-mix(in oklab, var(--color-fg) 55%, transparent);
+  --color-line: color-mix(in oklab, var(--color-border) 21%, transparent);
+  --color-line-strong: color-mix(in oklab, var(--color-border) 38%, transparent);
   --color-success: oklch(72% 0.15 152);
   --color-error: oklch(65% 0.19 22);
 }

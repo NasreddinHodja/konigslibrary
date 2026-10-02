@@ -42,7 +42,7 @@
 >
   <!-- Modal -->
   <div
-    class="flex h-full max-h-[85vh] w-full max-w-2xl flex-col border-2 border-border/35 bg-bg"
+    class="flex h-full max-h-[85vh] w-full max-w-2xl flex-col border-2 border-line-strong bg-bg"
     role="dialog"
     tabindex="-1"
     aria-modal="true"
@@ -52,15 +52,15 @@
     {@attach focusTrap}
   >
     <!-- Header -->
-    <div class="flex shrink-0 items-center gap-3 border-b border-border/10 px-4 py-3">
+    <div class="flex shrink-0 items-center gap-3 border-b border-line px-4 py-3">
       <div class="flex min-w-0 flex-1 flex-col">
-        <span class="text-xs font-bold tracking-widest opacity-50">JUMP TO PAGE</span>
+        <span class="text-xs font-bold tracking-widest text-dim">JUMP TO PAGE</span>
         {#if chapterName}
-          <span class="truncate text-xs opacity-40">{chapterName}</span>
+          <span class="truncate text-xs text-faint">{chapterName}</span>
         {/if}
       </div>
       <button
-        class="hit relative shrink-0 cursor-pointer p-1 opacity-60 hover:opacity-100"
+        class="hit relative shrink-0 cursor-pointer p-1 text-dim hover:text-fg"
         onclick={onclose}
         aria-label="Close"
       >
@@ -70,9 +70,9 @@
 
     <!-- Search bar -->
     <div
-      class="flex shrink-0 items-center gap-3 border-b border-border/10 px-4 py-3 pointer-coarse:py-3.5"
+      class="flex shrink-0 items-center gap-3 border-b border-line px-4 py-3 pointer-coarse:py-3.5"
     >
-      <Search size={14} class="shrink-0 opacity-50" />
+      <Search size={14} class="shrink-0 text-dim" />
       <input
         {@attach (el) => {
           // After the dialog's focus trap has focused its first button.
@@ -82,14 +82,14 @@
         type="text"
         inputmode="numeric"
         placeholder="Page number…"
-        class="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:opacity-50"
+        class="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-dim"
       />
-      <span class="shrink-0 text-xs tabular-nums opacity-50">{totalPages} pages</span>
+      <span class="shrink-0 text-xs tabular-nums text-dim">{totalPages} pages</span>
     </div>
 
     <!-- Grid -->
     {#if filteredIndices.length === 0}
-      <p class="flex-1 py-12 text-center text-sm opacity-50">No pages match</p>
+      <p class="flex-1 py-12 text-center text-sm text-dim">No pages match</p>
     {:else}
       <!-- Keyed so a new search starts back at the top. -->
       {#key query}

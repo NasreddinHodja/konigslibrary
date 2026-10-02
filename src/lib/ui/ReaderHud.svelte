@@ -37,7 +37,7 @@
   inert={!shown}
 >
   <button
-    class="hit relative shrink-0 cursor-pointer p-1 opacity-70 hover:opacity-100"
+    class="hit relative shrink-0 cursor-pointer p-1 text-soft hover:text-fg"
     onclick={onback}
     aria-label="Back"
   >
@@ -47,13 +47,13 @@
   <div class="flex min-w-0 flex-1 items-baseline gap-2 overflow-hidden">
     <span class="shrink-0 truncate text-sm font-bold">{mangaName}</span>
     {#if manga.selectedChapter}
-      <span class="shrink-0 text-xs opacity-50">·</span>
-      <span class="truncate text-xs opacity-70">{chapterLabel(manga.selectedChapter)}</span>
+      <span class="shrink-0 text-xs text-dim">·</span>
+      <span class="truncate text-xs text-soft">{chapterLabel(manga.selectedChapter)}</span>
     {/if}
   </div>
 
   <button
-    class="hit relative shrink-0 cursor-pointer text-xs tabular-nums hover:opacity-70"
+    class="hit relative shrink-0 cursor-pointer text-xs tabular-nums hover:text-soft"
     onclick={() => (pickerOpen = true)}
     title="Jump to page"
   >
@@ -61,7 +61,7 @@
   </button>
 
   <!-- Chapter progress line -->
-  <div class="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-border/25">
+  <div class="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-line-strong">
     <div
       class="h-full bg-fg/65 transition-[width] duration-300 ease-out"
       style="width: {progress}%"
@@ -71,7 +71,7 @@
 
 <!-- Bottom controls island -->
 <div
-  class="fixed bottom-4 left-1/2 z-40 w-full max-w-xs -translate-x-1/2 border border-border/25 bg-surface/85 px-4 backdrop-blur-2xl transition-transform duration-200 ease-out
+  class="fixed bottom-4 left-1/2 z-40 w-full max-w-xs -translate-x-1/2 border border-line-strong bg-surface/85 px-4 backdrop-blur-2xl transition-transform duration-200 ease-out
       {shown
     ? 'pointer-events-auto translate-y-0'
     : 'pointer-events-none translate-y-[calc(100%+1rem)]'}"
@@ -89,7 +89,7 @@
         <span class="text-xs font-bold tracking-widest">ZOOM</span>
         <div class="flex items-center gap-3">
           <button
-            class="hit relative cursor-pointer p-1 opacity-70 hover:opacity-100"
+            class="hit relative cursor-pointer p-1 text-soft hover:text-fg"
             onclick={zoomOut}
             aria-label="Zoom out"
           >
@@ -97,7 +97,7 @@
           </button>
           <span class="w-10 text-center text-sm tabular-nums">{Math.round(manga.zoom * 100)}%</span>
           <button
-            class="hit relative cursor-pointer p-1 opacity-70 hover:opacity-100"
+            class="hit relative cursor-pointer p-1 text-soft hover:text-fg"
             onclick={zoomIn}
             aria-label="Zoom in"
           >
@@ -119,7 +119,7 @@
 
     <a
       href="/settings"
-      class="hit relative flex items-center justify-center gap-1.5 pt-1 text-xs tracking-widest opacity-60 hover:opacity-100"
+      class="hit relative flex items-center justify-center gap-1.5 pt-1 text-xs tracking-widest text-dim hover:text-fg"
     >
       <Settings size={12} />
       SETTINGS

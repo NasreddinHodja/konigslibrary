@@ -173,21 +173,21 @@
 {#snippet tagsValue()}
   {#if meta && meta.tags.length}
     {#each meta.tags.slice(0, tagsExpanded ? TAGS_EXPANDED : TAGS_COLLAPSED) as tag (tag)}
-      <span class="border border-border/30 px-2 py-0.5 text-xs opacity-50">{tag}</span>
+      <span class="border border-line-strong px-2 py-0.5 text-xs text-dim">{tag}</span>
     {/each}
     {#if tagsExpanded}
       <button
-        class="hit relative cursor-pointer border border-border/15 px-2 py-0.5 text-xs opacity-60 hover:opacity-100"
+        class="hit relative cursor-pointer border border-line px-2 py-0.5 text-xs text-dim hover:text-fg"
         onclick={collapseTags}>less</button
       >
     {:else if meta.tags.length > TAGS_COLLAPSED}
       <button
-        class="hit relative cursor-pointer border border-border/15 px-2 py-0.5 text-xs opacity-60 hover:opacity-100"
+        class="hit relative cursor-pointer border border-line px-2 py-0.5 text-xs text-dim hover:text-fg"
         onclick={expandTags}>more</button
       >
     {/if}
   {:else}
-    <span class="opacity-40">—</span>
+    <span class="text-faint">—</span>
   {/if}
 {/snippet}
 
@@ -198,7 +198,7 @@
         <Button
           size="md"
           variant="default"
-          class="border-fg/40"
+          class="border-line-strong"
           onclick={() => (confirmingDownload = true)}
         >
           <Download size={14} />
@@ -216,18 +216,21 @@
 
 {#snippet specKey(label: string)}
   <div
-    class="w-24 shrink-0 border-r border-border/10 px-3 py-2.5 text-[11px] font-bold tracking-widest opacity-45 sm:w-28"
+    class="w-24 shrink-0 border-r border-line px-3 py-2.5 text-[11px] font-bold tracking-widest text-faint sm:w-28"
   >
     {label}
   </div>
 {/snippet}
 
+{#snippet filenameRow()}
+  <div class="flex">
+    {@render specKey('FILENAME')}
+    <div class="min-w-0 flex-1 truncate px-3 py-2.5 text-sm text-dim">{mangaName}</div>
+  </div>
+{/snippet}
+
 {#snippet specTable()}
-  <div class="w-full divide-y divide-border/10 border-2 border-border/15">
-    <div class="flex">
-      {@render specKey('FILENAME')}
-      <div class="min-w-0 flex-1 truncate px-3 py-2.5 text-sm opacity-50">{mangaName}</div>
-    </div>
+  <div class="w-full divide-y divide-line border-2 border-line">
     {#if meta}
       <div class="flex" in:fade={{ duration: ANIM_DURATION, easing: ANIM_EASE }}>
         {@render specKey('STATUS')}
@@ -237,12 +240,12 @@
               class="border px-2 py-0.5 text-xs font-bold tracking-widest uppercase {meta.status.toLowerCase() ===
               'ongoing'
                 ? 'border-success/50 text-success'
-                : 'border-border/20 opacity-50'}"
+                : 'border-line text-dim'}"
             >
               {meta.status}
             </span>
           {:else}
-            <span class="text-sm opacity-40">—</span>
+            <span class="text-sm text-faint">—</span>
           {/if}
         </div>
       </div>
@@ -254,6 +257,7 @@
         {@render specKey('YEAR')}
         <div class="min-w-0 flex-1 px-3 py-2.5 text-sm">{meta.year ?? '—'}</div>
       </div>
+      {@render filenameRow()}
       <div class="flex" in:fade={{ duration: ANIM_DURATION, easing: ANIM_EASE }}>
         {@render specKey('TAGS')}
         <div
@@ -276,6 +280,7 @@
           <Skeleton class="h-4 w-10" />
         </div>
       </div>
+      {@render filenameRow()}
       <div class="flex">
         {@render specKey('TAGS')}
         <div class="flex min-w-0 flex-1 flex-wrap items-center gap-1.5 px-3 py-2.5">
@@ -305,7 +310,7 @@
 {#snippet chapterGrid()}
   {#if filteredChapters.length === 0}
     <p
-      class="py-8 text-center text-xs opacity-50"
+      class="py-8 text-center text-xs text-dim"
       in:fade={{ duration: ANIM_DURATION, easing: ANIM_EASE }}
     >
       No chapters match "{search}"
@@ -319,7 +324,7 @@
       minItemWidth={isDesktop ? TILE.desktop.min : TILE.phone.min}
       gap={isDesktop ? TILE.desktop.gap : TILE.phone.gap}
       overscan={5}
-      frameClass="bg-border/12"
+      frameClass="bg-line"
       key={(c) => c.name}
     >
       {#snippet item(chapter)}
@@ -330,7 +335,7 @@
 {/snippet}
 
 {#snippet cover(sizeClass: string)}
-  <div class="relative shrink-0 border-2 border-border/15 {sizeClass}">
+  <div class="relative shrink-0 border-2 border-line {sizeClass}">
     {#if meta?.coverUrl && !coverFailed}
       <img
         src={meta.coverUrl}
@@ -395,7 +400,7 @@
     <ListPanel label="CHAPTERS ({chapters.length})" bind:search placeholder="Search chapters…">
       {#snippet actions()}
         <button
-          class="hit relative flex size-8 cursor-pointer items-center justify-center opacity-40 hover:bg-fg/10 hover:opacity-90 pointer-coarse:size-10"
+          class="hit relative flex size-8 cursor-pointer items-center justify-center text-faint hover:bg-fg/10 hover:text-soft pointer-coarse:size-10"
           onclick={toggleSort}
           aria-label={descending ? 'Sort oldest first' : 'Sort newest first'}
           title={descending ? 'Newest first' : 'Oldest first'}

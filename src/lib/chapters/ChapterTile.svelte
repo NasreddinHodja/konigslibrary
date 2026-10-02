@@ -46,7 +46,7 @@
 
 <button
   class="relative flex aspect-[2/3] cursor-pointer flex-col justify-end overflow-hidden border-2 text-left
-    {highlighted ? 'border-fg' : 'border-border/12 hover:border-border/40'}"
+    {highlighted ? 'border-fg' : 'border-line hover:border-line-strong'}"
   {title}
   {onclick}
   use:nearViewport={(v) => (near = v)}
@@ -58,7 +58,7 @@
     class="relative flex items-baseline justify-between gap-1 px-1.5 py-1
       {src ? 'bg-bg/85 backdrop-blur-md' : ''}"
   >
-    <span class="text-sm font-bold tabular-nums {highlighted ? '' : 'opacity-90'}">{number}</span>
-    <span class="text-[11px] tabular-nums opacity-60">{pageCount}p</span>
+    <span class="text-sm font-bold tabular-nums {highlighted ? '' : 'text-soft'}">{number}</span>
+    <span class="text-[11px] tabular-nums text-dim">{pageCount}p</span>
   </div>
 </button>

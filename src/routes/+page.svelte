@@ -197,7 +197,7 @@
   <div class="flex h-dvh w-full flex-col items-center" out:fadeOut in:fadeInAfter>
     <a
       href="/about"
-      class="hit fixed z-10 opacity-60 hover:opacity-100"
+      class="hit fixed z-10 text-dim hover:text-fg"
       style="top: calc(1rem + var(--safe-top)); right: calc(1rem + var(--safe-right))"
       aria-label="How to use"
     >
@@ -213,27 +213,27 @@
         <UploadButton {isDragOver} />
       </div>
 
-      <div class="w-full border-t border-border/10 pt-6">
-        <p class="mb-1 text-xs font-bold tracking-widest opacity-50">RUN LOCALLY</p>
-        <p class="mb-5 text-sm opacity-60">
+      <div class="w-full border-t border-line pt-6">
+        <p class="mb-1 text-xs font-bold tracking-widest text-dim">RUN LOCALLY</p>
+        <p class="mb-5 text-sm text-dim">
           Serve manga from your PC to any device on your network.
         </p>
         <div class="flex flex-wrap gap-3">
           <a
             href={downloads.windows}
-            class="hit relative border-2 border-fg/30 px-4 py-2 text-sm hover:border-fg hover:bg-fg/10"
+            class="hit relative border-2 border-line-strong px-4 py-2 text-sm hover:border-fg hover:bg-fg/10"
           >
             Windows
           </a>
           <a
             href={downloads.linux}
-            class="hit relative border-2 border-fg/30 px-4 py-2 text-sm hover:border-fg hover:bg-fg/10"
+            class="hit relative border-2 border-line-strong px-4 py-2 text-sm hover:border-fg hover:bg-fg/10"
           >
             Linux
           </a>
           <a
             href={downloads.android}
-            class="hit relative border-2 border-fg/30 px-4 py-2 text-sm hover:border-fg hover:bg-fg/10"
+            class="hit relative border-2 border-line-strong px-4 py-2 text-sm hover:border-fg hover:bg-fg/10"
           >
             Android
           </a>

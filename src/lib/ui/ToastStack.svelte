@@ -76,7 +76,7 @@
         {:else if toast.phase === 'error'}
           <AlertTriangle size={14} class="text-error" />
         {:else}
-          <LoaderCircle size={14} class="animate-spin opacity-60" />
+          <LoaderCircle size={14} class="animate-spin text-dim" />
         {/if}
       </div>
 
@@ -86,7 +86,7 @@
           <span class="text-sm leading-5">{toast.label}</span>
           <!-- Hides the toast; whatever it reports carries on. -->
           <button
-            class="hit relative flex h-5 shrink-0 cursor-pointer items-center opacity-60 hover:opacity-100"
+            class="hit relative flex h-5 shrink-0 cursor-pointer items-center text-dim hover:text-fg"
             onclick={dismiss}
             aria-label="Dismiss"
           >
@@ -95,21 +95,21 @@
         </div>
         <div class="flex items-baseline justify-between gap-3 text-xs">
           {#if toast.phase === 'fetching' && toast.id === FOLDED_ID}
-            <span class="tabular-nums opacity-50">{toast.current} / {toast.total} chapters</span>
+            <span class="tabular-nums text-dim">{toast.current} / {toast.total} chapters</span>
           {:else if toast.phase === 'fetching'}
-            <span class="tabular-nums opacity-50">{toast.current} / {toast.total}</span>
+            <span class="tabular-nums text-dim">{toast.current} / {toast.total}</span>
           {:else if toast.phase === 'deleting'}
-            <span class="tabular-nums opacity-50">Deleting… {toast.current} / {toast.total}</span>
+            <span class="tabular-nums text-dim">Deleting… {toast.current} / {toast.total}</span>
           {:else if toast.phase === 'packaging'}
-            <span class="opacity-50">Zipping…</span>
+            <span class="text-dim">Zipping…</span>
           {:else if toast.phase === 'done'}
-            <span class="opacity-50">Done</span>
+            <span class="text-dim">Done</span>
           {:else if toast.phase === 'error'}
-            <span class="break-all opacity-50">{toast.errorMessage ?? 'Failed'}</span>
+            <span class="break-all text-dim">{toast.errorMessage ?? 'Failed'}</span>
           {/if}
           {#if toast.cancel}
             <button
-              class="hit relative shrink-0 cursor-pointer font-bold tracking-wide opacity-60 hover:opacity-100"
+              class="hit relative shrink-0 cursor-pointer font-bold tracking-wide text-dim hover:text-fg"
               onclick={() => {
                 toast.cancel?.();
                 dismiss();

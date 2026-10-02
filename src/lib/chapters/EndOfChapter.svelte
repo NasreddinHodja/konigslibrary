@@ -14,7 +14,7 @@
 </script>
 
 <div class="flex w-full flex-col items-center justify-center gap-6 {className}">
-  <p class="text-lg opacity-50">End of {chapterLabel(manga.selectedChapter ?? '')}</p>
+  <p class="text-lg text-dim">End of {chapterLabel(manga.selectedChapter ?? '')}</p>
   <div class="flex flex-col items-center gap-3">
     {#if nextChapter}
       <Button size="lg" variant="primary" onclick={() => reader.goToNextChapter()}>
@@ -22,7 +22,7 @@
         <ChevronRight size={16} />
       </Button>
     {:else}
-      <span class="px-6 py-3 text-sm opacity-50">No next chapter</span>
+      <span class="px-6 py-3 text-sm text-dim">No next chapter</span>
     {/if}
   </div>
 </div>

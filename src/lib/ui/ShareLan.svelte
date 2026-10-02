@@ -67,7 +67,7 @@
 </script>
 
 <div class="space-y-3">
-  <h3 class="text-sm font-bold opacity-60">Share to LAN</h3>
+  <h3 class="text-sm font-bold text-dim">Share to LAN</h3>
   <Button size="md" onclick={toggle} disabled={status === 'starting' || status === 'stopping'}>
     {#if status === 'running'}
       Stop sharing
@@ -85,21 +85,21 @@
   {/if}
 
   {#if status === 'running' && url}
-    <div class="flex flex-col items-start gap-3 border-2 border-border/15 p-4 sm:flex-row">
+    <div class="flex flex-col items-start gap-3 border-2 border-line p-4 sm:flex-row">
       <QrCode data={deepLink} size={160} />
       <div class="space-y-2 text-sm">
-        <p class="opacity-60">Scan with your phone's camera app to connect.</p>
+        <p class="text-dim">Scan with your phone's camera app to connect.</p>
         <div class="flex items-center gap-2">
           <code class="border-2 bg-bg px-2 py-1 text-xs">{url}</code>
           <button
-            class="hit relative border-2 p-1.5 opacity-60 hover:opacity-100"
+            class="hit relative border-2 p-1.5 text-dim hover:text-fg"
             onclick={copyUrl}
             aria-label="Copy server URL"
           >
             <Copy size={14} />
           </button>
           {#if copied}
-            <span class="text-xs opacity-60">Copied</span>
+            <span class="text-xs text-dim">Copied</span>
           {/if}
         </div>
       </div>

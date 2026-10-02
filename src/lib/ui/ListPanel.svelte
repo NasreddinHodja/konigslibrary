@@ -125,31 +125,31 @@
     style={fill ? undefined : 'top: var(--safe-top)'}
   >
     <div
-      class="flex flex-col gap-3 border-b border-border/15 px-4 pt-3 pb-4 sm:flex-row sm:items-center sm:gap-4"
+      class="flex flex-col gap-3 border-b border-line px-4 pt-3 pb-4 sm:flex-row sm:items-center sm:gap-4"
     >
       {#if label}
         <div class="flex min-h-7 shrink-0 items-center justify-between gap-3">
           <span class="flex items-center gap-2">
-            <span class="text-xs font-bold tracking-widest opacity-50">{label}</span>
+            <span class="text-xs font-bold tracking-widest text-dim">{label}</span>
           </span>
           {@render actions?.()}
         </div>
       {/if}
 
       <div
-        class="flex min-w-0 flex-1 items-center gap-2 border-2 border-border/15 px-3 py-1.5 focus-within:border-fg/50 pointer-coarse:py-3"
+        class="flex min-w-0 flex-1 items-center gap-2 border-2 border-line px-3 py-1.5 focus-within:border-fg/50 pointer-coarse:py-3"
       >
-        <Search size={12} class="shrink-0 opacity-50" />
+        <Search size={12} class="shrink-0 text-dim" />
         <input
           type="text"
           {placeholder}
           aria-label={placeholder}
           bind:value={search}
-          class="w-full min-w-0 bg-transparent text-sm outline-none placeholder:opacity-50"
+          class="w-full min-w-0 bg-transparent text-sm outline-none placeholder:text-dim"
         />
         {#if search}
           <button
-            class="hit relative cursor-pointer opacity-50 hover:opacity-80"
+            class="hit relative cursor-pointer text-dim hover:text-soft"
             onclick={() => (search = '')}
             aria-label="Clear search"
           >
@@ -159,15 +159,15 @@
       </div>
     </div>
     {#if tabs.length > 1}
-      <div class="relative flex border-b border-border/15" role="tablist">
+      <div class="relative flex border-b border-line" role="tablist">
         {#each tabs as t (t.key)}
           <button
             role="tab"
             aria-selected={activeTab === t.key}
-            class="flex-1 cursor-pointer px-4 pt-3.5 pb-2.5 text-xs font-bold tracking-widest transition-opacity pointer-coarse:pt-4.5 pointer-coarse:pb-3.5 {activeTab ===
+            class="flex-1 cursor-pointer px-4 pt-3.5 pb-2.5 text-xs font-bold tracking-widest transition-colors pointer-coarse:pt-4.5 pointer-coarse:pb-3.5 {activeTab ===
             t.key
               ? ''
-              : 'opacity-40 hover:opacity-70'}"
+              : 'text-faint hover:text-soft'}"
             onclick={() => ontab?.(t.key)}
           >
             <span class="inline-flex items-center gap-2">

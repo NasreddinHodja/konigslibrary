@@ -35,15 +35,16 @@ export const PRESETS: ThemePreset[] = [
     readerBg: '#ffffff'
   },
   {
-    // One Dark Pro's editor, sidebar and input backgrounds; its comment grey.
-    // Text is its foreground (#abb2bf) brightened a quarter of the way to white.
+    // One Dark Pro's editor, sidebar and input backgrounds.
+    // Text is its foreground (#abb2bf) brightened to #dcdfe4 and muted raised to
+    // #9da5b4, so dimmed text still clears 4.5:1 on the editor background.
     id: 'onedark',
     name: 'One Bark',
     bg: '#282c34',
-    fg: '#c0c5cf',
+    fg: '#dcdfe4',
     surface: '#21252b',
-    border: '#c0c5cf',
-    muted: '#7f848e',
+    border: '#dcdfe4',
+    muted: '#9da5b4',
     readerBg: '#1d1f23'
   }
 ];

@@ -59,7 +59,7 @@
   virtualizer) - pages just reserve space for the chrome via padding.
 -->
 <nav
-  class="nav-rail fixed top-0 bottom-0 left-0 z-20 hidden w-14 flex-col items-center border-r border-border/10 bg-bg py-4 md:flex"
+  class="nav-rail fixed top-0 bottom-0 left-0 z-20 hidden w-14 flex-col items-center border-r border-line bg-bg py-4 md:flex"
   style="padding-top: calc(1rem + var(--safe-top)); padding-bottom: calc(1rem + var(--safe-bottom))"
 >
   <button
@@ -81,11 +81,11 @@
       <div
         class="flex h-8 w-8 items-center justify-center {active === 'library'
           ? 'bg-fg text-bg'
-          : 'opacity-50 hover:bg-fg/10 hover:opacity-90'}"
+          : 'text-dim hover:bg-fg/10 hover:text-soft'}"
       >
         <LibraryBig size={15} />
       </div>
-      <span class="text-[0.55rem] font-bold tracking-wide uppercase opacity-70">Library</span>
+      <span class="text-[0.55rem] font-bold tracking-wide uppercase text-soft">Library</span>
     </button>
 
     <a
@@ -96,11 +96,11 @@
       <div
         class="flex h-8 w-8 items-center justify-center {active === 'settings'
           ? 'bg-fg text-bg'
-          : 'opacity-50 hover:bg-fg/10 hover:opacity-90'}"
+          : 'text-dim hover:bg-fg/10 hover:text-soft'}"
       >
         <Settings size={15} />
       </div>
-      <span class="text-[0.55rem] font-bold tracking-wide uppercase opacity-70">Settings</span>
+      <span class="text-[0.55rem] font-bold tracking-wide uppercase text-soft">Settings</span>
     </a>
   </div>
 
@@ -108,7 +108,7 @@
 </nav>
 
 <nav
-  class="nav-tabs fixed inset-x-0 bottom-0 z-20 flex items-center border-t border-border/10 bg-bg px-2 md:hidden {typing
+  class="nav-tabs fixed inset-x-0 bottom-0 z-20 flex items-center border-t border-line bg-bg px-2 md:hidden {typing
     ? 'hidden'
     : ''}"
   style="height: calc(3.75rem + var(--safe-bottom)); padding-bottom: var(--safe-bottom)"
@@ -120,7 +120,7 @@
     class="flex flex-1 cursor-pointer flex-col items-center justify-center gap-1 self-stretch {active ===
     'library'
       ? ''
-      : 'opacity-50 hover:opacity-90'}"
+      : 'text-dim hover:text-soft'}"
   >
     <LibraryBig size={16} />
     <span class="text-[11px] font-bold tracking-wide uppercase">Library</span>
@@ -134,7 +134,7 @@
     class="flex flex-1 flex-col items-center justify-center gap-1 self-stretch {active ===
     'settings'
       ? ''
-      : 'opacity-50 hover:opacity-90'}"
+      : 'text-dim hover:text-soft'}"
   >
     <Settings size={16} />
     <span class="text-[11px] font-bold tracking-wide uppercase">Settings</span>

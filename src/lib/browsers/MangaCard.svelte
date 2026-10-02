@@ -193,7 +193,7 @@
             size={16}
             class={action.loading
               ? 'animate-pulse opacity-40'
-              : 'opacity-80 group-hover:opacity-100'}
+              : 'text-soft group-hover:text-fg'}
           />
         </button>
       {/if}

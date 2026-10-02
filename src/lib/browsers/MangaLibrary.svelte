@@ -632,13 +632,13 @@
           ? 'bg-muted'
           : 'animate-pulse bg-muted'}"
     ></span>
-    {#if status === 'offline'}<span class="opacity-60">OFFLINE</span>{/if}
+    {#if status === 'offline'}<span class="text-dim">OFFLINE</span>{/if}
   </span>
 {/snippet}
 
 {#snippet body(t: Tab | null)}
   {#if t === 'device' && deviceError}
-    <p class="mb-2 text-xs opacity-60">{deviceError}</p>
+    <p class="mb-2 text-xs text-dim">{deviceError}</p>
   {/if}
 
   {#if t && (isLoading(t) || refreshing)}
@@ -681,19 +681,19 @@
       <LibraryBig size={40} class="opacity-25" />
       <div class="flex max-w-64 flex-col gap-1">
         {#if tabs.length === 0}
-          <p class="text-base font-bold opacity-80">No manga sources configured</p>
-          <p class="text-xs opacity-60">
+          <p class="text-base font-bold text-soft">No manga sources configured</p>
+          <p class="text-xs text-dim">
             <a href="/settings" class="underline">Set one up in Settings</a>
           </p>
         {:else if searchQuery.trim()}
-          <p class="text-base font-bold opacity-80">No results for "{searchQuery.trim()}"</p>
+          <p class="text-base font-bold text-soft">No results for "{searchQuery.trim()}"</p>
         {:else if t === 'server' && serverStatus() === 'offline'}
-          <p class="text-base font-bold opacity-80">Server unreachable</p>
+          <p class="text-base font-bold text-soft">Server unreachable</p>
         {:else if t === 'device' && !mangaDir}
-          <p class="text-base font-bold opacity-80">No manga on this device yet</p>
-          <p class="text-xs opacity-60">Download some from the server</p>
+          <p class="text-base font-bold text-soft">No manga on this device yet</p>
+          <p class="text-xs text-dim">Download some from the server</p>
         {:else}
-          <p class="text-base font-bold opacity-80">No manga found</p>
+          <p class="text-base font-bold text-soft">No manga found</p>
         {/if}
       </div>
     </div>
@@ -705,7 +705,7 @@
 <div class="box-content flex h-8 shrink-0 items-center gap-3 px-4 pt-8 pb-2 pointer-coarse:h-10">
   {#if selecting && tab}
     <button
-      class="{ICON_BUTTON} opacity-60 hover:opacity-100"
+      class="{ICON_BUTTON} text-dim hover:text-fg"
       onclick={stopSelecting}
       aria-label="Cancel selection"
     >
@@ -736,7 +736,7 @@
         <!-- On a wrapper: grow's opacity would override the button's own. -->
         <span class="flex" transition:grow>
           <button
-            class="{ICON_BUTTON} opacity-40 hover:opacity-90"
+            class="{ICON_BUTTON} text-faint hover:text-soft"
             onclick={() => startSelecting()}
             aria-label="Select"
           >
@@ -748,7 +748,7 @@
       {#if tab && !(tab === 'device' && !mangaDir)}
         <span class="flex" transition:grow>
           <button
-            class="{ICON_BUTTON} opacity-40 hover:opacity-90"
+            class="{ICON_BUTTON} text-faint hover:text-soft"
             onclick={refresh}
             aria-label="Refresh"
           >

@@ -100,7 +100,7 @@
     onclick={handleClick}
     class="flex flex-1 cursor-pointer flex-col items-center justify-center gap-1 self-stretch {isDragOver
       ? ''
-      : 'opacity-50 hover:opacity-90'}"
+      : 'text-dim hover:text-soft'}"
   >
     <Upload size={16} />
     <span class="text-[11px] font-bold tracking-wide uppercase">Upload</span>
@@ -112,7 +112,7 @@
     aria-label={pickFiles ? 'Add chapters' : 'Add manga folder'}
     class="flex h-8 w-8 cursor-pointer items-center justify-center border-2 transition-colors {isDragOver
       ? 'border-fg bg-fg/10'
-      : 'border-fg/30 bg-bg hover:border-fg hover:bg-fg/10'}"
+      : 'border-line-strong bg-bg hover:border-fg hover:bg-fg/10'}"
   >
     <Upload size={14} stroke-linecap="square" stroke-linejoin="miter" />
   </button>
@@ -121,7 +121,7 @@
     type="button"
     onclick={handleClick}
     class="group flex w-full cursor-pointer items-center justify-between border-2 px-5 py-4 transition-colors duration-150 md:flex-col md:gap-4 md:py-12
-      {isDragOver ? 'border-fg bg-fg/5' : 'border-fg/25 hover:border-fg/70 hover:bg-fg/[0.03]'}"
+      {isDragOver ? 'border-fg bg-fg/5' : 'border-line-strong hover:border-fg/70 hover:bg-fg/[0.03]'}"
   >
     <div class="flex items-center gap-4">
       <Upload
@@ -129,13 +129,13 @@
         strokeWidth={1.5}
         stroke-linecap="square"
         stroke-linejoin="miter"
-        class="shrink-0 transition-opacity {isDragOver
-          ? 'opacity-80'
-          : 'opacity-40 group-hover:opacity-70'}"
+        class="shrink-0 transition-colors {isDragOver
+          ? 'text-soft'
+          : 'text-faint group-hover:text-dim'}"
       />
       <span class="text-sm font-bold tracking-widest">{label}</span>
     </div>
-    <span class="text-xs tracking-widest opacity-40"
+    <span class="text-xs tracking-widest text-faint"
       >{pickFiles ? '.CBZ CHAPTERS' : 'COVER + .CBZ CHAPTERS'}</span
     >
   </button>

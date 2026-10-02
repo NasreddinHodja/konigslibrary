@@ -12,7 +12,7 @@
   } = $props();
 
   const linkClass =
-    'hit relative flex w-fit cursor-pointer items-center gap-1.5 text-xs tracking-widest opacity-50 hover:opacity-80';
+    'hit relative flex w-fit cursor-pointer items-center gap-1.5 text-xs tracking-widest text-dim hover:text-soft';
 </script>
 
 {#if href}

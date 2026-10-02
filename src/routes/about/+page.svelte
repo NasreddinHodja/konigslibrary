@@ -37,17 +37,17 @@
 
   <h1 class="text-2xl font-bold">How to use konigslibrary</h1>
 
-  <p class="text-sm leading-relaxed opacity-70">
+  <p class="text-sm leading-relaxed text-soft">
     konigslibrary reads manga stored as <code>.cbz</code> files. Your folders have to follow the
     layout in
-    <a href="#preparing" class="border-b border-fg/40 hover:border-fg/80">Preparing your manga</a>.
+    <a href="#preparing" class="border-b border-line-strong hover:border-fg/80">Preparing your manga</a>.
   </p>
 
   <h2 class="pt-4 text-xl font-bold">Pick how you want to read</h2>
 
   <section class="space-y-3">
-    <h3 class="text-lg font-bold opacity-80">In this browser</h3>
-    <p class="text-sm leading-relaxed opacity-70">
+    <h3 class="text-lg font-bold text-soft">In this browser</h3>
+    <p class="text-sm leading-relaxed text-soft">
       Nothing to install. Click Open folder and pick a manga folder, or drag the folder onto the
       page. To read a single chapter right away, drag its <code>.cbz</code> onto the page.
     </p>
@@ -55,10 +55,10 @@
   </section>
 
   <section class="space-y-3">
-    <h3 class="text-lg font-bold opacity-80">On your Android phone</h3>
-    <p class="text-sm leading-relaxed opacity-70">
+    <h3 class="text-lg font-bold text-soft">On your Android phone</h3>
+    <p class="text-sm leading-relaxed text-soft">
       Download the
-      <a href={downloads.android} class="border-b border-fg/40 hover:border-fg/80">Android app</a>
+      <a href={downloads.android} class="border-b border-line-strong hover:border-fg/80">Android app</a>
       and install it. Open a chapter <code>.cbz</code> from your phone, or download manga from your computer
       (see "From your computer to your phone").
     </p>
@@ -78,14 +78,14 @@
   </section>
 
   <section class="space-y-3">
-    <h3 class="text-lg font-bold opacity-80">On your computer</h3>
-    <p class="text-sm leading-relaxed opacity-70">
+    <h3 class="text-lg font-bold text-soft">On your computer</h3>
+    <p class="text-sm leading-relaxed text-soft">
       Download the desktop app: the
-      <a href={downloads.windows} class="border-b border-fg/40 hover:border-fg/80"
+      <a href={downloads.windows} class="border-b border-line-strong hover:border-fg/80"
         >Windows installer</a
       >
       and install it, or the
-      <a href={downloads.linux} class="border-b border-fg/40 hover:border-fg/80">Linux AppImage</a>,
+      <a href={downloads.linux} class="border-b border-line-strong hover:border-fg/80">Linux AppImage</a>,
       make it executable and run it. In Settings, pick your library folder. All your manga show up
       on the home screen.
     </p>
@@ -105,23 +105,23 @@
   </section>
 
   <section class="space-y-3">
-    <h3 class="text-lg font-bold opacity-80">From your computer to your phone</h3>
-    <p class="text-sm leading-relaxed opacity-70">
+    <h3 class="text-lg font-bold text-soft">From your computer to your phone</h3>
+    <p class="text-sm leading-relaxed text-soft">
       With the desktop app open and your phone on the same Wi-Fi, go to Settings → Share to LAN and
       scan the QR code with your phone's camera. The Android app must already be installed.
     </p>
   </section>
 
-  <p class="text-sm leading-relaxed opacity-50">
+  <p class="text-sm leading-relaxed text-dim">
     Running it on a server with no screen (NAS, home server)? See the
-    <a href={README} class="border-b border-fg/40 hover:border-fg/80">README</a>.
+    <a href={README} class="border-b border-line-strong hover:border-fg/80">README</a>.
   </p>
 
   <h2 id="preparing" class="pt-4 text-xl font-bold">Preparing your manga</h2>
 
   <section class="space-y-3">
-    <h3 class="text-lg font-bold opacity-80">How your manga must be laid out</h3>
-    <ul class="list-inside list-disc space-y-2 text-sm leading-relaxed opacity-70">
+    <h3 class="text-lg font-bold text-soft">How your manga must be laid out</h3>
+    <ul class="list-inside list-disc space-y-2 text-sm leading-relaxed text-soft">
       <li>
         <b>One folder per manga.</b> The folder's name is used as the title if there is no metadata (see
         below).
@@ -140,32 +140,32 @@
         the app at it.
       </li>
     </ul>
-    <pre class="overflow-x-auto border border-border/20 p-4 text-xs leading-relaxed">{folder}</pre>
+    <pre class="overflow-x-auto border border-line p-4 text-xs leading-relaxed">{folder}</pre>
   </section>
 
   <section class="space-y-3">
-    <h3 class="text-lg font-bold opacity-80">Chapter order and numbers</h3>
-    <p class="text-sm leading-relaxed opacity-70">
+    <h3 class="text-lg font-bold text-soft">Chapter order and numbers</h3>
+    <p class="text-sm leading-relaxed text-soft">
       Chapters are sorted by file name, letter by letter, so <code>10.cbz</code> comes before
       <code>2.cbz</code>. Pad numbers with zeros so they all have the same length:
       <code>001</code>, <code>002</code>, <code>010</code>.
     </p>
-    <p class="text-sm leading-relaxed opacity-70">
+    <p class="text-sm leading-relaxed text-soft">
       Files named <code>chapter_0044-00.cbz</code> show as "Ch. 44", and
       <code>chapter_0044-05.cbz</code> as "Ch. 44.5". Any other name is shown as is.
     </p>
   </section>
 
   <section class="space-y-3">
-    <h3 class="text-lg font-bold opacity-80">Title, summary, authors, tags, status</h3>
-    <p class="text-sm leading-relaxed opacity-70">
+    <h3 class="text-lg font-bold text-soft">Title, summary, authors, tags, status</h3>
+    <p class="text-sm leading-relaxed text-soft">
       These come from a file named <code>ComicInfo.xml</code> inside the chapter <code>.cbz</code>
       files, next to the pages. It's a plain text file you can write in any text editor. Only the first
       and last chapters are read, so putting it in the first chapter is enough. Every field is optional:
     </p>
     <pre
-      class="overflow-x-auto border border-border/20 p-4 text-xs leading-relaxed">{comicInfo}</pre>
-    <ul class="list-inside list-disc space-y-1 text-sm leading-relaxed opacity-70">
+      class="overflow-x-auto border border-line p-4 text-xs leading-relaxed">{comicInfo}</pre>
+    <ul class="list-inside list-disc space-y-1 text-sm leading-relaxed text-soft">
       <li><code>Series</code>: title</li>
       <li><code>Summary</code>: description</li>
       <li><code>Year</code>: year</li>
