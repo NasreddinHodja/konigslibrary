@@ -68,6 +68,43 @@ jobs:
 
       - run: bun run build
 
+  # The self-hosted app in a browser (playwright.config.ts): reading flows and
+  # axe's accessibility checks, against the simulated library.
+  e2e:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: oven-sh/setup-bun@v2
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: crates
+
+      # Same as the ci job.
+      - run: cargo install -f wasm-bindgen-cli --version 0.2.99
+
+      - run: bun install --frozen-lockfile
+
+      - run: bunx playwright install --with-deps chromium
+
+      # Compiled ahead, so the server starts within Playwright's wait for it.
+      - run: cargo build --manifest-path crates/Cargo.toml -p klserver
+
+      - run: bun run test:e2e
+
+      # Traces of the failed tests, viewable with `bunx playwright show-report`.
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: playwright-report
+          path: playwright-report/
+
   # The desktop and Android app's own Rust, which builds on crates/: nothing
   # else compiles it before a release.
   tauri:
