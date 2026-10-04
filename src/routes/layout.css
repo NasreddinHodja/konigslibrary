@@ -63,6 +63,11 @@ body {
     -webkit-user-select: none;
     user-select: none;
   }
+  /* No page zoom: the reader pinches its pages itself. The viewport meta
+     says so too, but iOS Safari ignores it. */
+  html {
+    touch-action: pan-x pan-y;
+  }
   input,
   textarea,
   [contenteditable] {

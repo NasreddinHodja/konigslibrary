@@ -231,7 +231,7 @@
   {#if fill}
     <!-- Embla's viewport, container and slides. -->
     <div class="min-h-0 flex-1 overflow-hidden" bind:this={viewport}>
-      <div class="flex h-full touch-pan-y touch-pinch-zoom">
+      <div class="flex h-full touch-pan-y">
         {#each pages as key (key)}
           <!-- Each page scrolls on its own, and is what the cards in it watch
                their visibility against. Vertical overscroll is contained: with
