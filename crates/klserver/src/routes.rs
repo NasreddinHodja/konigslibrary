@@ -751,6 +751,36 @@ mod tests {
     assert_eq!(body, std::fs::read(dir.join("ch01.cbz")).unwrap());
   }
 
+  fn get_range(uri: &str, range: &str) -> Request<Body> {
+    let mut req = get_from(uri, LAN);
+    req
+      .headers_mut()
+      .insert(header::RANGE, HeaderValue::from_str(range).unwrap());
+    req
+  }
+
+  #[tokio::test]
+  async fn a_whole_archive_answers_a_byte_range() {
+    let h = harness();
+    let whole = std::fs::read(berserk(&h).join("ch01.cbz")).unwrap();
+    let len = whole.len();
+
+    let (status, body, res) =
+      send(&h, get_range("/api/library/Berserk/ch01.cbz", "bytes=0-3")).await;
+    assert_eq!(status, StatusCode::PARTIAL_CONTENT);
+    assert_eq!(body, &whole[..4]);
+    assert_eq!(
+      res.headers()[header::CONTENT_RANGE],
+      format!("bytes 0-3/{len}").as_str()
+    );
+    // Our headers are still applied on top of the partial response.
+    assert_eq!(
+      res.headers()[header::CONTENT_TYPE],
+      "application/octet-stream"
+    );
+    assert_eq!(res.headers()[header::CACHE_CONTROL], "no-cache");
+  }
+
   #[tokio::test]
   async fn a_missing_file_is_a_clean_404() {
     let h = harness();
