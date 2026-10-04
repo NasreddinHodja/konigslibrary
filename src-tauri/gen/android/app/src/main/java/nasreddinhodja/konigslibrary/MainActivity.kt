@@ -1,6 +1,10 @@
 package nasreddinhodja.konigslibrary
 
 import android.Manifest
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
@@ -18,6 +22,10 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 
 class MainActivity : TauriActivity() {
+  companion object {
+    const val DOWNLOADED_CHANNEL_ID = "kl_downloaded"
+  }
+
   private var webViewRef: WebView? = null
   private var immersiveHidden = false
 
@@ -34,6 +42,11 @@ class MainActivity : TauriActivity() {
     val density = resources.displayMetrics.density
     gestureInsets = "${zones.left / density},${zones.right / density}"
   }
+
+  /// Each finished download's notification id, so they don't replace each
+  /// other; above DownloadService.NOTIFICATION_ID. Bumped on the JS bridge's
+  /// thread only.
+  private var nextDownloadedId = 2000
 
   private val requestNotificationPermission =
     registerForActivityResult(ActivityResultContracts.RequestPermission()) {}
@@ -67,12 +80,38 @@ class MainActivity : TauriActivity() {
     }
 
     @JavascriptInterface
-    fun acquireWakeLock(label: String, total: Int) {
+    fun acquireWakeLock(label: String, current: Int, total: Int) {
       startForegroundService(Intent(this@MainActivity, DownloadService::class.java).apply {
         action = DownloadService.ACTION_START
         putExtra(DownloadService.EXTRA_LABEL, label)
+        putExtra(DownloadService.EXTRA_CURRENT, current)
         putExtra(DownloadService.EXTRA_TOTAL, total)
       })
+    }
+
+    /// One manga finished downloading: a notification of its own, left
+    /// after the progress one goes. Tapping it opens the app.
+    @JavascriptInterface
+    fun notifyDownloaded(title: String) {
+      val manager = getSystemService(NotificationManager::class.java)
+      manager.createNotificationChannel(
+        NotificationChannel(DOWNLOADED_CHANNEL_ID, "Finished downloads", NotificationManager.IMPORTANCE_DEFAULT)
+      )
+      val tap = PendingIntent.getActivity(
+        this@MainActivity, 0,
+        Intent(this@MainActivity, MainActivity::class.java).apply {
+          flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        },
+        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+      )
+      val notification = Notification.Builder(this@MainActivity, DOWNLOADED_CHANNEL_ID)
+        .setContentTitle(title)
+        .setContentText("Downloaded")
+        .setSmallIcon(android.R.drawable.stat_sys_download_done)
+        .setContentIntent(tap)
+        .setAutoCancel(true)
+        .build()
+      manager.notify(nextDownloadedId++, notification)
     }
 
     @JavascriptInterface
@@ -111,6 +150,9 @@ class MainActivity : TauriActivity() {
     // selection) only buzzes, with nothing to show for it.
     webView.isHapticFeedbackEnabled = false
     webView.addJavascriptInterface(NativeBridge(), "__kl")
+    DownloadService.onCancelAll = {
+      webView.evaluateJavascript("window.dispatchEvent(new CustomEvent('nativecanceldownloads'))", null)
+    }
     webView.addOnLayoutChangeListener { v, _, _, _, _, _, _, _, _ -> updateGestureInsets(v as WebView) }
     // The keyboard can close while its field keeps focus (system back), which
     // the page can't see; it's told whenever the keyboard shows or hides.

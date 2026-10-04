@@ -7,6 +7,7 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Intent
 import android.content.pm.ServiceInfo
+import android.graphics.drawable.Icon
 import android.os.Build
 import android.os.Handler
 import android.os.IBinder
@@ -25,12 +26,17 @@ class DownloadService : Service() {
   companion object {
     const val ACTION_START = "ACTION_START"
     const val ACTION_PROGRESS = "ACTION_PROGRESS"
+    const val ACTION_CANCEL_ALL = "ACTION_CANCEL_ALL"
     const val EXTRA_LABEL = "label"
     const val EXTRA_CURRENT = "current"
     const val EXTRA_TOTAL = "total"
     const val NOTIFICATION_ID = 1001
     const val CHANNEL_ID = "kl_download"
     const val NOTIFY_INTERVAL_MS = 300L
+
+    /// What the notification's "Cancel all" does: set by MainActivity, which
+    /// has the page to tell.
+    var onCancelAll: (() -> Unit)? = null
   }
 
   private val flushNotification = Runnable {
@@ -69,16 +75,18 @@ class DownloadService : Service() {
       ACTION_START -> {
         currentLabel = intent.getStringExtra(EXTRA_LABEL) ?: "manga"
         pendingTotal = intent.getIntExtra(EXTRA_TOTAL, 0)
-        pendingCurrent = 0
+        pendingCurrent = intent.getIntExtra(EXTRA_CURRENT, 0)
         handler.removeCallbacks(flushNotification)
         updateScheduled = false
-        notificationManager.notify(NOTIFICATION_ID, buildNotification(currentLabel, 0, pendingTotal))
+        notificationManager.notify(NOTIFICATION_ID, buildNotification(currentLabel, pendingCurrent, pendingTotal))
       }
       ACTION_PROGRESS -> {
         pendingCurrent = intent.getIntExtra(EXTRA_CURRENT, 0)
         pendingTotal = intent.getIntExtra(EXTRA_TOTAL, pendingTotal)
         scheduleNotify()
       }
+      // The page stops every download, then the service with the last.
+      ACTION_CANCEL_ALL -> onCancelAll?.invoke()
     }
     return START_NOT_STICKY
   }
@@ -92,6 +100,11 @@ class DownloadService : Service() {
       PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
     )
 
+    val cancelAll = PendingIntent.getService(
+      this, 0, Intent(this, DownloadService::class.java).setAction(ACTION_CANCEL_ALL),
+      PendingIntent.FLAG_IMMUTABLE
+    )
+
     val builder = Notification.Builder(this, CHANNEL_ID)
       .setContentTitle("Downloading $label")
       .setSmallIcon(android.R.drawable.stat_sys_download)
@@ -100,6 +113,13 @@ class DownloadService : Service() {
       .setOngoing(true)
       // Download progress is not sensitive; show it on the lock screen too.
       .setVisibility(Notification.VISIBILITY_PUBLIC)
+      .addAction(
+        Notification.Action.Builder(
+          Icon.createWithResource(this, android.R.drawable.ic_menu_close_clear_cancel),
+          "Cancel all",
+          cancelAll
+        ).build()
+      )
 
     if (total > 0) {
       val pct = current * 100 / total

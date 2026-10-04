@@ -21,6 +21,7 @@
   import ToastStack from '$lib/ui/ToastStack.svelte';
   import UpdateBanner from '$lib/ui/UpdateBanner.svelte';
   import { showError } from '$lib/ui/toast.svelte';
+  import { cancelAllDownloads } from '$lib/sources/download.svelte';
   import { describeOpenFileError } from '$lib/utils/errors';
   import { fetchDownloadLinks, DEFAULT_DOWNLOAD_LINKS } from '$lib/utils/update';
   import { onMount, untrack } from 'svelte';
@@ -115,6 +116,13 @@
     };
     window.addEventListener('nativeback', onNativeBack);
     return () => window.removeEventListener('nativeback', onNativeBack);
+  });
+
+  // The Android download notification's "Cancel all".
+  $effect(() => {
+    if (!native) return;
+    window.addEventListener('nativecanceldownloads', cancelAllDownloads);
+    return () => window.removeEventListener('nativecanceldownloads', cancelAllDownloads);
   });
 
   const handleKey = (event: KeyboardEvent) => {

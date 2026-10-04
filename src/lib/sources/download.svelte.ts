@@ -105,47 +105,92 @@ export function cancelDownload(slug: string): void {
   cancellers.get(slug)?.();
 }
 
+/// How to stop each download as a whole (a single manga, a batch, or one
+/// still fetching its chapter list), for cancelling them all.
+// eslint-disable-next-line svelte/prefer-svelte-reactivity
+const stoppers = new Map<string, () => void>();
+
+/// Stops every download, queued or running: the Android notification's
+/// "Cancel all".
+export function cancelAllDownloads(): void {
+  for (const stop of [...stoppers.values()]) stop();
+}
+
 /// Fetches a manga's chapter list, then downloads it as `saveManga` does.
 /// Cancellable from the start, while the list is still loading.
 export async function startDownload(slug: string, name: string, events?: EventBus): Promise<void> {
   let cancelled = false;
+  const fetchId = `fetch-${nextId++}`;
   setProgress(slug, 0, 0, name);
-  cancellers.set(slug, () => {
+  const cancel = () => {
     cancelled = true;
     cancellers.delete(slug);
+    stoppers.delete(fetchId);
     downloadProgress.delete(slug);
-  });
+  };
+  cancellers.set(slug, cancel);
+  stoppers.set(fetchId, cancel);
   let chapters: ServerChapter[];
   try {
     chapters = await fetchServerChapters(slug);
   } catch (err) {
     if (cancelled) return;
     cancellers.delete(slug);
+    stoppers.delete(fetchId);
     downloadProgress.delete(slug);
     throw err;
   }
   if (cancelled) return;
+  stoppers.delete(fetchId);
   saveManga(slug, name, chapters, events);
 }
 
-/// Downloads holding the native download service (Android's foreground
-/// service and wake lock). There is one service for all of them, so it is
-/// started by the first and stopped only by the last: a download that ends
-/// must not stop it under another still running.
-let nativeHolds = 0;
+/// Each download running, single or batch, by toast id: chapters copied of
+/// those listed so far, and what the Android notification calls it when it
+/// runs alone. Kept apart from the toasts, which can be dismissed while the
+/// download carries on.
+export const activeDownloads = new SvelteMap<
+  string,
+  { name: string; current: number; total: number }
+>();
 
-/// Starts or relabels the native download service and holds it until the
-/// returned release is called. Releasing twice is harmless.
-function holdNativeDownload(label: string, total: number): () => void {
-  nativeHolds++;
-  nativeBridge()?.acquireWakeLock(label, total);
-  let held = true;
-  return () => {
-    if (!held) return;
-    held = false;
-    nativeHolds--;
-    if (nativeHolds === 0) nativeBridge()?.releaseWakeLock();
-  };
+/// The name the Android notification was last started with; empty while
+/// its service isn't running.
+let nativeName = '';
+
+/// Shows every running download in Android's one download notification:
+/// the manga's name when only one runs, else how many manga, with all their
+/// chapters counted together. The service (and its wake lock) stops once
+/// none run.
+function syncNative() {
+  const bridge = nativeBridge();
+  if (!bridge) return;
+  const all = [...activeDownloads.values()];
+  if (all.length === 0) {
+    if (nativeName) bridge.releaseWakeLock();
+    nativeName = '';
+    return;
+  }
+  const name = all.length === 1 ? all[0].name : `${downloadProgress.size} manga`;
+  const current = all.reduce((n, d) => n + d.current, 0);
+  const total = all.reduce((n, d) => n + d.total, 0);
+  if (name !== nativeName) {
+    nativeName = name;
+    bridge.acquireWakeLock(name, current, total);
+  } else {
+    bridge.updateDownloadProgress(current, total);
+  }
+}
+
+function track(id: string, update: Partial<{ name: string; current: number; total: number }>) {
+  const known = activeDownloads.get(id) ?? { name: '', current: 0, total: 0 };
+  activeDownloads.set(id, { ...known, ...update });
+  syncNative();
+}
+
+function untrack(id: string) {
+  if (!activeDownloads.delete(id)) return;
+  syncNative();
 }
 
 /// Copies a manga's chapter archives and cover from the server into the
@@ -159,34 +204,38 @@ export function saveManga(
   const id = `dl-${nextId++}`;
   const job: Job = { cancelled: false, fileId: '' };
   const total = chapters.length;
-  const release = holdNativeDownload(name, total);
+  let title = name;
 
   const cancel = () => {
     cancelJob(job);
     removeToast(id);
-    release();
+    untrack(id);
   };
   cancellers.set(slug, cancel);
+  stoppers.set(id, cancel);
 
   setProgress(slug, 0, total, name);
   addToast({ id, label: name, current: 0, total, phase: 'fetching', cancel, group: 'download' });
+  track(id, { name, current: 0, total });
 
   copyManga(id, slug, chapters, job, events, {
     // Callers pass the best name they have; the metadata title wins.
-    title: (title) => {
-      if (title === name) return;
-      updateToast(id, { label: title });
-      nativeBridge()?.acquireWakeLock(title, total);
+    title: (t) => {
+      if (t === title) return;
+      title = t;
+      updateToast(id, { label: t });
+      track(id, { name: t });
     },
     chapter: (done) => {
       updateToast(id, { current: done });
-      nativeBridge()?.updateDownloadProgress(done, total);
+      track(id, { current: done });
     }
   })
     .then(() => {
       if (job.cancelled) return;
       events?.emit('download:complete', { slug });
       updateToast(id, { phase: 'done', cancel: undefined });
+      nativeBridge()?.notifyDownloaded(title);
     })
     .catch((err: unknown) => {
       if (job.cancelled) return;
@@ -196,8 +245,9 @@ export function saveManga(
     })
     .finally(() => {
       cancellers.delete(slug);
+      stoppers.delete(id);
       downloadProgress.delete(slug);
-      release();
+      untrack(id);
       if (job.cancelled) discard(slug, events);
     });
 
@@ -205,9 +255,10 @@ export function saveManga(
 }
 
 /// Downloads several manga one after another under one toast, which counts
-/// manga rather than chapters. Each one's chapter list is fetched when its
-/// turn comes; one failing, or being cancelled on its own, doesn't stop the
-/// rest. The toast's cancel stops them all.
+/// chapters like a single download's. Every chapter list is fetched at the
+/// start, so the total is all that was queued before the first is copied;
+/// one failing, or being cancelled on its own, doesn't stop the rest. The toast's cancel
+/// stops them all.
 export function saveMangas(
   items: { slug: string; name: string }[],
   events?: EventBus
@@ -219,7 +270,20 @@ export function saveMangas(
   const dropped = new Set<string>();
   let current: { slug: string; job: Job } | null = null;
   let total = items.length;
+  // Chapters copied, and listed, across the manga still in the batch.
+  let chaptersDone = 0;
+  let chaptersTotal = 0;
   const label = () => `Downloading ${total} manga`;
+
+  // Chapters listed per manga, counted in `chaptersTotal`.
+  // eslint-disable-next-line svelte/prefer-svelte-reactivity
+  const listed = new Map<string, number>();
+  // Once stopped, the toast and tracking are gone; nothing brings them back.
+  const count = () => {
+    if (stopped) return;
+    updateToast(id, { current: chaptersDone, total: chaptersTotal });
+    track(id, { current: chaptersDone, total: chaptersTotal });
+  };
 
   const drop = (slug: string) => {
     if (dropped.has(slug)) return;
@@ -227,23 +291,39 @@ export function saveMangas(
     cancellers.delete(slug);
     downloadProgress.delete(slug);
     total--;
-    updateToast(id, { label: label(), total });
+    if (!stopped) {
+      updateToast(id, { label: label() });
+      track(id, { name: `${total} manga` });
+    }
     if (current?.slug === slug) {
       // Marked now: its files are deleted once the copy in flight stops.
       downloadsDiscarding.add(slug);
       cancelJob(current.job);
+    } else {
+      // Still queued: its chapters leave the total now.
+      chaptersTotal -= listed.get(slug) ?? 0;
+      listed.delete(slug);
+      count();
     }
   };
 
-  const release = holdNativeDownload(label(), total);
   const cancel = () => {
     stopped = true;
     if (current) cancelJob(current.job);
     removeToast(id);
-    release();
+    untrack(id);
   };
+  stoppers.set(id, cancel);
 
-  addToast({ id, label: label(), current: 0, total, phase: 'fetching', cancel, group: 'download' });
+  addToast({
+    id,
+    label: label(),
+    current: 0,
+    total: 0,
+    phase: 'fetching',
+    cancel,
+    group: 'download'
+  });
   // This batch's cancel per slug, to tell its entries from a later download's.
   // eslint-disable-next-line svelte/prefer-svelte-reactivity
   const mine = new Map<string, () => void>();
@@ -252,36 +332,72 @@ export function saveMangas(
     mine.set(slug, () => drop(slug));
     cancellers.set(slug, mine.get(slug)!);
   }
+  track(id, { name: `${total} manga`, current: 0, total: 0 });
+
+  // Requested together; each adds to the total as it arrives, and is awaited
+  // when its manga's turn comes.
+  // eslint-disable-next-line svelte/prefer-svelte-reactivity
+  const lists = new Map(
+    items.map(({ slug }) => {
+      const list = fetchServerChapters(slug).then((chapters) => {
+        if (!stopped && !dropped.has(slug)) {
+          listed.set(slug, chapters.length);
+          chaptersTotal += chapters.length;
+          count();
+        }
+        return chapters;
+      });
+      // Rejections are handled when awaited, which may be much later.
+      list.catch(() => {});
+      return [slug, list];
+    })
+  );
 
   const run = async () => {
-    let done = 0;
     let failed = 0;
-    for (const { slug } of items) {
+    for (const { slug, name } of items) {
       if (stopped) return;
       if (dropped.has(slug)) continue;
       const job: Job = { cancelled: false, fileId: '' };
       current = { slug, job };
+      let title = name;
+      let copied = 0;
       try {
-        await copyManga(id, slug, await fetchServerChapters(slug), job, events);
+        const chapters = await lists.get(slug)!;
+        await copyManga(id, slug, chapters, job, events, {
+          title: (t) => (title = t),
+          chapter: (n) => {
+            copied = n;
+            chaptersDone++;
+            count();
+          }
+        });
         if (stopped) return;
-        if (!job.cancelled) events?.emit('download:complete', { slug });
+        if (!job.cancelled) {
+          events?.emit('download:complete', { slug });
+          nativeBridge()?.notifyDownloaded(title);
+        }
       } catch (err) {
         if (stopped) return;
         if (!job.cancelled) {
           failed++;
           events?.emit('download:error', { slug, error: errorMessage(err) });
+          // What it didn't copy no longer counts toward the total.
+          chaptersTotal -= (listed.get(slug) ?? 0) - copied;
+          count();
         }
       }
       current = null;
       cancellers.delete(slug);
       downloadProgress.delete(slug);
-      // Dropped while copying: what it got so far goes.
+      // Dropped while copying: what it got so far goes, from the count too.
       if (job.cancelled) {
+        chaptersDone -= copied;
+        chaptersTotal -= listed.get(slug) ?? 0;
+        listed.delete(slug);
+        count();
         discard(slug, events);
-        continue;
       }
-      updateToast(id, { current: ++done });
-      nativeBridge()?.updateDownloadProgress(done, total);
     }
     if (total === 0) {
       removeToast(id);
@@ -296,7 +412,8 @@ export function saveMangas(
       cancellers.delete(slug);
       downloadProgress.delete(slug);
     }
-    release();
+    stoppers.delete(id);
+    untrack(id);
     // Stopped mid-copy: the manga being copied goes; finished ones stay.
     if (stopped && current) discard(current.slug, events);
   });

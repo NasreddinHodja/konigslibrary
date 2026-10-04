@@ -3,9 +3,10 @@
 type NativeBridge = {
   setImmersive(hidden: boolean): void;
   setStatusBarStyle(light: boolean): void;
-  acquireWakeLock(label: string, total: number): void;
+  acquireWakeLock(label: string, current: number, total: number): void;
   updateDownloadProgress(current: number, total: number): void;
   releaseWakeLock(): void;
+  notifyDownloaded(title: string): void;
   systemGestureInsets?(): string;
   hapticLongPress?(): void;
 };

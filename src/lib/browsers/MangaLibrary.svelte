@@ -1,7 +1,7 @@
 <script lang="ts">
   import { Channel } from '@tauri-apps/api/core';
   import { untrack } from 'svelte';
-  import type { TransitionConfig } from 'svelte/transition';
+  import { fade, type TransitionConfig } from 'svelte/transition';
   import { SvelteMap, SvelteSet } from 'svelte/reactivity';
   import { getReaderContext } from '$lib/context';
   import { openNativeManga, ServerLibraryProvider } from '$lib/sources';
@@ -20,6 +20,7 @@
     startDownload,
     saveMangas,
     cancelDownload,
+    cancelAllDownloads,
     downloadProgress,
     downloadsDiscarding
   } from '$lib/sources/download.svelte';
@@ -29,7 +30,14 @@
     checkServer,
     reportServerFailure
   } from '$lib/sources/connection.svelte';
-  import { isLocalServer, getServerUrl, ANIM_DURATION, ANIM_EASE } from '$lib/utils/constants';
+  import {
+    isLocalServer,
+    getServerUrl,
+    ANIM_DURATION,
+    ANIM_EASE,
+    ANIM_EXIT_DURATION,
+    ANIM_EASE_IN
+  } from '$lib/utils/constants';
   import { isNative } from '$lib/utils/platform';
   import {
     showError,
@@ -732,6 +740,19 @@
     <h1 class="text-2xl font-bold">Library</h1>
     {#if tabs.length === 1 && serverEnabled}{@render serverDot()}{/if}
     <span class="ml-auto flex items-center gap-1">
+      <!-- Here while anything downloads or waits to: its toast can be closed,
+           and the notification's button is out of sight. -->
+      {#if downloadProgress.size > 0}
+        <span
+          class="flex"
+          in:grow
+          out:fade={{ duration: ANIM_EXIT_DURATION, easing: ANIM_EASE_IN }}
+        >
+          <Button size="sm" variant="ghost" class={TOUCH_BUTTON} onclick={cancelAllDownloads}>
+            <X size={13} /> Cancel all
+          </Button>
+        </span>
+      {/if}
       {#if native && tab && (lists[tab].rows.length > 0 || (refreshing && hadRows[tab]))}
         <!-- On a wrapper: grow's opacity would override the button's own. -->
         <span class="flex" transition:grow>

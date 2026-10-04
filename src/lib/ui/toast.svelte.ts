@@ -16,8 +16,9 @@ export type Toast = {
 const DISMISS_DELAY = 3000;
 const ERROR_DISMISS_DELAY = 15000;
 
-/// More running downloads than this fold into one toast.
-const MAX_DOWNLOAD_TOASTS = 3;
+/// More running downloads than this fold into one toast: a second download
+/// started while one runs joins it in one toast.
+const MAX_DOWNLOAD_TOASTS = 1;
 
 let toasts: Toast[] = $state([]);
 let downloadsFolded = $state(false);
