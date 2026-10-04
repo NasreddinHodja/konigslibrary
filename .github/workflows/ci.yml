@@ -20,6 +20,10 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: wasm32-unknown-unknown
+          # For cargo-llvm-cov, which reads the coverage with them.
+          components: llvm-tools-preview
+
+      - uses: taiki-e/install-action@cargo-llvm-cov
 
       - uses: Swatinem/rust-cache@v2
         with:
@@ -37,8 +41,63 @@ jobs:
 
       - run: bun run check
 
-      - run: bun run test:run
+      # The tests, with coverage. Vitest empties coverage/ first, so it goes
+      # before the Rust report written there.
+      - run: bunx vitest run --coverage
 
-      - run: cargo test --manifest-path crates/Cargo.toml
+      - run: cargo llvm-cov --manifest-path crates/Cargo.toml --workspace --lcov --output-path coverage/rust.lcov
+
+      - name: Coverage summary
+        run: |
+          {
+            echo '## Coverage'
+            echo '### Frontend'
+            bun -e 'const t = (await Bun.file("coverage/coverage-summary.json").json()).total;
+              console.log(`Lines ${t.lines.pct}% · Branches ${t.branches.pct}% · Functions ${t.functions.pct}%`)'
+            echo '### Rust'
+            echo '```'
+            cargo llvm-cov report --manifest-path crates/Cargo.toml --summary-only
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # The HTML report (coverage/index.html) and both lcov files.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage/
 
       - run: bun run build
+
+  # The desktop and Android app's own Rust, which builds on crates/: nothing
+  # else compiles it before a release.
+  tauri:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Same as release-linux.yml.
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            file \
+            libssl-dev \
+            libxdo-dev \
+            libwebkit2gtk-4.1-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            xdg-utils
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      # A bundled resource the build checks for; build:sidecar fills it for a
+      # release, and the tests don't read it.
+      - run: mkdir -p src-tauri/binaries/konigslibrary-server-assets
+
+      - run: cargo test --manifest-path src-tauri/Cargo.toml
