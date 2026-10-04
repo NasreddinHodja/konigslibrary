@@ -27,7 +27,8 @@ beforeEach(async () => {
   );
 });
 
-const page = () => new Response(new Blob(['page'], { type: 'image/jpeg' }));
+// A string body: under jsdom, Blob is jsdom's, which Node's Response can't read.
+const page = () => new Response('page', { headers: { 'Content-Type': 'image/jpeg' } });
 
 /// A server with every page; returns the fetch mock.
 const pages = () => fakeServer((url) => (url.pathname.endsWith('.jpg') ? page() : undefined));
