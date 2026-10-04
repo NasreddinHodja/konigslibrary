@@ -1,0 +1,42 @@
+#+TITLE: Page loading
+#+OPTIONS: ^:{}
+
+How a page gets from an archive to the screen, per provider.
+
+* Browser: UploadProvider
+
+Files come from a folder picker, a dropped folder, or a single dropped =.cbz=. Nothing is uploaded anywhere; they're read in place.
+
+1. Opening a chapter: for each archive, the worker reads only the archive's tail and its central directory. That's enough to list pages and find =ComicInfo.xml=. Then =klparse= sorts chapters by number.
+2. Reading a page: the worker reads that entry's bytes, and =klparse= inflates and CRC-checks them. The page is handed back as a =Blob= and shown through a blob URL.
+
+The reads are =File.slice()= calls in JavaScript (=src/lib/zip/index.ts=). The wasm module is given only the byte ranges it needs, so a 2 GB archive is never copied into the wasm heap.
+
+The parser runs in one Web Worker (=src/lib/zip/worker.ts=), so inflating doesn't block scrolling. =worker-client.ts= sends it requests by ID, and if the worker crashes, restarts it once.
+
+Entry sizes are checked against limits before anything is read, so a zip bomb is rejected on its declared sizes.
+
+* Server: ServerLibraryProvider
+
+1. =GET /api/library/{manga}/chapters= returns every chapter with its page entry paths. The server stores each archive's page list in its database and re-reads it only when the archive's size or mtime changes.
+2. Page URLs are built client-side as =/api/library/{manga}/{chapter}/{page}=. The browser fetches them like any image, and since they're served as =immutable=, they're cached.
+
+On the server, =klfs= keeps a cache of parsed central directories, keyed by path and invalidated by mtime, so each page request is a seek and an inflate.
+
+* Desktop and Android: NativeFilesystemProvider
+
+1. =list_manga_chapters= returns chapters with their archive path and page entries.
+2. Each page is a =read_archive_page= call, which returns the raw bytes. The frontend wraps them in a blob URL.
+
+The Rust side uses the same =klfs= cache as the server. Paths are checked against the allowed roots on every call (see [[file:../api/tauri.org::*Conventions][Tauri commands]]).
+
+* In the reader
+
+=useChapter= (=src/lib/chapter-loader/use-chapter.svelte.ts=) loads the selected chapter:
+
+- Bulk providers :: all URLs come back at once. The current page is decoded before the reader shows.
+- Lazy providers :: pages from 2 behind to 5 ahead of the current one are fetched first, in order, and the current one is decoded. The rest are then fetched 4 at a time in the background. Any page can be requested out of turn through =ensurePageUrl=.
+
+=usePreloader= (=preloader.svelte.ts=) keeps a window of decoded =Image= elements, from 2 pages behind to 5 ahead, as the current page moves.
+
+Changing chapter aborts in-flight loads and revokes every blob URL the old chapter created.

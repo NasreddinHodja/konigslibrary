@@ -1,0 +1,65 @@
+#+TITLE: Library
+#+OPTIONS: ^:{}
+
+* Folder structure
+
+A manga is a folder holding one =.cbz= (or =.zip=) per chapter and, optionally, a cover image named =cover.*=.
+
+#+begin_example
+MANGA_DIR/
+├── One Piece/
+│   ├── cover.jpg
+│   ├── chapter_0001-00.cbz
+│   ├── chapter_0002-00.cbz
+│   └── chapter_0002-05.cbz
+└── Berserk/
+    ├── cover.png
+    ├── 001.cbz
+    └── 002.cbz
+#+end_example
+
+- Each subdirectory of =MANGA_DIR= is one manga.
+- Each =.cbz= or =.zip= directly inside it is one chapter. Every image in the archive is a page, whatever folder it's nested in.
+- Loose images, subfolders and other files in a manga folder are ignored.
+- Hidden files and folders (starting with =.=) are ignored.
+
+In the browser, open a manga folder with the same layout, or a single chapter archive.
+
+Supported image formats: JPEG, PNG, GIF, WebP, AVIF, BMP.
+
+* Metadata
+
+Title, summary, authors, tags and status come from =ComicInfo.xml= inside the chapter archives. Only the first and last chapters are read: the first one's values win, the last one fills what the first lacks. Without =ComicInfo.xml=, the folder name is the title.
+
+| Element               | Shown as                       |
+|-----------------------+--------------------------------|
+| =Series=              | Title                          |
+| =Summary=             | Description                    |
+| =Year=                | Year                           |
+| =Writer=, =Penciller= | Authors (comma-separated)      |
+| =Genre=, =Tags=       | Tags (comma-separated)         |
+| =Status=              | Status badge, shown as written |
+
+=Status= isn't in the ComicInfo v2.1 schema; it's an extension. An archive with =Count= but no =Status= is shown as complete.
+
+* Sorting
+
+Chapters sort by volume, then chapter number, read from each archive's file name:
+
+| File name               | Volume | Chapter |
+|-------------------------+--------+---------|
+| =Berserk v01 c003.cbz=  |      1 |       3 |
+| =Vol. 2 Ch. 12.5.cbz=   |      2 |    12.5 |
+| =Volume 07.cbz=         |      7 |         |
+| =chapter 7.cbz=         |        |       7 |
+| =Beelzebub_53[KSH].cbz= |        |      53 |
+| =chapter_0044-05.cbz=   |        |   44.05 |
+
+- Volume markers: =v=, =vol=, =volume=, =tome=. Chapter markers: =c=, =ch=, =chp=, =chap=, =chapter=, =episode=. Any case, at the start of a word.
+- With no marker, the last number in the name is the chapter.
+- Text in =()=, =[]= and ={}= is skipped.
+- =<Volume>= and =<Number>= in an archive's =ComicInfo.xml= override the file name, each on its own, when they're numbers.
+
+Volumes come first, then chapters with no volume. Archives with no number sort last, by name, comparing numbers in names by value.
+
+Archives named =chapter_<major>-<minor>= display as chapter numbers: =chapter_0044-00= is "Ch. 44", =chapter_0044-05= is "Ch. 44.5". Other names display as they are.

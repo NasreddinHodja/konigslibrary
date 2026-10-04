@@ -1,0 +1,23 @@
+#+TITLE: konigslibrary documentation
+#+OPTIONS: ^:{}
+
+* Guide
+
+- [[file:guide/install.org][Install]]: browser, desktop, Android, self-hosted server
+- [[file:guide/library.org][Library]]: folder structure, metadata, chapter sorting
+- [[file:guide/keyboard.org][Keyboard shortcuts]]
+
+* Architecture
+
+- [[file:architecture/overview.org][Overview]]: run modes, crates, source providers
+- [[file:architecture/page-loading.org][Page loading]]: archive to screen, per mode
+- [[file:architecture/server-index.org][Server index]]: the server's SQLite database
+
+* API
+
+- [[file:api/http.org][HTTP server]]: =konigslibrary-server= routes
+- [[file:api/tauri.org][Tauri commands]]: what the frontend calls with =invoke()=
+
+* Contributing
+
+- [[file:../CONTRIBUTING.org][Contributing]]: setup, scripts, Android builds, checks

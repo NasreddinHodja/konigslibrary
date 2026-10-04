@@ -1,8 +1,15 @@
-#+TITLE: Contributing to Konigslibrary
+#+TITLE: Contributing
+#+OPTIONS: ^:{}
 
 * Prerequisites
 
 - [[https://bun.sh/][Bun]]
+- [[https://rustup.rs/][Rust]], for the archive parser compiled to wasm:
+
+#+begin_src sh
+rustup target add wasm32-unknown-unknown
+cargo install -f wasm-bindgen-cli --version 0.2.99  # must match crates/klwasm/Cargo.toml
+#+end_src
 
 * Setup
 
@@ -13,33 +20,40 @@ bun install
 bun dev
 #+end_src
 
-* Available Scripts
+* Scripts
 
-| Command            | Description               |
-|--------------------+---------------------------|
-| =bun dev=          | Start dev server          |
-| =bun run build=    | Production build          |
-| =bun run check=    | Svelte type checking      |
-| =bun run lint=     | Prettier + ESLint check   |
-| =bun run format=   | Auto-format with Prettier |
-| =bun run test=     | Run tests                 |
+| Command                 | Description                                              |
+|-------------------------+----------------------------------------------------------|
+| =bun dev=               | Dev server                                               |
+| =bun run build=         | Production build (adapter-auto)                          |
+| =bun run build:local=   | Static build for the local server                        |
+| =bun run build:wasm=    | Compile the parser to wasm                               |
+| =bun run build:server=  | Build the =konigslibrary-server= binary                  |
+| =bun run serve=         | Build and start the local server                         |
+| =bun run dev:sim=       | Dev server against a generated library in =dev-library/= |
+| =bun run check=         | Svelte type checking                                     |
+| =bun run lint=          | Prettier and ESLint check                                |
+| =bun run format=        | Auto-format with Prettier                                |
+| =bun run test=          | Vitest                                                   |
+| =bun run test:rust=     | Parser and server tests (cargo)                          |
+| =bun run tauri:local=   | Tauri dev mode                                           |
+| =bun tauri build=       | Tauri release build                                      |
+| =bun run build:desktop= | Linux AppImage, built in Docker, into =dist/=            |
 
-* Code Style
+* Android
 
-This project uses Prettier and ESLint for consistent formatting. Configuration lives in [[file:.prettierrc][.prettierrc]] and [[file:.editorconfig][.editorconfig]].
+Building the Android app also needs the Android SDK and NDK, and a JDK 17 for the Gradle daemon. =src-tauri/gen/android/gradle/gradle-daemon-jvm.properties= requests JDK 17, so Gradle finds or downloads one itself; =JAVA_HOME= doesn't need to change.
 
-Before submitting code, run:
+=bun run build:android= is unsigned unless a keystore is configured: copy =src-tauri/gen/android/app/key.properties.example= to =key.properties= (gitignored) and fill it in. CI passes the same values as =KEYSTORE_PATH=, =STORE_PASSWORD=, =KEY_ALIAS= and =KEY_PASSWORD= (see [[file:.github/workflows/release-android.yml][release-android.yml]]). Signing happens inside the Gradle build.
+
+* Before a pull request
 
 #+begin_src sh
 bun run format
 bun run lint
+bun run check
+bun run test:run
+bun run test:rust
 #+end_src
 
-* Pull Request Workflow
-
-1. Fork the repository
-2. Create a feature branch (=git checkout -b my-feature=)
-3. Commit your changes
-4. Push to your fork and open a PR against =main=
-
-CI runs lint, type checking, and tests on every PR.
+CI runs lint, type checking and tests on every PR against =main=.

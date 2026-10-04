@@ -1,0 +1,22 @@
+#+TITLE: Keyboard shortcuts
+#+OPTIONS: ^:{}
+
+All shortcuts are rebindable from Settings. Defaults, from =src/lib/keyboard/keybindings.svelte.ts=:
+
+| Key        | Action                          |
+|------------+---------------------------------|
+| =j= / =↓=  | Next page                       |
+| =k= / =↑=  | Previous page                   |
+| =l= / =→=  | Next page (previous in RTL)     |
+| =h= / =←=  | Previous page (next in RTL)     |
+| =n= / =]=  | Next chapter                    |
+| =p= / =[=  | Previous chapter                |
+| =z= (hold) | Zoom to cursor (page-turn mode) |
+| =b=        | Back                            |
+| =m=        | Toggle scroll / page-turn mode  |
+| =r=        | Toggle LTR / RTL                |
+| ~-~ / ~=~  | Zoom out / in (scroll mode)     |
+| =?=        | Toggle shortcut help            |
+| =Escape=   | Close overlay                   |
+
+In page-turn mode, click the left or right half of the page to navigate.

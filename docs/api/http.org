@@ -1,0 +1,158 @@
+#+TITLE: HTTP server
+#+OPTIONS: ^:{}
+
+The API served by =konigslibrary-server= (=crates/klserver=). The desktop app's Share to LAN runs the same server. Routes are defined in =crates/klserver/src/routes.rs=.
+
+Any path not listed here serves the built SPA, falling back to its =index.html=.
+
+* Conventions
+
+- ={manga}= is a manga folder name, percent-encoded. Use the =slug= the library returns.
+- JSON errors have the shape ={"error": "<message>"}=. Some routes answer with plain text instead; each route says which.
+- The library routes send CORS headers allowing any origin, so the packaged app and the web deployment can read a server on another host. The settings routes send none.
+
+* Library
+
+** GET /api/ping
+
+Reachability check. Always =204 No Content=.
+
+** GET /api/library
+
+One page of the library, in title order. Indexes the manga directory first if it changed.
+
+| Query   | Description                                                                         |
+|---------+-------------------------------------------------------------------------------------|
+| =q=     | Filter to manga whose title or folder name contains this, ignoring case and accents |
+| =after= | Cursor: the =next= of the previous page                                             |
+| =limit= | Page size. Default =100=, clamped between =1= and =500=                             |
+
+#+begin_src json
+{
+  "entries": [
+    {
+      "name": "One Piece",
+      "slug": "One%20Piece",
+      "title": "One Piece",
+      "cover": "cover.jpg",
+      "coverVersion": "…",
+      "scanned": true
+    }
+  ],
+  "next": "…"
+}
+#+end_src
+
+| Field          | Description                                                                                   |
+|----------------+-----------------------------------------------------------------------------------------------|
+| =name=         | Folder name                                                                                   |
+| =slug=         | Folder name, percent-encoded, for ={manga}=                                                   |
+| =title=        | ComicInfo title. =null= when there is none or it hasn't been read yet                         |
+| =cover=        | Cover file name inside the folder, or =null=                                                  |
+| =coverVersion= | Changes when the cover file does. Pass it as the =v= query parameter to get a cacheable cover |
+| =scanned=      | Whether =title= and =cover= have been read, so a =null= one is final                          |
+| =next=         | Cursor for the next page, =null= on the last one                                              |
+
+With no manga directory configured: ={"entries": [], "next": null}=. A database error is =500= with a JSON error.
+
+** GET /api/library/{manga}/chapters
+
+The manga's chapters, in chapter order (see [[file:../guide/library.org::*Sorting][Sorting]]). An archive with no pages is left out.
+
+#+begin_src json
+[
+  {
+    "name": "chapter_0001-00",
+    "slug": "chapter_0001-00.cbz",
+    "pageCount": 2,
+    "pages": ["001.jpg", "002.jpg"]
+  }
+]
+#+end_src
+
+| Field       | Description                                                   |
+|-------------+---------------------------------------------------------------|
+| =name=      | Archive file name without =.cbz= or =.zip=                    |
+| =slug=      | Archive file name, percent-encoded                            |
+| =pageCount= | Number of pages                                               |
+| =pages=     | Entry paths of the pages inside the archive, in reading order |
+
+An unknown or invalid ={manga}= returns =[]=. A folder over the chapter limit (5,000) returns =422= with a plain-text message.
+
+** GET /api/library/{manga}/meta
+
+The manga's metadata, from =ComicInfo.xml= (see [[file:../guide/library.org::*Metadata][Metadata]]).
+
+#+begin_src json
+{
+  "title": "Berserk",
+  "description": "…",
+  "year": 1989,
+  "authors": ["Kentaro Miura"],
+  "tags": ["Action"],
+  "status": "Ongoing",
+  "cover": "cover.png"
+}
+#+end_src
+
+=404= with plain text =Not found= when the folder doesn't exist.
+
+** GET /api/library/{manga}/{path}
+
+A file from the manga folder. Each segment of ={path}= is percent-decoded on its own, so an encoded =/= stays part of a file name.
+
+| ={path}=               | Serves                                         |
+|------------------------+------------------------------------------------|
+| =<chapter>.cbz/<page>= | A page from inside a chapter archive           |
+| =<chapter>.cbz=        | The whole archive, with range support          |
+| =<image>=              | A loose image in the folder, such as the cover |
+
+- Only image files and =.cbz= or =.zip= archives are served. A loose image over 64 MB is refused.
+- Pages, and any request with a =v= query parameter, get =Cache-Control: public, max-age=31536000, immutable=. Everything else gets =no-cache=.
+- Anything not found or not allowed is =404= with plain text =Not found=.
+
+* Settings
+
+These are only for the SPA the server serves. Write and browse requests must come from loopback (=127.0.0.1=, =::1=) and from a page with a loopback =Host= and, if one is sent, a matching =Origin=. Otherwise: =403= with a JSON error.
+
+** GET /api/settings
+
+Not restricted to loopback.
+
+#+begin_src json
+{ "mangaDir": "~/Manga" }
+#+end_src
+
+** POST /api/settings
+
+Sets the manga directory, saved to =konigslibrary.json= in the server's working directory.
+
+#+begin_src json
+{ "mangaDir": "~/Manga" }
+#+end_src
+
+| Status | When                                                         |
+|--------+--------------------------------------------------------------|
+| =200=  | Saved. Echoes the body as sent, before =~= expansion         |
+| =400=  | =mangaDir= missing or not a string                           |
+| =403=  | Not from this machine                                        |
+| =409=  | The directory is set by the =MANGA_DIR= environment variable |
+| =500=  | The config file couldn't be written                          |
+
+** GET /api/settings/browse
+
+Lists subdirectories, for the folder picker. Hidden folders are left out; sorted by name.
+
+| Query  | Description                                       |
+|--------+---------------------------------------------------|
+| =path= | Directory to list. =~= is expanded. Default: home |
+
+#+begin_src json
+{
+  "path": "/home/me/Manga",
+  "parent": "/home/me",
+  "entries": [{ "name": "Berserk", "path": "/home/me/Manga/Berserk" }]
+}
+#+end_src
+
+=400= with a JSON error when the directory can't be read. =403= when not from this machine.

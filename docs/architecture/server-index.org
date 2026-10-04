@@ -1,0 +1,37 @@
+#+TITLE: Server index
+#+OPTIONS: ^:{}
+
+=klserver= keeps a SQLite database of the manga directory (=crates/klserver/src/db.rs=). It holds what the library list shows, sorts and searches by, so a large directory is neither listed from disk on every request nor read two archives per card.
+
+It's a cache: deleting the file only costs a rescan. The path is =KL_DB=, default =./konigslibrary.db=.
+
+* Tables
+
+| Table       | Holds                                                                                                                 |
+|-------------+-----------------------------------------------------------------------------------------------------------------------|
+| =manga=     | One row per manga folder: title, sort key, search text, cover, metadata JSON, and what it was read from               |
+| =manga_fts= | FTS5 trigram index over =manga.search=, kept in sync by triggers                                                      |
+| =chapters=  | Per archive: page entry names and ComicInfo volume and number. Filled the first time a manga's chapters are asked for |
+| =settings=  | Key–value                                                                                                             |
+
+* Staying current
+
+- Row set :: on =GET /api/library=, if the manga directory's mtime changed since the last sync, its folders are listed and diffed against the rows. This runs inline, so the list is complete when the request returns. Switching to a different directory starts over.
+- Metadata :: a background sweep re-reads a manga's metadata when its folder's mtime changes, or when the first or last archive it was read from changes size or mtime. A sweep runs after every sync, and at most every 10 minutes otherwise. It commits in batches of 200. =GET /api/library/{manga}/meta= also re-reads stale metadata on demand.
+- Chapters :: an archive's pages are re-read when its size or mtime changes. An unreadable archive is stored with no pages and not retried until it changes.
+
+Until a manga's metadata is read, its row has no title and sorts by folder name. =scanned= in the API response says whether that's final.
+
+* Search
+
+=q= is folded (case and accents removed) and matched against folded title and folder name. Terms of 3 characters or more use the trigram index; shorter ones scan.
+
+* Paging
+
+Pages are by keyset, not offset: the =next= cursor is the sort key of the last entry, and the next page starts after it.
+
+* Schema changes
+
+=SCHEMA_VERSION= is stored in SQLite's =user_version=. A database from another version is dropped and rebuilt.
+
+If the database can't be opened at all, the server uses =konigslibrary.db= in the system temp directory.

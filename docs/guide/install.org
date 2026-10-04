@@ -1,0 +1,49 @@
+#+TITLE: Install
+#+OPTIONS: ^:{}
+
+* Browser
+
+Open the deployed site, then open a manga folder (see [[file:library.org][Library]]) or drop a single chapter =.cbz= to read it.
+
+* Desktop app
+
+The [[https://github.com/NasreddinHodja/konigslibrary/releases/latest][latest release]] has a Windows installer (=-setup.exe=) and a Linux AppImage.
+
+To read on a phone on the same network: Settings → Share to LAN, then scan the QR code with the phone. The Android app must already be installed.
+
+* Android
+
+A signed APK is on the [[https://github.com/NasreddinHodja/konigslibrary/releases/latest][latest release]].
+
+* Self-hosted server
+
+For a headless, always-on setup:
+
+#+begin_src sh
+bun install
+MANGA_DIR=~/Manga bun run serve
+#+end_src
+
+=bun run serve= builds the frontend into =build-local/=, builds the =konigslibrary-server= binary and runs it. Once built, the binary runs on its own:
+
+#+begin_src sh
+KL_STATIC_DIR=./build-local MANGA_DIR=~/Manga NO_BROWSER=1 \
+  crates/target/release/konigslibrary-server
+#+end_src
+
+=konigslibrary.service= in the repo is a systemd user unit that does this.
+
+The manga directory can also be set from Settings in the UI, which saves it to =konigslibrary.json= in the working directory.
+
+** Environment variables
+
+| Variable        | Default                                           | Description                                        |
+|-----------------+---------------------------------------------------+----------------------------------------------------|
+| =MANGA_DIR=     | from =konigslibrary.json=                         | Manga directory                                    |
+| =KL_DB=         | =./konigslibrary.db=                              | Library database. A cache; safe to delete          |
+| =PORT=          | =3000=                                            | Server port                                        |
+| =HOST=          | =0.0.0.0=                                         | Bind address                                       |
+| =KL_STATIC_DIR= | =client/= next to the binary, else =build-local/= | Built frontend to serve                            |
+| =NO_BROWSER=    | unset                                             | Set to anything to skip opening a browser on start |
+
+If the database can't be opened, the server falls back to =konigslibrary.db= in the system temp directory.

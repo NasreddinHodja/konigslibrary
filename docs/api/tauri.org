@@ -1,0 +1,189 @@
+#+TITLE: Tauri commands
+#+OPTIONS: ^:{}
+
+The commands the frontend calls with =invoke()= in the desktop and Android apps. They're registered in =src-tauri/src/lib.rs= (=generate_handler!=).
+
+* Conventions
+
+- Arguments are passed in camelCase from JavaScript: =file_name= in Rust is =fileName= in =invoke=.
+- A failing command rejects with a string message.
+- Long-running commands report progress through a =Channel<DownloadProgress>=:
+
+#+begin_src typescript
+type DownloadProgress = { current: number; total: number };
+#+end_src
+
+- Commands that take a filesystem =path= canonicalize it and reject anything outside the allowed roots with =path is outside the manga directories=. The allowed roots are the manga directory set by =set_manga_dir=, plus the app's own folders under its app data directory:
+  - =offline/=: downloads from a server
+  - =library/=: imported manga
+
+* Manga directory
+
+** expand_home
+
+| Argument | Type     |
+|----------+----------|
+| =path=   | =string= |
+
+Returns =path= with a leading =~= expanded to the home directory.
+
+** set_manga_dir
+
+| Argument | Type     |
+|----------+----------|
+| =dir=    | =string= |
+
+Makes =dir= the manga directory: an allowed root, and readable through the asset protocol. Fails if =dir= doesn't exist.
+
+* Reading
+
+** list_device_manga
+
+| Argument | Type               | Description                         |
+|----------+--------------------+-------------------------------------|
+| =query=  | =string= or =null= | Filter to names containing this     |
+| =after=  | =string= or =null= | Cursor: =next= of the previous page |
+| =limit=  | =number= or =null= | Page size                           |
+
+One page of the Device tab: the manga directory, downloads and imports together.
+
+#+begin_src typescript
+type DevicePage = {
+  entries: {
+    name: string;
+    path: string;
+    origin: 'folder' | 'download' | 'import';
+    slug: string | null; // server slug, for a download
+  }[];
+  next: string | null;
+};
+#+end_src
+
+** list_manga_chapters
+
+| Argument | Type     | Description       |
+|----------+----------+-------------------|
+| =path=   | =string= | Manga folder path |
+
+The folder's chapters in chapter order. A corrupt archive is skipped; more than 5,000 archives is an error.
+
+#+begin_src typescript
+type Chapter = { name: string; archive: string; pages: string[] };
+// returns Chapter[]
+#+end_src
+
+** read_archive_page
+
+| Argument | Type     | Description                        |
+|----------+----------+------------------------------------|
+| =path=   | =string= | Chapter archive path               |
+| =entry=  | =string= | Page entry path inside the archive |
+
+Returns the page's raw bytes as an =ArrayBuffer=.
+
+** read_manga_meta
+
+| Argument | Type     | Description       |
+|----------+----------+-------------------|
+| =path=   | =string= | Manga folder path |
+
+Returns the same metadata shape as [[file:http.org::*GET /api/library/{manga}/meta][GET /api/library/{manga}/meta]].
+
+* Downloads
+
+** download_file
+
+| Argument   | Type                        | Description                             |
+|------------+-----------------------------+-----------------------------------------|
+| =id=       | =string=                    | Caller-chosen ID, for =cancel_download= |
+| =slug=     | =string=                    | Folder name under =offline/=            |
+| =fileName= | =string=                    | File name to save as                    |
+| =url=      | =string=                    | URL to fetch                            |
+| =channel=  | =Channel<DownloadProgress>= | Byte progress                           |
+
+Downloads =url= to =offline/<slug>/<fileName>=. Does nothing if the file already exists. Writes to =<fileName>.part= and renames when done, so an interrupted download never looks finished.
+
+** cancel_download
+
+| Argument | Type     |
+|----------+----------|
+| =id=     | =string= |
+
+Cancels the =download_file= started with this =id=.
+
+** list_offline_manga
+
+Every downloaded manga with at least one finished chapter.
+
+#+begin_src typescript
+type OfflineManga = { slug: string; name: string; path: string };
+// returns OfflineManga[]
+#+end_src
+
+** delete_offline_manga
+
+| Argument  | Type                        |
+|-----------+-----------------------------|
+| =slug=    | =string=                    |
+| =channel= | =Channel<DownloadProgress>= |
+
+Deletes a downloaded manga one file at a time, reporting files deleted.
+
+* Imports
+
+** import_file
+
+Adds one file to an imported manga under =library/=, creating the manga if it's new. Returns the manga folder path.
+
+The bytes are the request body. The =manga= and =file= headers, percent-encoded, name the destination:
+
+#+begin_src typescript
+await invoke<string>('import_file', bytes, {
+  headers: { manga: encodeURIComponent(manga), file: encodeURIComponent(name) }
+});
+#+end_src
+
+** import_manga_folder
+
+| Argument  | Type                        |
+|-----------+-----------------------------|
+| =path=    | =string=                    |
+| =channel= | =Channel<DownloadProgress>= |
+
+Copies a manga folder's chapter archives and cover into =library/=, reporting files copied. Returns the new manga folder path.
+
+** delete_imported_manga
+
+| Argument  | Type                        |
+|-----------+-----------------------------|
+| =name=    | =string=                    |
+| =channel= | =Channel<DownloadProgress>= |
+
+Deletes an imported manga one file at a time, reporting files deleted.
+
+* LAN server
+
+The desktop app shares its library by running the bundled =konigslibrary-server= as a child process. See [[file:http.org][HTTP server]].
+
+#+begin_src typescript
+type LanServerStatus = { running: boolean; url: string | null; port: number | null };
+#+end_src
+
+** start_lan_server
+
+| Argument   | Type               | Description                   |
+|------------+--------------------+-------------------------------|
+| =mangaDir= | =string=           | Directory to serve            |
+| =port=     | =number= or =null= | Port; =null= picks a free one |
+
+Starts the server bound to =0.0.0.0= and waits for =/api/ping= to answer, for about 9 seconds at most. Returns its status, with =url= on the machine's LAN address. If it's already running, returns the current status.
+
+The server's database is =lan-library.db= in the app data directory.
+
+** stop_lan_server
+
+Stops the server. The app also stops it on exit.
+
+** lan_server_status
+
+Returns the current =LanServerStatus=.
