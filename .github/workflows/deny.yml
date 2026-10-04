@@ -1,0 +1,35 @@
+name: Dependencies
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  # The advisory database changes without any commit here, so check it weekly.
+  schedule:
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+jobs:
+  cargo-deny:
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        manifest: [crates/Cargo.toml, src-tauri/Cargo.toml]
+        checks: [advisories, bans licenses sources]
+
+    # A newly published advisory shouldn't fail an unrelated PR; the weekly
+    # run is where it fails.
+    continue-on-error: ${{ matrix.checks == 'advisories' && github.event_name != 'schedule' }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: EmbarkStudios/cargo-deny-action@v2
+        with:
+          # Some locked deps need a newer toolchain than the action's default.
+          rust-version: '1.97.1'
+          manifest-path: ${{ matrix.manifest }}
+          command: check ${{ matrix.checks }}

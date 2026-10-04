@@ -1,0 +1,48 @@
+# cargo-deny config, shared by both Rust workspaces (crates/ and src-tauri/).
+# Run: cargo deny --manifest-path <workspace>/Cargo.toml check
+
+[advisories]
+unmaintained = "all"
+unsound = "all"
+yanked = "deny"
+ignore = [
+  # Both come from Tauri's GTK3 stack (gtk/tao/muda pin glib 0.18) on Linux.
+  # No compatible fix; clears when Tauri moves off GTK3.
+  { id = "RUSTSEC-2024-0429", reason = "glib 0.18 unsound VariantStrIter; fix is 0.20, pinned by Tauri's GTK3 deps" },
+  { id = "RUSTSEC-2024-0370", reason = "proc-macro-error unmaintained; build-time only, via glib-macros 0.18" },
+]
+
+[licenses]
+# Permissive licenses only; the release binaries bundle these crates.
+allow = [
+  "0BSD",
+  "Apache-2.0",
+  "Apache-2.0 WITH LLVM-exception",
+  "BSD-3-Clause",
+  "BSL-1.0",
+  "CC0-1.0",
+  "CDLA-Permissive-2.0",
+  "ISC",
+  "MIT",
+  "MIT-0",
+  "Unicode-3.0",
+  "Unlicense",
+  "Zlib",
+]
+# MPL-2.0 is file-level copyleft, so it's allowed per crate rather than globally.
+exceptions = [
+  { crate = "cssparser", allow = ["MPL-2.0"] },
+  { crate = "cssparser-macros", allow = ["MPL-2.0"] },
+  { crate = "dtoa-short", allow = ["MPL-2.0"] },
+  { crate = "option-ext", allow = ["MPL-2.0"] },
+  { crate = "selectors", allow = ["MPL-2.0"] },
+]
+
+[bans]
+multiple-versions = "warn"
+wildcards = "deny"
+allow-wildcard-paths = true
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
