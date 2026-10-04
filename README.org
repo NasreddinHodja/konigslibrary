@@ -17,7 +17,7 @@ Manga reader for ZIP and CBZ archives. Runs in the browser, as a desktop or Andr
 
 * Testing
 
-Every push and pull request runs the Rust tests (parser, server, app) and the frontend's, components included, in jsdom with Testing Library. Coverage in October 2026: 92% of the Rust crates' lines, 76% of the frontend's; each CI run reports the current figures. Every test file was mutation-checked: each behaviour it covers was broken on purpose, to make sure a test fails. See [[file:CONTRIBUTING.org][Contributing]] for running them.
+Every push and pull request runs the Rust tests (parser, server, app) and the frontend's, components included, in jsdom with Testing Library, then reads a manga end to end in Chromium (Playwright), with axe checking each page for WCAG 2.1 AA violations. Coverage in October 2026: 92% of the Rust crates' lines, 76% of the frontend's; each CI run reports the current figures. Every test file was mutation-checked: each behaviour it covers was broken on purpose, to make sure a test fails. See [[file:CONTRIBUTING.org][Contributing]] for running them.
 
 * License
 

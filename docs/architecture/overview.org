@@ -22,6 +22,7 @@ One SvelteKit frontend runs in four places. What changes between them is where t
 | Icons     | Lucide Svelte                                  |
 | Quality   | ESLint 9, Prettier, svelte-check               |
 | Tests     | Vitest, Testing Library (jsdom), cargo test    |
+| E2E       | Playwright, axe                                |
 | Coverage  | Vitest v8 coverage, cargo-llvm-cov             |
 
 * Rust crates

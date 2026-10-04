@@ -36,6 +36,7 @@ bun dev
 | =bun run format=        | Auto-format with Prettier                                |
 | =bun run test=          | Vitest                                                   |
 | =bun run test:coverage= | Vitest with coverage, into =coverage/=                   |
+| =bun run test:e2e=      | Playwright, against =dev:sim= (started if not running)   |
 | =bun run test:rust=     | Parser and server tests (cargo)                          |
 | =bun run coverage:rust= | Rust tests with coverage, into =coverage/rust/html/=     |
 | =bun run tauri:local=   | Tauri dev mode                                           |
@@ -56,6 +57,7 @@ bun run lint
 bun run check
 bun run test:run
 bun run test:rust
+bun run test:e2e
 #+end_src
 
 CI runs lint, type checking and tests on every PR against =main=, the app's own Rust (=src-tauri/=) included, with coverage: a summary on the run's page and the HTML report as its =coverage= artifact.
@@ -63,5 +65,7 @@ CI runs lint, type checking and tests on every PR against =main=, the app's own 
 * Tests
 
 Plain modules are tested in Node (=*.test.ts=). Components, and modules using runes or the DOM, are tested in jsdom with Testing Library (=*.svelte.test.ts=). Helpers for those are in =src/lib/testing/=: a reader to mount viewers under, a fake server at =fetch=, the Tauri app through its official IPC mocks, and stand-ins for what jsdom lacks (see =setup-dom.ts=).
+
+=e2e/= drives the self-hosted app in Chromium with Playwright, against the library =dev:sim= generates: browsing, searching, reading, and progress across a reload. Each page it visits is also checked with axe for WCAG 2.1 A and AA violations; page zoom is exempt, since the reader pinches its pages itself. Its tests use the fixed =Order - …= manga, which don't change with =--count=. The first run needs =bunx playwright install chromium=.
 
 =bun run coverage:rust= needs =cargo-llvm-cov= and the =llvm-tools-preview= component.
