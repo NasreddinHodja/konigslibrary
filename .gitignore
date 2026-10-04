@@ -75,3 +75,7 @@ AUDIT.org
 # appimage output
 /dist/
 /TODO.org
+
+# playwright
+/test-results/
+/playwright-report/
