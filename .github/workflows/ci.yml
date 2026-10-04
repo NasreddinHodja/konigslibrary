@@ -105,6 +105,45 @@ jobs:
           name: playwright-report
           path: playwright-report/
 
+  # Criterion benches of main and of the PR, back to back on one runner, so
+  # they are compared on the same machine. Fails on a regression
+  # (scripts/bench-compare.js).
+  bench:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          path: base
+
+      - uses: oven-sh/setup-bun@v2
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: crates
+
+      # Both checkouts build into crates/target, which is where criterion keeps
+      # the saved baseline.
+      - name: Bench main
+        env:
+          CARGO_TARGET_DIR: ${{ github.workspace }}/crates/target
+        run: |
+          rm -rf crates/target/criterion
+          # Before main had benches there is nothing to compare against.
+          if [ -f base/crates/klserver/benches/index.rs ]; then
+            cargo bench --manifest-path base/crates/Cargo.toml --workspace --bench parse --bench index -- --save-baseline main
+          fi
+
+      - run: cargo bench --manifest-path crates/Cargo.toml --workspace --bench parse --bench index -- --baseline-lenient main
+
+      - run: bun scripts/bench-compare.js >> "$GITHUB_STEP_SUMMARY"
+
   # The desktop and Android app's own Rust, which builds on crates/: nothing
   # else compiles it before a release.
   tauri:

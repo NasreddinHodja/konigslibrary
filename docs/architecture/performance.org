@@ -1,0 +1,68 @@
+#+TITLE: Performance
+#+OPTIONS: ^:{}
+
+Benchmarks of the parser and the server's index. =bun run bench= runs them all.
+
+* What is measured
+
+The inputs are made by =crates/klparse/src/bench_inputs.rs= and are the same every run:
+
+- a chapter archive of 200 pages, stored in shuffled order, plus a =ComicInfo.xml=;
+- one deflated 1 MiB page, of noise that compresses about as poorly as an image;
+- 1000 chapter names, in the naming styles =chapters.rs= parses;
+- 5000 manga folder names, mixing case, accents and punctuation;
+- for the server, a manga directory of 500 folders, each with 3 chapter archives and a cover.
+
+| Bench                   | What it times                                                          |
+|-------------------------+------------------------------------------------------------------------|
+| =zip/index_zip=         | Opening a chapter on the server: tail, central directory, entries      |
+| =zip/page_entries=      | Parsing a central directory into the sorted page list                  |
+| =zip/decode_entry=      | Inflating a page and checking its CRC                                  |
+| =collate/sort_chapters= | Numbering and ordering 1000 chapters                                   |
+| =collate/sort_manga=    | Ordering 5000 manga names with =locale_cmp=                            |
+| =collate/fold=          | The sort and search keys of 5000 manga names                           |
+| =index/sync=            | Listing the manga directory into an empty database                     |
+| =index/sweep_cold=      | Reading every manga's metadata, as on the first start                  |
+| =index/sweep_warm=      | A sweep when nothing changed, as on every later start                  |
+| =query/page=            | One page of 50 from the library                                        |
+| =query/search=          | The same, filtered by a search                                         |
+
+* Native
+
+=bun run bench:rust=: criterion, in =crates/klparse/benches/= and =crates/klserver/benches/=. Mean times on an AMD Ryzen 7 5700X, Rust 1.97.1, October 2026:
+
+| Bench                   |    Time |
+|-------------------------+---------|
+| =zip/index_zip=         | 10.7 µs |
+| =zip/page_entries=      |  254 µs |
+| =zip/decode_entry=      | 5.74 ms |
+| =collate/sort_chapters= |  205 µs |
+| =collate/sort_manga=    | 8.07 ms |
+| =collate/fold=          |  353 µs |
+| =index/sync=            | 7.34 ms |
+| =index/sweep_cold=      | 41.9 ms |
+| =index/sweep_warm=      | 4.77 ms |
+| =query/page=            | 38.6 µs |
+| =query/search=          |  208 µs |
+
+=page_entries= is mostly the sort: =index_zip= parses the same directory in 10.7 µs but leaves the entries unsorted, while =natural_cmp= over 200 names takes the rest.
+
+* Wasm against native
+
+=bun run bench:wasm= writes the same inputs to =crates/target/bench-inputs/= (=crates/klparse/examples/bench-inputs.rs=) and times them through the wasm build, with Vitest's =bench= (=src/lib/zip/wasm.bench.ts=). It calls the same bindings the browser's worker does, so the wasm figures include crossing the JS↔wasm boundary: copying bytes in, and building JS objects out.
+
+Same machine, Node 24.19.0:
+
+| Bench           |  Native |    Wasm | Wasm / native |
+|-----------------+---------+---------+---------------|
+| =page_entries=  |  254 µs |  527 µs |          2.1× |
+| =decode_entry=  | 5.74 ms | 7.81 ms |          1.4× |
+| =sort_chapters= |  205 µs |  713 µs |          3.5× |
+
+The gap grows with what crosses the boundary: =decode_entry= returns one byte array, while =page_entries= returns 200 objects and =sort_chapters= takes 1000.
+
+* Regression gate
+
+On a pull request, CI's =bench= job runs the criterion benches of =main=, then of the PR, on the same runner. =scripts/bench-compare.js= puts a table of both in the run summary and fails the job if a bench is more than 15% slower than on =main=, counting only a slowdown criterion is 95% confident of. Benches new in the PR are listed but not judged.
+
+The wasm benches are not gated.

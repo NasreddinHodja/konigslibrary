@@ -39,6 +39,9 @@ bun dev
 | =bun run test:e2e=      | Playwright, against =dev:sim= (started if not running)   |
 | =bun run test:rust=     | Parser and server tests (cargo)                          |
 | =bun run coverage:rust= | Rust tests with coverage, into =coverage/rust/html/=     |
+| =bun run bench=         | All benchmarks, native and wasm                          |
+| =bun run bench:rust=    | Parser and server benchmarks (criterion)                 |
+| =bun run bench:wasm=    | The parser's wasm build, on the same inputs              |
 | =bun run tauri:local=   | Tauri dev mode                                           |
 | =bun tauri build=       | Tauri release build                                      |
 | =bun run build:desktop= | Linux AppImage, built in Docker, into =dist/=            |
@@ -60,7 +63,7 @@ bun run test:rust
 bun run test:e2e
 #+end_src
 
-CI runs lint, type checking and tests on every PR against =main=, the app's own Rust (=src-tauri/=) included, with coverage: a summary on the run's page and the HTML report as its =coverage= artifact.
+CI runs lint, type checking and tests on every PR against =main=, the app's own Rust (=src-tauri/=) included, with coverage: a summary on the run's page and the HTML report as its =coverage= artifact. It also benchmarks the PR against =main= and fails on a regression past 15%.
 
 * Tests
 

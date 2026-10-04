@@ -7,6 +7,9 @@ license.workspace = true
 repository.workspace = true
 publish.workspace = true
 
+[lib]
+path = "src/lib.rs"
+
 [[bin]]
 name = "konigslibrary-server"
 path = "src/main.rs"
@@ -26,3 +29,9 @@ klparse = { workspace = true, features = ["fixtures"] }
 tempfile = "3"
 tower = { version = "0.5", features = ["util"] }
 http-body-util = "0.1"
+# Without the plotting and parallel analysis it pulls in by default.
+criterion = { version = "0.8.2", default-features = false, features = ["cargo_bench_support"] }
+
+[[bench]]
+name = "index"
+harness = false

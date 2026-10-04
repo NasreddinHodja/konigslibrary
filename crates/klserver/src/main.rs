@@ -5,20 +5,14 @@
 //! `konigslibrary.service`. The browser-only deployment still needs no server
 //! at all — that path runs the same parser compiled to wasm.
 
-mod auth;
-mod config;
-mod db;
-mod library;
-mod pathutil;
-mod routes;
-
 use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use config::Config;
 use klfs::ZipCache;
-use routes::{AppState, SharedState};
+use klserver::config::Config;
+use klserver::routes::{AppState, SharedState};
+use klserver::{auth, db, routes};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {

@@ -12,6 +12,7 @@
 - [[file:architecture/overview.org][Overview]]: run modes, crates, source providers
 - [[file:architecture/page-loading.org][Page loading]]: archive to screen, per mode
 - [[file:architecture/server-index.org][Server index]]: the server's SQLite database
+- [[file:architecture/performance.org][Performance]]: benchmarks, native against wasm
 
 * API
 

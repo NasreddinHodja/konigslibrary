@@ -378,7 +378,7 @@ impl Db {
   /// Makes the rows match the folders in `dir`: drops vanished manga, adds new
   /// ones with no metadata yet. A different directory than last time starts
   /// over.
-  fn sync_folders(&self, dir: &Path) -> rusqlite::Result<()> {
+  pub fn sync_folders(&self, dir: &Path) -> rusqlite::Result<()> {
     let folders = match klfs::subfolders(dir) {
       Ok(f) => f,
       Err(e) => {
@@ -433,7 +433,7 @@ impl Db {
 
   /// Re-reads the metadata of every manga whose sources changed, on its own
   /// connection, committing in batches.
-  fn sweep(&self, dir: &Path) -> rusqlite::Result<()> {
+  pub fn sweep(&self, dir: &Path) -> rusqlite::Result<()> {
     let mut conn = connect(&self.path)?;
     let folders: Vec<String> = conn
       .prepare("SELECT folder FROM manga")?

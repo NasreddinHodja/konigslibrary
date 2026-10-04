@@ -57,7 +57,9 @@ export default defineConfig({
           name: 'dom',
           environment: 'jsdom',
           include: ['src/**/*.svelte.test.ts'],
-          setupFiles: ['src/lib/testing/setup-dom.ts']
+          setupFiles: ['src/lib/testing/setup-dom.ts'],
+          // The benches time the parser, which runs in node.
+          benchmark: { include: [] }
         }
       }
     ]

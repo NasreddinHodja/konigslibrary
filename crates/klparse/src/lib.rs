@@ -21,6 +21,8 @@ pub mod uri;
 pub mod zip;
 
 #[cfg(any(test, feature = "fixtures"))]
+pub mod bench_inputs;
+#[cfg(any(test, feature = "fixtures"))]
 pub mod fixture;
 
 pub use chapters::{chapter_cmp, chapter_number, check_chapter_count, ChapterNumber, MAX_CHAPTERS};
