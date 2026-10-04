@@ -66,3 +66,21 @@ The gap grows with what crosses the boundary: =decode_entry= returns one byte ar
 On a pull request, CI's =bench= job runs the criterion benches of =main=, then of the PR, on the same runner. =scripts/bench-compare.js= puts a table of both in the run summary and fails the job if a bench is more than 15% slower than on =main=, counting only a slowdown criterion is 95% confident of. Benches new in the PR are listed but not judged.
 
 The wasm benches are not gated.
+
+* Bundle size
+
+CI builds the public site (=STATIC_BUILD=1=, as =vercel.json= does) and =scripts/bundle-budget.js= sums the gzipped size of its JS, CSS and wasm, each file gzipped on its own. The job fails if a type is over its budget, set at about 10% above the size when it was set:
+
+| Type  |     Size |   Budget |
+|-------+----------+----------|
+| JS    | 120.8 kB | 133.0 kB |
+| CSS   |   8.0 kB |   9.0 kB |
+| Wasm  |  84.8 kB |  95.0 kB |
+
+A change that grows the bundle past a budget raises it in the same change.
+
+* Lighthouse
+
+The same CI job then runs =bunx lhci autorun= (=lighthouserc.json=): three Lighthouse runs on =/= of =build/=, failing if performance (median run), accessibility, best practices or SEO scores under 0.9. The reports are the =lighthouse= artifact.
+
+Accessibility can't reach 1: =meta-viewport= fails on purpose, since the reader turns off page zoom. Locally, =CHROME_PATH= points it at a Chrome or Chromium.

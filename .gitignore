@@ -79,3 +79,6 @@ AUDIT.org
 # playwright
 /test-results/
 /playwright-report/
+
+# lighthouse (lhci autorun)
+/.lighthouseci/

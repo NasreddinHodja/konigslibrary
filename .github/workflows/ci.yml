@@ -66,7 +66,20 @@ jobs:
           name: coverage
           path: coverage/
 
-      - run: bun run build
+      # The public site, as vercel.json builds it, into build/.
+      - run: STATIC_BUILD=1 bun run build
+
+      - run: bun scripts/bundle-budget.js >> "$GITHUB_STEP_SUMMARY"
+
+      # Scores of the built site against the minimums in lighthouserc.json,
+      # in the runner's Chrome.
+      - run: bunx lhci autorun
+
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: lighthouse
+          path: .lighthouseci/report/
 
   # The self-hosted app in a browser (playwright.config.ts): reading flows and
   # axe's accessibility checks, against the simulated library.
