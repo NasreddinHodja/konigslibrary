@@ -4,6 +4,8 @@ export type LanServerStatus = {
   running: boolean;
   url: string | null;
   port: number | null;
+  /// The access key other devices need; see `crates/klserver/src/auth.rs`.
+  key: string | null;
 };
 
 export async function startLanServer(mangaDir: string): Promise<LanServerStatus> {

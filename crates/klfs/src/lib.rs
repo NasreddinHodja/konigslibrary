@@ -4,9 +4,10 @@
 //! for the browser. What both native readers of a library need — the
 //! self-hosted server (`klserver`) and the app (`src-tauri`) — lives here
 //! instead: positional reads of an archive, a cache of parsed directories,
-//! and listing a manga folder.
+//! listing a manga folder, and the LAN server's access key.
 
 mod cache;
+mod key;
 mod reader;
 
 use std::path::{Path, PathBuf};
@@ -15,6 +16,7 @@ use klparse::zip::ZipError;
 use klparse::{ChapterNumber, MangaMeta};
 
 pub use cache::{ZipCache, ZIP_CACHE_MAX};
+pub use key::access_key;
 pub use reader::FileReader;
 
 /// The user's home directory, from `HOME` (or `USERPROFILE` on Windows).

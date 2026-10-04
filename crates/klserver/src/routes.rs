@@ -10,6 +10,7 @@ use axum::{
   body::Body,
   extract::{ConnectInfo, Query, RawPathParams, RawQuery, Request, State},
   http::{header, HeaderMap, HeaderValue, Method, StatusCode},
+  middleware,
   response::{IntoResponse, Response},
   routing::get,
   Json, Router,
@@ -18,6 +19,7 @@ use serde_json::json;
 use tower_http::cors::{Any, CorsLayer};
 use tower_http::services::{ServeDir, ServeFile};
 
+use crate::auth;
 use crate::config::Config;
 use crate::db::Db;
 use crate::library;
@@ -28,6 +30,8 @@ pub struct AppState {
   pub cache: ZipCache,
   pub db: Arc<Db>,
   pub static_dir: PathBuf,
+  /// What `?key=` must match; see `auth`.
+  pub key: String,
 }
 
 pub type SharedState = Arc<AppState>;
@@ -44,7 +48,7 @@ const IMMUTABLE: &str = "public, max-age=31536000, immutable";
 /// exposed to them. Loopback is `127.0.0.1` and `::1`, with the IPv4-mapped
 /// form of loopback also accepted because a dual-stack listener reports v4
 /// clients that way.
-fn is_local_client(addr: SocketAddr) -> bool {
+pub(crate) fn is_local_client(addr: SocketAddr) -> bool {
   match addr.ip() {
     IpAddr::V4(v4) => v4 == Ipv4Addr::LOCALHOST,
     IpAddr::V6(v6) => match v6.to_ipv4_mapped() {
@@ -63,7 +67,7 @@ fn is_local_client(addr: SocketAddr) -> bool {
 /// cross-origin or POST request, so a page of ours has a loopback `Host` and,
 /// if there is an `Origin`, the same one. Non-browser clients send neither
 /// header and are judged by their peer address alone.
-fn is_local_page(headers: &HeaderMap) -> bool {
+pub(crate) fn is_local_page(headers: &HeaderMap) -> bool {
   let host = headers.get(header::HOST).and_then(|h| h.to_str().ok());
   if let Some(host) = host {
     let name = match host.strip_prefix('[') {
@@ -96,25 +100,34 @@ fn forbidden() -> Response {
   error(StatusCode::FORBIDDEN, "Forbidden")
 }
 
+pub(crate) fn unauthorized() -> Response {
+  error(StatusCode::UNAUTHORIZED, "Unauthorized")
+}
+
 pub fn router(state: SharedState) -> Router {
   let index = state.static_dir.join("index.html");
   // Unmatched paths fall through to the built SPA, which does its own routing.
   let static_files = ServeDir::new(&state.static_dir).fallback(ServeFile::new(index));
 
-  // The library is read cross-origin; see `cors`.
+  let require_key = middleware::from_fn_with_state(Arc::clone(&state), auth::require_key);
+
+  // The library is read cross-origin; see `cors`. `/api/ping` is added after
+  // the key check, so "unreachable" and "wrong key" stay distinguishable.
   let library = Router::new()
-    .route("/api/ping", get(get_ping))
     .route("/api/library", get(get_library))
     .route("/api/library/{manga}/chapters", get(get_chapters))
     .route("/api/library/{manga}/meta", get(get_meta))
     .route("/api/library/{manga}/{*path}", get(get_image))
+    .route_layer(require_key.clone())
+    .route("/api/ping", get(get_ping))
     .layer(cors());
   // Settings are only for the SPA this server serves, which calls them
   // same-origin, so they get no CORS headers: another site's page can't read
   // them or send them JSON.
   let settings = Router::new()
     .route("/api/settings", get(get_settings).post(post_settings))
-    .route("/api/settings/browse", get(get_browse));
+    .route("/api/settings/browse", get(get_browse))
+    .route_layer(require_key);
 
   library
     .merge(settings)
@@ -406,6 +419,7 @@ mod tests {
       cache: ZipCache::new(),
       db: Db::open(&tmp.path().join("library.db")).unwrap(),
       static_dir,
+      key: KEY.to_string(),
     });
     Harness { tmp, root, state }
   }
@@ -422,6 +436,7 @@ mod tests {
       cache: ZipCache::new(),
       db: Db::open(&h.tmp.path().join("library-unset.db")).unwrap(),
       static_dir,
+      key: KEY.to_string(),
     });
     Harness {
       tmp: h.tmp,
@@ -433,6 +448,13 @@ mod tests {
   const LOCAL_V4: &str = "127.0.0.1:54321";
   const LOCAL_V6: &str = "[::1]:54321";
   const LAN: &str = "192.168.1.50:54321";
+  const KEY: &str = "0123456789abcdef";
+
+  /// `uri` with the access key, as a paired device sends it.
+  fn keyed(uri: &str) -> String {
+    let sep = if uri.contains('?') { '&' } else { '?' };
+    format!("{uri}{sep}key={KEY}")
+  }
 
   async fn send(h: &Harness, req: Request<Body>) -> (StatusCode, Vec<u8>, Response<()>) {
     let res = router(Arc::clone(&h.state)).oneshot(req).await.unwrap();
@@ -482,7 +504,7 @@ mod tests {
     let h = harness_unset();
     let (status, body, _) = send(
       &h,
-      post_from("/api/settings", LAN, r#"{"mangaDir":"/tmp/evil"}"#),
+      post_from(&keyed("/api/settings"), LAN, r#"{"mangaDir":"/tmp/evil"}"#),
     )
     .await;
 
@@ -521,7 +543,7 @@ mod tests {
   #[tokio::test]
   async fn browse_is_forbidden_for_a_lan_client() {
     let h = harness();
-    let (status, body, _) = send(&h, get_from("/api/settings/browse?path=/etc", LAN)).await;
+    let (status, body, _) = send(&h, get_from(&keyed("/api/settings/browse?path=/etc"), LAN)).await;
 
     assert_eq!(status, StatusCode::FORBIDDEN);
     assert_eq!(String::from_utf8_lossy(&body), r#"{"error":"Forbidden"}"#);
@@ -554,7 +576,7 @@ mod tests {
     // Only the mutating and filesystem-walking endpoints are restricted; the
     // LAN client needs to be able to read which directory is being served.
     let h = harness();
-    let (status, body, _) = send(&h, get_from("/api/settings", LAN)).await;
+    let (status, body, _) = send(&h, get_from(&keyed("/api/settings"), LAN)).await;
     assert_eq!(status, StatusCode::OK);
     assert!(String::from_utf8_lossy(&body).contains("mangaDir"));
   }
@@ -600,7 +622,7 @@ mod tests {
     std::fs::create_dir_all(h.root.join("Berserk")).unwrap();
     std::fs::create_dir_all(h.root.join("Akira")).unwrap();
 
-    let (status, body, _) = send(&h, get_from("/api/library", LAN)).await;
+    let (status, body, _) = send(&h, get_from(&keyed("/api/library"), LAN)).await;
     assert_eq!(status, StatusCode::OK);
     let parsed: serde_json::Value = serde_json::from_slice(&body).unwrap();
     assert_eq!(parsed["entries"][0]["name"], "Akira");
@@ -615,7 +637,7 @@ mod tests {
       std::fs::create_dir_all(h.root.join(name)).unwrap();
     }
 
-    let (_, body, _) = send(&h, get_from("/api/library?limit=2", LAN)).await;
+    let (_, body, _) = send(&h, get_from(&keyed("/api/library?limit=2"), LAN)).await;
     let first: serde_json::Value = serde_json::from_slice(&body).unwrap();
     assert_eq!(first["entries"].as_array().unwrap().len(), 2);
     let next = first["next"].as_str().unwrap();
@@ -624,7 +646,7 @@ mod tests {
       "/api/library?limit=2&after={}",
       klparse::encode_uri_component(next)
     );
-    let (_, body, _) = send(&h, get_from(&uri, LAN)).await;
+    let (_, body, _) = send(&h, get_from(&keyed(&uri), LAN)).await;
     let second: serde_json::Value = serde_json::from_slice(&body).unwrap();
     assert_eq!(second["entries"][0]["name"], "Monster");
     assert_eq!(second["next"], serde_json::Value::Null);
@@ -636,7 +658,7 @@ mod tests {
     for name in ["One Piece", "Berserk"] {
       std::fs::create_dir_all(h.root.join(name)).unwrap();
     }
-    let (_, body, _) = send(&h, get_from("/api/library?q=piece", LAN)).await;
+    let (_, body, _) = send(&h, get_from(&keyed("/api/library?q=piece"), LAN)).await;
     let parsed: serde_json::Value = serde_json::from_slice(&body).unwrap();
     assert_eq!(parsed["entries"].as_array().unwrap().len(), 1);
     assert_eq!(parsed["entries"][0]["name"], "One Piece");
@@ -652,7 +674,11 @@ mod tests {
       &[("page01.png", b"x")],
     );
 
-    let (status, body, _) = send(&h, get_from("/api/library/One%20Piece/chapters", LAN)).await;
+    let (status, body, _) = send(
+      &h,
+      get_from(&keyed("/api/library/One%20Piece/chapters"), LAN),
+    )
+    .await;
     assert_eq!(status, StatusCode::OK);
     let parsed: serde_json::Value = serde_json::from_slice(&body).unwrap();
     assert_eq!(parsed[0]["name"], "ch01");
@@ -666,7 +692,11 @@ mod tests {
     std::fs::create_dir_all(&secret).unwrap();
     write_zip(&secret, "ch01.cbz", &[("page01.png", b"SECRET")]);
 
-    let (status, body, _) = send(&h, get_from("/api/library/..%2Fsecret/chapters", LAN)).await;
+    let (status, body, _) = send(
+      &h,
+      get_from(&keyed("/api/library/..%2Fsecret/chapters"), LAN),
+    )
+    .await;
     assert_eq!(status, StatusCode::OK);
     assert_eq!(String::from_utf8_lossy(&body), "[]");
   }
@@ -690,7 +720,7 @@ mod tests {
       ],
     );
 
-    let (status, body, _) = send(&h, get_from("/api/library/One%20Piece/meta", LAN)).await;
+    let (status, body, _) = send(&h, get_from(&keyed("/api/library/One%20Piece/meta"), LAN)).await;
     assert_eq!(status, StatusCode::OK);
     let parsed: serde_json::Value = serde_json::from_slice(&body).unwrap();
     assert_eq!(parsed["title"], "One Piece");
@@ -702,7 +732,7 @@ mod tests {
   async fn meta_for_a_traversing_slug_is_a_404() {
     let h = harness();
     std::fs::create_dir_all(h.root.parent().unwrap().join("secret")).unwrap();
-    let (status, _, _) = send(&h, get_from("/api/library/..%2Fsecret/meta", LAN)).await;
+    let (status, _, _) = send(&h, get_from(&keyed("/api/library/..%2Fsecret/meta"), LAN)).await;
     assert_eq!(status, StatusCode::NOT_FOUND);
   }
 
@@ -723,7 +753,7 @@ mod tests {
 
     let (status, body, res) = send(
       &h,
-      get_from("/api/library/Berserk/ch01.cbz/ch01/page01.jpg", LAN),
+      get_from(&keyed("/api/library/Berserk/ch01.cbz/ch01/page01.jpg"), LAN),
     )
     .await;
     assert_eq!(status, StatusCode::OK);
@@ -737,22 +767,27 @@ mod tests {
     let h = harness();
     let dir = berserk(&h);
 
-    let (status, body, res) = send(&h, get_from("/api/library/Berserk/cover.png", LAN)).await;
+    let (status, body, res) =
+      send(&h, get_from(&keyed("/api/library/Berserk/cover.png"), LAN)).await;
     assert_eq!(status, StatusCode::OK);
     assert_eq!(body, b"PNGDATA");
     assert_eq!(res.headers()[header::CONTENT_TYPE], "image/png");
     assert_eq!(res.headers()[header::CACHE_CONTROL], "no-cache");
 
-    let (_, _, res) = send(&h, get_from("/api/library/Berserk/cover.png?v=1:7", LAN)).await;
+    let (_, _, res) = send(
+      &h,
+      get_from(&keyed("/api/library/Berserk/cover.png?v=1:7"), LAN),
+    )
+    .await;
     assert_eq!(res.headers()[header::CACHE_CONTROL], IMMUTABLE);
 
-    let (status, body, _) = send(&h, get_from("/api/library/Berserk/ch01.cbz", LAN)).await;
+    let (status, body, _) = send(&h, get_from(&keyed("/api/library/Berserk/ch01.cbz"), LAN)).await;
     assert_eq!(status, StatusCode::OK);
     assert_eq!(body, std::fs::read(dir.join("ch01.cbz")).unwrap());
   }
 
   fn get_range(uri: &str, range: &str) -> Request<Body> {
-    let mut req = get_from(uri, LAN);
+    let mut req = get_from(&keyed(uri), LAN);
     req
       .headers_mut()
       .insert(header::RANGE, HeaderValue::from_str(range).unwrap());
@@ -786,7 +821,7 @@ mod tests {
     let h = harness();
     berserk(&h);
 
-    let (status, body, _) = send(&h, get_from("/api/library/Berserk/nope.png", LAN)).await;
+    let (status, body, _) = send(&h, get_from(&keyed("/api/library/Berserk/nope.png"), LAN)).await;
     assert_eq!(status, StatusCode::NOT_FOUND);
     assert_eq!(String::from_utf8_lossy(&body), "Not found");
   }
@@ -796,7 +831,7 @@ mod tests {
     let h = harness();
     touch(&h.root, "Berserk/id_rsa", b"PRIVATE KEY");
 
-    let (status, _, _) = send(&h, get_from("/api/library/Berserk/id_rsa", LAN)).await;
+    let (status, _, _) = send(&h, get_from(&keyed("/api/library/Berserk/id_rsa"), LAN)).await;
     assert_eq!(status, StatusCode::NOT_FOUND);
   }
 
@@ -811,10 +846,121 @@ mod tests {
       "/api/library/..%2F..%2Fsecret.png/x.png",
       "/api/library/..%2F/secret.png",
     ] {
-      let (status, body, _) = send(&h, get_from(uri, LAN)).await;
+      let (status, body, _) = send(&h, get_from(&keyed(uri), LAN)).await;
       assert_eq!(status, StatusCode::NOT_FOUND, "{uri} should not resolve");
       assert_ne!(body, b"SECRET");
     }
+  }
+
+  // --- the access key (security-critical, must not regress) ---
+
+  #[tokio::test]
+  async fn a_lan_client_without_the_key_is_refused() {
+    let h = harness();
+    berserk(&h);
+    for uri in [
+      "/api/library",
+      "/api/library/Berserk/chapters",
+      "/api/library/Berserk/meta",
+      "/api/library/Berserk/cover.png",
+      "/api/library/Berserk/ch01.cbz/ch01/page01.jpg",
+      "/api/settings",
+    ] {
+      let (status, body, _) = send(&h, get_from(uri, LAN)).await;
+      assert_eq!(status, StatusCode::UNAUTHORIZED, "{uri}");
+      assert_eq!(
+        String::from_utf8_lossy(&body),
+        r#"{"error":"Unauthorized"}"#
+      );
+    }
+  }
+
+  #[tokio::test]
+  async fn a_wrong_key_is_refused() {
+    let h = harness();
+    for uri in [
+      "/api/library?key=0123456789abcdee",
+      "/api/library?key=0123456789abcde",
+      "/api/library?key=",
+      "/api/library?notkey=0123456789abcdef",
+    ] {
+      let (status, _, _) = send(&h, get_from(uri, LAN)).await;
+      assert_eq!(status, StatusCode::UNAUTHORIZED, "{uri}");
+    }
+  }
+
+  #[tokio::test]
+  async fn the_key_can_sit_among_other_parameters() {
+    let h = harness();
+    berserk(&h);
+    let (status, _, _) = send(
+      &h,
+      get_from(
+        &format!("/api/library/Berserk/cover.png?v=1:7&key={KEY}"),
+        LAN,
+      ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+  }
+
+  #[tokio::test]
+  async fn our_own_page_on_this_machine_needs_no_key() {
+    let h = harness();
+    let cases: &[&[(header::HeaderName, &'static str)]] = &[
+      &[(header::HOST, "localhost:3000")],
+      &[
+        (header::HOST, "127.0.0.1:3000"),
+        (header::ORIGIN, "http://127.0.0.1:3000"),
+      ],
+      // Not a browser: judged by the peer address alone.
+      &[],
+    ];
+    for headers in cases {
+      let req = with_headers(get_from("/api/library", LOCAL_V4), headers);
+      let (status, _, _) = send(&h, req).await;
+      assert_eq!(status, StatusCode::OK, "{headers:?}");
+    }
+  }
+
+  #[tokio::test]
+  async fn another_site_on_this_machine_needs_the_key() {
+    // The hole the key closes: the library allows any origin, so without it
+    // any site open in the host's browser could read it from localhost.
+    let h = harness();
+    let cases: &[&[(header::HeaderName, &'static str)]] = &[
+      &[
+        (header::HOST, "localhost:3000"),
+        (header::ORIGIN, "https://evil.example"),
+      ],
+      // DNS rebinding.
+      &[
+        (header::HOST, "evil.example:3000"),
+        (header::ORIGIN, "http://evil.example:3000"),
+      ],
+    ];
+    for headers in cases {
+      let req = with_headers(get_from("/api/library", LOCAL_V4), headers);
+      let (status, _, _) = send(&h, req).await;
+      assert_eq!(status, StatusCode::UNAUTHORIZED, "{headers:?}");
+    }
+  }
+
+  #[tokio::test]
+  async fn a_refusal_is_readable_cross_origin() {
+    // So the paired app can tell "wrong key" from "unreachable".
+    let h = harness();
+    let mut req = get_from("/api/library", LAN);
+    req.headers_mut().insert(
+      header::ORIGIN,
+      HeaderValue::from_static("http://tauri.localhost"),
+    );
+    let (status, _, res) = send(&h, req).await;
+    assert_eq!(status, StatusCode::UNAUTHORIZED);
+    assert_eq!(
+      res.headers().get(header::ACCESS_CONTROL_ALLOW_ORIGIN),
+      Some(&HeaderValue::from_static("*"))
+    );
   }
 
   // --- static fallback ---
@@ -840,7 +986,7 @@ mod tests {
   #[tokio::test]
   async fn api_responses_are_readable_cross_origin() {
     let h = harness();
-    let mut req = get_from("/api/library", LAN);
+    let mut req = get_from(&keyed("/api/library"), LAN);
     req.headers_mut().insert(
       header::ORIGIN,
       HeaderValue::from_static("http://tauri.localhost"),
@@ -907,6 +1053,7 @@ mod tests {
 
   #[tokio::test]
   async fn browse_is_forbidden_to_another_site_on_this_machine() {
+    // Even holding the key: settings are for the user at the host.
     let h = harness();
     let uri = format!("/api/settings/browse?path={}", h.root.to_string_lossy());
     let cases: &[&[(header::HeaderName, &'static str)]] = &[
@@ -923,7 +1070,7 @@ mod tests {
       &[(header::HOST, "evil.example:3000")],
     ];
     for headers in cases {
-      let (status, _, _) = send(&h, with_headers(get_from(&uri, LOCAL_V4), headers)).await;
+      let (status, _, _) = send(&h, with_headers(get_from(&keyed(&uri), LOCAL_V4), headers)).await;
       assert_eq!(status, StatusCode::FORBIDDEN, "{headers:?}");
     }
   }
@@ -953,7 +1100,7 @@ mod tests {
   async fn post_settings_is_forbidden_to_another_site_on_this_machine() {
     let h = harness_unset();
     let req = with_headers(
-      post_from("/api/settings", LOCAL_V4, r#"{"mangaDir":"/"}"#),
+      post_from(&keyed("/api/settings"), LOCAL_V4, r#"{"mangaDir":"/"}"#),
       &[
         (header::HOST, "localhost:3000"),
         (header::ORIGIN, "https://evil.example"),

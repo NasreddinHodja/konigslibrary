@@ -23,7 +23,8 @@
   import { getMangaDir, setMangaDir, expandHome } from '$lib/sources/native-library';
   import {
     validateAndConnect,
-    normalizeServerUrl,
+    parseServerInput,
+    knownKey,
     probeServer,
     isProbeable
   } from '$lib/sources/server-connect';
@@ -142,7 +143,7 @@
   let serverUrlInput: HTMLInputElement | undefined = $state();
 
   $effect(() => {
-    const url = normalizeServerUrl(serverUrl);
+    const { url, key } = parseServerInput(serverUrl);
     connectError = null;
     if (!url) {
       probeStatus = 'idle';
@@ -155,7 +156,7 @@
         probeStatus = 'error';
         return;
       }
-      probeServer(url, ctrl.signal).then(
+      probeServer(url, key || knownKey(url), ctrl.signal).then(
         () => (probeStatus = 'ok'),
         (e) => {
           if (ctrl.signal.aborted) return;

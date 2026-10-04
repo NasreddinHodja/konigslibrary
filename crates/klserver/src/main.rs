@@ -5,6 +5,7 @@
 //! `konigslibrary.service`. The browser-only deployment still needs no server
 //! at all — that path runs the same parser compiled to wasm.
 
+mod auth;
 mod config;
 mod db;
 mod library;
@@ -29,6 +30,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
   let static_dir = static_dir();
 
   let config = Config::from_env();
+  let (key, key_source) = auth::load_key(std::env::var("KL_KEY").ok(), &config.key_path())?;
   let db = match db::Db::open(&config.db_path()) {
     Ok(db) => db,
     // A cache, so anywhere writable will do rather than not serving at all.
@@ -53,13 +55,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     cache: ZipCache::new(),
     db,
     static_dir,
+    key: key.clone(),
   });
 
   let addr: SocketAddr = format!("{host}:{port}").parse()?;
   let listener = tokio::net::TcpListener::bind(addr).await?;
   let bound = listener.local_addr()?;
 
-  print_banner(bound.port());
+  // The app's sidecar logs its output, so it never prints the key.
+  let shown_key = (key_source == auth::KeySource::File).then_some(key.as_str());
+  print_banner(bound.port(), shown_key);
   if std::env::var("NO_BROWSER").is_err() {
     open_browser(bound.port());
   }
@@ -93,11 +98,19 @@ fn static_dir() -> PathBuf {
   PathBuf::from("build-local")
 }
 
-fn print_banner(port: u16) {
+fn print_banner(port: u16, key: Option<&str>) {
   println!("\nkonigslibrary running on:");
   println!("  Local:   http://localhost:{port}");
   for addr in lan_addresses() {
-    println!("  Network: http://{addr}:{port}");
+    match key {
+      // Opening this on another device pairs it.
+      Some(key) => println!("  Network: http://{addr}:{port}/?key={key}"),
+      None => println!("  Network: http://{addr}:{port}"),
+    }
+  }
+  if key.is_some() {
+    println!("\n  Other devices need the key in the Network link.");
+    println!("  To change it, delete konigslibrary.key and restart.");
   }
   println!();
 }

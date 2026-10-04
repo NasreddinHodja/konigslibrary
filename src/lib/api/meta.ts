@@ -14,8 +14,7 @@ export type CardMeta = Pick<MangaMeta, 'title' | 'coverUrl'>;
 /// With a `version`, the server lets the image be cached for good: a replaced
 /// cover gets a new version, so a new URL.
 export function serverCoverUrl(slug: string, cover: string, version?: string | null): string {
-  const url = serverFileUrl(slug, cover);
-  return version ? `${url}?v=${encodeURIComponent(version)}` : url;
+  return serverFileUrl(slug, cover, version ? `?v=${encodeURIComponent(version)}` : '');
 }
 
 export async function fetchNativeMeta(path: string): Promise<MangaMeta | null> {

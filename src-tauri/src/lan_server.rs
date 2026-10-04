@@ -11,6 +11,7 @@ pub struct Running {
   child: Child,
   port: u16,
   lan_ip: String,
+  key: String,
 }
 
 #[derive(Default)]
@@ -21,6 +22,7 @@ pub struct LanServerStatus {
   running: bool,
   url: Option<String>,
   port: Option<u16>,
+  key: Option<String>,
 }
 
 impl Running {
@@ -29,6 +31,7 @@ impl Running {
       running: true,
       url: Some(format!("http://{}:{}", self.lan_ip, self.port)),
       port: Some(self.port),
+      key: Some(self.key.clone()),
     }
   }
 }
@@ -80,6 +83,10 @@ pub async fn start_lan_server(
     None => free_port()?,
   };
   let ip = lan_ip()?;
+  let data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
+  std::fs::create_dir_all(&data_dir).map_err(|e| e.to_string())?;
+  // Kept across restarts, so paired devices stay paired.
+  let key = klfs::access_key(&data_dir.join("lan-key")).map_err(|e| e.to_string())?;
 
   let assets_dir = app
     .path()
@@ -106,14 +113,8 @@ pub async fn start_lan_server(
     .env("MANGA_DIR", &manga_dir)
     // Its library database: the working directory it inherits may be a
     // read-only install location.
-    .env(
-      "KL_DB",
-      app
-        .path()
-        .app_data_dir()
-        .map_err(|e| e.to_string())?
-        .join("lan-library.db"),
-    )
+    .env("KL_DB", data_dir.join("lan-library.db"))
+    .env("KL_KEY", &key)
     .env("PORT", port.to_string())
     .env("HOST", "0.0.0.0")
     .env("NO_BROWSER", "1")
@@ -184,6 +185,7 @@ pub async fn start_lan_server(
     child,
     port,
     lan_ip: ip,
+    key,
   };
   let status = running.status();
   *state.0.lock().unwrap() = Some(running);
@@ -203,6 +205,7 @@ pub fn lan_server_status(state: State<'_, LanServerState>) -> LanServerStatus {
       running: false,
       url: None,
       port: None,
+      key: None,
     },
   }
 }

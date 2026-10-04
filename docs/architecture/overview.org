@@ -67,6 +67,6 @@ See [[file:page-loading.org][Page loading]] for how each is read.
 
 * Which server
 
-=apiUrl()= (=src/lib/utils/constants.ts=) prefixes API paths with the server URL stored in =localStorage= under =kl:serverUrl=. Empty means same-origin, which is the case when =klserver= serves the frontend itself. The packaged apps set the URL when connecting to a server, including through a =konigslibrary://connect= link (=src/lib/sources/server-connect.ts=), which is what the LAN share QR code holds.
+=apiUrl()= (=src/lib/utils/constants.ts=) prefixes API paths with the server URL stored in =localStorage= under =kl:serverUrl=, and appends the server's access key, stored under =kl:serverKey= (see [[file:../api/http.org][HTTP server]]). Empty URL means same-origin, which is the case when =klserver= serves the frontend itself; that page takes the key from a =?key== in its own address. The packaged apps set both when connecting to a server, including through a =konigslibrary://connect= link (=src/lib/sources/server-connect.ts=), which is what the LAN share QR code holds.
 
 =src/lib/sources/connection.svelte.ts= polls =/api/ping= every 3 seconds while anything is watching, to show the server going offline or coming back.

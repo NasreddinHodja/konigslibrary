@@ -33,6 +33,7 @@ export const DEFAULT_PAGE_RATIO = 1.5; // height / width, typical manga page
 export const PAGE_TURN_ZOOM = 2;
 
 const LS_SERVER_URL = 'kl:serverUrl';
+const LS_SERVER_KEY = 'kl:serverKey';
 
 const browser = typeof localStorage !== 'undefined';
 
@@ -41,13 +42,33 @@ export function getServerUrl(): string {
   return localStorage.getItem(LS_SERVER_URL) || '';
 }
 
-export function setServerUrl(url: string) {
-  if (browser) localStorage.setItem(LS_SERVER_URL, url);
+/// The server's access key; empty when there's none, as on the host itself.
+export function getServerKey(): string {
+  if (!browser) return '';
+  return localStorage.getItem(LS_SERVER_KEY) || '';
 }
 
+export function setServer(url: string, key: string) {
+  if (!browser) return;
+  localStorage.setItem(LS_SERVER_URL, url);
+  localStorage.setItem(LS_SERVER_KEY, key);
+}
+
+/// Just the key, for a page the server served itself, whose URL is its own.
+export function setServerKey(key: string) {
+  if (browser) localStorage.setItem(LS_SERVER_KEY, key);
+}
+
+/// `path` on the server, with the access key: in the URL, because page images
+/// are plain `<img src>`s.
 export function apiUrl(path: string): string {
   const base = getServerUrl().replace(/\/+$/, '');
-  return base ? `${base}${path}` : path;
+  return withKey(base ? `${base}${path}` : path, getServerKey());
+}
+
+export function withKey(url: string, key: string): string {
+  if (!key) return url;
+  return `${url}${url.includes('?') ? '&' : '?'}key=${encodeURIComponent(key)}`;
 }
 
 declare const __LOCAL_BUILD__: boolean;

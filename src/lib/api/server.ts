@@ -3,8 +3,8 @@ import type { ServerChapter } from '$lib/utils/types';
 import type { RawMangaMeta } from '$lib/zip';
 
 /// A file in a manga's server folder: its cover or a chapter archive.
-export function serverFileUrl(slug: string, file: string): string {
-  return apiUrl(`/api/library/${slug}/${encodeURIComponent(file)}`);
+export function serverFileUrl(slug: string, file: string, query = ''): string {
+  return apiUrl(`/api/library/${slug}/${encodeURIComponent(file)}${query}`);
 }
 
 export async function fetchServerChapters(slug: string): Promise<ServerChapter[]> {

@@ -11,6 +11,12 @@ Any path not listed here serves the built SPA, falling back to its =index.html=.
 - JSON errors have the shape ={"error": "<message>"}=. Some routes answer with plain text instead; each route says which.
 - The library routes send CORS headers allowing any origin, so the packaged app and the web deployment can read a server on another host. The settings routes send none.
 
+* Access key
+
+Every =/api= route except =/api/ping= needs the server's key as the =key= query parameter, e.g. =/api/library?key=…=. Without it, or with a wrong one: =401= with a JSON error. Requests from the server's own page on this machine need no key; that's the same check the settings routes use (see [[*Settings][Settings]]).
+
+The key is =KL_KEY= if set, otherwise the one in =konigslibrary.key= next to =konigslibrary.json=, created on first run. Defined in =crates/klserver/src/auth.rs=.
+
 * Library
 
 ** GET /api/ping
@@ -117,7 +123,7 @@ These are only for the SPA the server serves. Write and browse requests must com
 
 ** GET /api/settings
 
-Not restricted to loopback.
+Not restricted to loopback, but needs the key.
 
 #+begin_src json
 { "mangaDir": "~/Manga" }

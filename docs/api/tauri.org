@@ -166,7 +166,12 @@ Deletes an imported manga one file at a time, reporting files deleted.
 The desktop app shares its library by running the bundled =konigslibrary-server= as a child process. See [[file:http.org][HTTP server]].
 
 #+begin_src typescript
-type LanServerStatus = { running: boolean; url: string | null; port: number | null };
+type LanServerStatus = {
+  running: boolean;
+  url: string | null;
+  port: number | null;
+  key: string | null;
+};
 #+end_src
 
 ** start_lan_server
@@ -178,7 +183,7 @@ type LanServerStatus = { running: boolean; url: string | null; port: number | nu
 
 Starts the server bound to =0.0.0.0= and waits for =/api/ping= to answer, for about 9 seconds at most. Returns its status, with =url= on the machine's LAN address. If it's already running, returns the current status.
 
-The server's database is =lan-library.db= in the app data directory.
+The server's database is =lan-library.db= in the app data directory. Its access key, which =key= returns, is kept in =lan-key= there and passed in as =KL_KEY=.
 
 ** stop_lan_server
 

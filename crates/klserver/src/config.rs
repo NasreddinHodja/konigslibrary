@@ -66,6 +66,11 @@ impl Config {
       .unwrap_or_else(|| self.config_path.with_file_name("konigslibrary.db"))
   }
 
+  /// The access key file, next to `konigslibrary.json`.
+  pub fn key_path(&self) -> PathBuf {
+    self.config_path.with_file_name("konigslibrary.key")
+  }
+
   pub fn home(&self) -> &str {
     &self.home
   }

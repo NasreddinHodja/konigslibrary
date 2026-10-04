@@ -58,6 +58,7 @@ src-tauri/binaries/*
 
 # config
 konigslibrary.json
+konigslibrary.key
 
 # library database (klserver), a cache of the manga directory
 konigslibrary.db*

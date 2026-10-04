@@ -9,7 +9,7 @@ Open the deployed site, then open a manga folder (see [[file:library.org][Librar
 
 The [[https://github.com/NasreddinHodja/konigslibrary/releases/latest][latest release]] has a Windows installer (=-setup.exe=) and a Linux AppImage.
 
-To read on a phone on the same network: Settings → Share to LAN, then scan the QR code with the phone. The Android app must already be installed.
+To read on a phone on the same network: Settings → Share to LAN, then scan the QR code with the phone. The Android app must already be installed. Without it, copy the link beside the QR code and open it in the phone's browser.
 
 * Android
 
@@ -35,6 +35,8 @@ KL_STATIC_DIR=./build-local MANGA_DIR=~/Manga NO_BROWSER=1 \
 
 The manga directory can also be set from Settings in the UI, which saves it to =konigslibrary.json= in the working directory.
 
+Other devices need the server's access key. On start, the server prints a =Network= link with the key in it: open it in a browser on the other device, or paste it into the app's Server URL field. The key is kept in =konigslibrary.key= in the working directory; delete it and restart to make a new one, which unpairs every device.
+
 ** Environment variables
 
 | Variable        | Default                                           | Description                                        |
@@ -43,6 +45,7 @@ The manga directory can also be set from Settings in the UI, which saves it to =
 | =KL_DB=         | =./konigslibrary.db=                              | Library database. A cache; safe to delete          |
 | =PORT=          | =3000=                                            | Server port                                        |
 | =HOST=          | =0.0.0.0=                                         | Bind address                                       |
+| =KL_KEY=        | from =konigslibrary.key=                          | Access key; when set, it isn't printed             |
 | =KL_STATIC_DIR= | =client/= next to the binary, else =build-local/= | Built frontend to serve                            |
 | =NO_BROWSER=    | unset                                             | Set to anything to skip opening a browser on start |
 

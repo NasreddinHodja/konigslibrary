@@ -2059,6 +2059,7 @@ dependencies = [
 name = "klfs"
 version = "0.6.0"
 dependencies = [
+ "getrandom 0.4.3",
  "klparse",
 ]
 
