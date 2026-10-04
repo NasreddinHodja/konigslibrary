@@ -22,6 +22,9 @@ certs/
 !.env.example
 !.env.test
 
+# Test coverage reports
+/coverage
+
 # Vite
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*

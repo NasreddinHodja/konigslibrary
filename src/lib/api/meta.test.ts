@@ -1,7 +1,7 @@
-import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterAll } from 'vitest';
 
 describe('serverCoverUrl', () => {
-  beforeAll(() => {
+  beforeEach(() => {
     const store = new Map([
       ['kl:serverUrl', 'http://192.168.1.5:3000'],
       ['kl:serverKey', 'abc']
@@ -11,7 +11,6 @@ describe('serverCoverUrl', () => {
   });
 
   afterAll(() => {
-    vi.unstubAllGlobals();
     vi.resetModules();
   });
 
