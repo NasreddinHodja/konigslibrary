@@ -56,4 +56,3 @@ jobs:
         uses: softprops/action-gh-release@v3
         with:
           files: ${{ steps.installer.outputs.path }}
-          generate_release_notes: true

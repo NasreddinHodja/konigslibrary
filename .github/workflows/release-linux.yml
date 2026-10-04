@@ -21,6 +21,8 @@ jobs:
       - uses: actions/checkout@v7
         with:
           ref: ${{ inputs.tag || github.ref }}
+          # git-cliff needs the tags and history for the release notes.
+          fetch-depth: 0
 
       - name: Install system dependencies
         run: |
@@ -72,9 +74,17 @@ jobs:
           ./appimagetool --comp xz "$appdir" "dist/$name"
           echo "path=dist/$name" >> "$GITHUB_OUTPUT"
 
+      # Only this workflow writes the release notes (see cliff.toml); the
+      # Windows and Android ones leave the body alone.
+      - name: Generate release notes
+        id: notes
+        uses: orhun/git-cliff-action@v4
+        with:
+          args: --latest --strip header
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ inputs.tag || github.ref_name }}
           files: ${{ steps.appimage.outputs.path }}
-          generate_release_notes: true
+          body: ${{ steps.notes.outputs.content }}
