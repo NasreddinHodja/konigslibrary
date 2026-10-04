@@ -12,32 +12,29 @@
   } = $props();
 </script>
 
-<div
-  class="relative flex w-full border-2 p-1 text-xs font-bold tracking-wide"
-  role="group"
-  aria-label="{labelA} / {labelB}"
+<!-- One button: a click anywhere on it switches to the other side. -->
+<button
+  class="group relative flex w-full cursor-pointer border-2 p-1 text-xs font-bold tracking-wide"
+  aria-label="{labelA} / {labelB}: {active ? labelB : labelA}"
+  {onclick}
 >
-  <div
+  <span
     class="absolute top-1 bottom-1 left-1 w-[calc(50%-0.25rem)] bg-fg transition-transform duration-200 ease-out {active
       ? 'translate-x-full'
       : ''}"
-  ></div>
-  <button
+  ></span>
+  <span
     class="relative flex-1 py-1.5 text-center transition-colors duration-200 pointer-coarse:py-3.5 {!active
       ? 'text-bg'
-      : 'cursor-pointer hover:bg-fg/10'}"
-    {onclick}
-    disabled={!active}
+      : 'group-hover:bg-fg/10'}"
   >
     {labelA}
-  </button>
-  <button
+  </span>
+  <span
     class="relative flex-1 py-1.5 text-center transition-colors duration-200 pointer-coarse:py-3.5 {active
       ? 'text-bg'
-      : 'cursor-pointer hover:bg-fg/10'}"
-    {onclick}
-    disabled={active}
+      : 'group-hover:bg-fg/10'}"
   >
     {labelB}
-  </button>
-</div>
+  </span>
+</button>
