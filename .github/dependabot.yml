@@ -1,0 +1,41 @@
+version: 2
+
+# Monthly, one grouped PR per ecosystem for minor and patch bumps. Major bumps
+# still get their own PRs, since those can break things.
+updates:
+  - package-ecosystem: cargo
+    directories:
+      - /crates
+      - /src-tauri
+    schedule:
+      interval: monthly
+    groups:
+      cargo:
+        patterns: ['*']
+        update-types: [minor, patch]
+    commit-message:
+      prefix: chore
+      include: scope
+
+  - package-ecosystem: bun
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      bun:
+        patterns: ['*']
+        update-types: [minor, patch]
+    commit-message:
+      prefix: chore
+      include: scope
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      actions:
+        patterns: ['*']
+        update-types: [minor, patch]
+    commit-message:
+      prefix: ci
