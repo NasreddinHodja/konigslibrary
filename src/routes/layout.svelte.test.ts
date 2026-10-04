@@ -122,4 +122,23 @@ describe('the layout', () => {
       expect(fetch).not.toHaveBeenCalled();
     });
   });
+
+  describe('in the app', () => {
+    it("sends the page's uncaught errors to the log", async () => {
+      const calls = mockApp();
+      renderLayout();
+      window.dispatchEvent(new ErrorEvent('error', { message: 'oops' }));
+      expect(calls.find((c) => c.cmd === 'plugin:log|log')?.args).toMatchObject({
+        message: expect.stringContaining('oops')
+      });
+    });
+
+    it('offers to report the last crash', async () => {
+      mockApp((cmd) => {
+        if (cmd === 'take_crash_report') return 'boom';
+      });
+      renderLayout();
+      expect(await screen.findByRole('dialog', { name: 'Crash report' })).toBeInTheDocument();
+    });
+  });
 });

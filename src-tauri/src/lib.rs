@@ -1,5 +1,6 @@
 mod archive;
 mod device_library;
+mod diagnostics;
 mod download;
 mod import;
 mod lan_server;
@@ -144,16 +145,20 @@ pub fn run() {
           .push(std::fs::canonicalize(&dir)?);
       }
 
-      let log_level = if cfg!(debug_assertions) {
-        log::LevelFilter::Info
-      } else {
-        log::LevelFilter::Warn
-      };
+      // Info in release too: the LAN server's output is logged at info, and
+      // the logs are what "Copy logs" hands over. One rotated file is kept,
+      // so a rotation never leaves an empty log.
       app.handle().plugin(
         tauri_plugin_log::Builder::default()
-          .level(log_level)
+          .level(log::LevelFilter::Info)
+          .max_file_size(200_000)
+          .rotation_strategy(tauri_plugin_log::RotationStrategy::KeepSome(1))
           .build(),
       )?;
+      diagnostics::install_panic_hook(
+        app.path().app_log_dir()?,
+        app.package_info().version.to_string(),
+      );
       Ok(())
     })
     .invoke_handler(tauri::generate_handler![
@@ -173,6 +178,8 @@ pub fn run() {
       lan_server::start_lan_server,
       lan_server::stop_lan_server,
       lan_server::lan_server_status,
+      diagnostics::read_logs,
+      diagnostics::take_crash_report,
     ])
     .build(tauri::generate_context!())
     .expect("error while building tauri application")

@@ -5,6 +5,8 @@ import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
@@ -134,6 +136,16 @@ class MainActivity : TauriActivity() {
     @JavascriptInterface
     fun hapticLongPress() {
       runOnUiThread { window.decorView.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS) }
+    }
+
+    /// The WebView's navigator.clipboard does nothing here; the system
+    /// clipboard does, and Android shows its own "copied" notice.
+    @JavascriptInterface
+    fun copyText(text: String) {
+      runOnUiThread {
+        getSystemService(ClipboardManager::class.java)
+          .setPrimaryClip(ClipData.newPlainText("konigslibrary", text))
+      }
     }
 
     @JavascriptInterface

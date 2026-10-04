@@ -11,6 +11,8 @@ The [[https://github.com/NasreddinHodja/konigslibrary/releases/latest][latest re
 
 To read on a phone on the same network: Settings → Share to LAN, then scan the QR code with the phone. The Android app must already be installed. Without it, copy the link beside the QR code and open it in the phone's browser.
 
+If something goes wrong, Settings → Diagnostics → Copy logs copies the app's logs for a bug report. After a crash, the app offers to open a GitHub issue with the report on the next launch. Nothing is sent unless you submit it.
+
 * Android
 
 A signed APK is on the [[https://github.com/NasreddinHodja/konigslibrary/releases/latest][latest release]].

@@ -1,6 +1,6 @@
 import { isAndroid, isNative } from './platform';
 
-const GITHUB_REPO = 'NasreddinHodja/konigslibrary';
+export const GITHUB_REPO = 'NasreddinHodja/konigslibrary';
 const LS_DISMISSED = 'kl:update:dismissed';
 
 export type UpdateInfo = {

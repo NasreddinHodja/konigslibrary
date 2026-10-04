@@ -18,7 +18,7 @@
   import { fetchServerSettings, saveServerSettings } from '$lib/api/server';
   import { isAndroid, isNative } from '$lib/utils/platform';
   import { goto } from '$app/navigation';
-  import { showSuccess } from '$lib/ui/toast.svelte';
+  import { showError, showSuccess } from '$lib/ui/toast.svelte';
   import { errorMessage } from '$lib/utils/errors';
   import { getMangaDir, setMangaDir, expandHome } from '$lib/sources/native-library';
   import {
@@ -35,6 +35,8 @@
   import { PRESETS, getTheme, setTheme } from '$lib/theme';
   import type { Theme } from '$lib/theme';
   import { backOrHome, nativeBackOrHome } from '$lib/ui/back';
+  import { readLogs } from '$lib/utils/diagnostics';
+  import { copyText } from '$lib/utils/bridge';
 
   const TOKEN_LABELS: [keyof Theme, string][] = [
     ['bg', 'Background'],
@@ -118,7 +120,8 @@
     { id: 'sources', label: 'Sources', show: isLocalServer },
     { id: 'theme', label: 'Theme', show: true },
     { id: 'shortcuts', label: 'Shortcuts', show: !isMobile },
-    { id: 'providers', label: 'Providers', show: native }
+    { id: 'providers', label: 'Providers', show: native },
+    { id: 'diagnostics', label: 'Diagnostics', show: native }
   ].filter((s) => s.show);
   let deviceDir = $state(getMangaDir());
 
@@ -199,6 +202,15 @@
     if (e.key === 'Enter') {
       (e.currentTarget as HTMLInputElement).blur();
       connectServer();
+    }
+  }
+
+  async function copyLogs() {
+    try {
+      await copyText(await readLogs());
+      showSuccess('Logs copied');
+    } catch (e) {
+      showError(errorMessage(e, 'Could not copy the logs'));
     }
   }
 
@@ -502,6 +514,19 @@
             </span>
           </div>
         </div>
+      </div>
+    </section>
+  {/if}
+
+  {#if native}
+    <section id="settings-diagnostics" class="scroll-mt-[calc(1rem+var(--safe-top))]">
+      {@render sectionHeader('DIAGNOSTICS')}
+
+      <div class="space-y-3 py-4">
+        <p class="text-sm text-soft">
+          The app's logs, with its version and platform, for a bug report.
+        </p>
+        <Button size="md" onclick={copyLogs}>Copy logs</Button>
       </div>
     </section>
   {/if}

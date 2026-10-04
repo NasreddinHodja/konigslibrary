@@ -178,13 +178,39 @@ describe('settings on the web', () => {
 describe('settings in the app', () => {
   const serverUrlBox = () => screen.getByRole('textbox', { name: 'Server URL' });
 
-  it('jumps to the providers too', () => {
+  it('jumps to the providers and diagnostics too', () => {
     mockApp();
     render(Settings);
     const jumps = screen
       .getAllByRole('link')
       .filter((a) => a.getAttribute('href')?.startsWith('#'));
     expect(jumps.map((a) => a.textContent?.trim())).toContain('Providers');
+    expect(jumps.map((a) => a.textContent?.trim())).toContain('Diagnostics');
+  });
+
+  it('copies the logs', async () => {
+    const user = userEvent.setup();
+    mockApp((cmd) => {
+      if (cmd === 'read_logs') return 'konigslibrary 0.9.0 (linux x86_64)\nsome log';
+    });
+    render(Settings);
+    await user.click(screen.getByRole('button', { name: 'Copy logs' }));
+    await vi.waitFor(() => expect(getToasts().map((t) => t.label)).toContain('Logs copied'));
+    expect(await navigator.clipboard.readText()).toBe(
+      'konigslibrary 0.9.0 (linux x86_64)\nsome log'
+    );
+  });
+
+  it('says when the logs could not be copied', async () => {
+    const user = userEvent.setup();
+    mockApp((cmd) => {
+      if (cmd === 'read_logs') throw 'no log folder';
+    });
+    render(Settings);
+    await user.click(screen.getByRole('button', { name: 'Copy logs' }));
+    await vi.waitFor(() =>
+      expect(getToasts().map((t) => t.label)).toContain('Could not copy the logs')
+    );
   });
 
   it('saves the manga directory, with ~ expanded', async () => {

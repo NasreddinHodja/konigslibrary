@@ -192,3 +192,17 @@ Stops the server. The app also stops it on exit.
 ** lan_server_status
 
 Returns the current =LanServerStatus=.
+
+* Diagnostics
+
+Logs go through =tauri-plugin-log= to =konigslibrary.log= in the app log directory, at info and above. Past 200 KB the file is rotated: one older file, named with its date, is kept. The webview's uncaught errors and unhandled rejections are logged too, through the plugin's own =plugin:log|log= command (=logWebviewErrors= in =src/lib/utils/diagnostics.ts=).
+
+A panic writes =crash.txt= beside the logs: version, platform, message, location and backtrace. On the next launch the app offers to report it (=CrashReport.svelte=): Report opens a GitHub issue with the crash and as much of the end of the logs as fits in the link, Copy puts both on the clipboard. Nothing is sent from the app: the issue is only filed if the reporter submits it on GitHub.
+
+** read_logs
+
+Returns every log file, oldest first, under a line with the app version and platform. Settings → Diagnostics → Copy logs puts it on the clipboard.
+
+** take_crash_report
+
+Returns the last panic's report, or =null=, and deletes it so it's offered once.

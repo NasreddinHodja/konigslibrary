@@ -12,6 +12,8 @@
   import { isLocalServer, setServerKey } from '$lib/utils/constants';
   import { afterNavigate, goto, onNavigate, replaceState } from '$app/navigation';
   import { page } from '$app/state';
+  import CrashReport from '$lib/ui/CrashReport.svelte';
+  import { logWebviewErrors } from '$lib/utils/diagnostics';
 
   let { children } = $props();
 
@@ -63,6 +65,11 @@
     if (type === 'link' || type === 'goto') replaceState('', { ...page.state, fromApp: true });
   });
 
+  // The app's log gets the page's uncaught errors too, for "Copy logs".
+  $effect(() => {
+    if (isNative()) return logWebviewErrors();
+  });
+
   async function handleDeepLink(raw: string) {
     const link = parseConnectLink(raw);
     if (!link) return;
@@ -99,3 +106,4 @@
   <div class="fixed top-0 right-0 left-0 z-9998 bg-bg" style="height: var(--safe-top)"></div>
 {/if}
 {@render children()}
+<CrashReport />
