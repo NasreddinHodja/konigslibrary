@@ -7,6 +7,11 @@ on:
 
 permissions:
   contents: write
+  # actions/attest: OIDC token for the Sigstore certificate, storing the
+  # attestation, and the artifact storage record.
+  id-token: write
+  attestations: write
+  artifact-metadata: write
 
 jobs:
   build:
@@ -58,6 +63,11 @@ jobs:
           STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+
+      # Signed build provenance, checked with `gh attestation verify`.
+      - uses: actions/attest@v4
+        with:
+          subject-path: 'dist/konigslibrary_*.apk'
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v3

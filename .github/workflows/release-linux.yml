@@ -12,6 +12,11 @@ on:
 
 permissions:
   contents: write
+  # actions/attest: OIDC token for the Sigstore certificate, storing the
+  # attestation, and the artifact storage record.
+  id-token: write
+  attestations: write
+  artifact-metadata: write
 
 jobs:
   build:
@@ -73,6 +78,11 @@ jobs:
           mkdir -p dist
           ./appimagetool --comp xz "$appdir" "dist/$name"
           echo "path=dist/$name" >> "$GITHUB_OUTPUT"
+
+      # Signed build provenance, checked with `gh attestation verify`.
+      - uses: actions/attest@v4
+        with:
+          subject-path: '${{ steps.appimage.outputs.path }}'
 
       # Only this workflow writes the release notes (see cliff.toml); the
       # Windows and Android ones leave the body alone.

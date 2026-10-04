@@ -7,6 +7,11 @@ on:
 
 permissions:
   contents: write
+  # actions/attest: OIDC token for the Sigstore certificate, storing the
+  # attestation, and the artifact storage record.
+  id-token: write
+  attestations: write
+  artifact-metadata: write
 
 jobs:
   build:
@@ -51,6 +56,11 @@ jobs:
           mkdir -p dist
           cp "$installer" dist/
           echo "path=dist/$(basename "$installer")" >> "$GITHUB_OUTPUT"
+
+      # Signed build provenance, checked with `gh attestation verify`.
+      - uses: actions/attest@v4
+        with:
+          subject-path: '${{ steps.installer.outputs.path }}'
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v3

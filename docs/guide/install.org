@@ -17,6 +17,14 @@ If something goes wrong, Settings → Diagnostics → Copy logs copies the app's
 
 A signed APK is on the [[https://github.com/NasreddinHodja/konigslibrary/releases/latest][latest release]].
 
+* Verifying a download
+
+Every release file has a signed attestation that it was built by this repo's release workflow. To check one with the [[https://cli.github.com/][GitHub CLI]]:
+
+#+begin_src sh
+gh attestation verify <file> --repo NasreddinHodja/konigslibrary
+#+end_src
+
 * Self-hosted server
 
 For a headless, always-on setup:
