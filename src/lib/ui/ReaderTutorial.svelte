@@ -22,6 +22,7 @@
   aria-label="Dismiss tutorial"
   onclick={ondismiss}
   onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && ondismiss()}
+  {@attach (node) => node.focus()}
   in:fade={{ duration: ANIM_DURATION, easing: ANIM_EASE }}
   out:fadeOut
 >

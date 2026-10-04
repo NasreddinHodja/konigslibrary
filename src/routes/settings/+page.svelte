@@ -367,7 +367,7 @@
         </div>
         <div class="divide-y divide-line">
           {#each TOKEN_LABELS as [key, label] (key)}
-            <div class="flex items-center justify-between py-2">
+            <label class="flex items-center justify-between py-2">
               <span class="text-sm text-soft">{label}</span>
               <input
                 type="color"
@@ -375,7 +375,7 @@
                 oninput={(e) => updateToken(key, (e.currentTarget as HTMLInputElement).value)}
                 class="h-7 w-12 cursor-pointer border-2 border-line bg-transparent p-0.5 pointer-coarse:h-12 pointer-coarse:w-16"
               />
-            </div>
+            </label>
           {/each}
         </div>
       </div>
