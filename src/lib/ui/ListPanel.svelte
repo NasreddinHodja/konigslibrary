@@ -2,7 +2,8 @@
   import { untrack, type Snippet } from 'svelte';
   import EmblaCarousel, { type EmblaCarouselType } from 'embla-carousel';
   import { inSystemGesture } from '$lib/utils/system-gestures';
-  import { Search, X } from 'lucide-svelte';
+  import { fade } from 'svelte/transition';
+  import { ArrowUp, Search, X } from 'lucide-svelte';
 
   // A searchable list: optional tabs and a label/search bar, then the list.
   //
@@ -108,6 +109,43 @@
     };
   });
 
+  /// How far down, in screen heights, a list is scrolled before it offers a
+  /// way back to its top.
+  const FAR = 1;
+
+  let root: HTMLDivElement | undefined = $state();
+  /// `fill` pages scrolled past FAR, by tab key.
+  let farPages: Record<string, boolean> = $state({});
+  /// In page flow: the list's top is more than FAR above the screen.
+  let farInFlow = $state(false);
+  /// In page flow: the list's right edge, from the right of the screen.
+  let flowRight = $state(0);
+
+  function trackScroll(node: HTMLElement, key: string | null) {
+    const onScroll = () => {
+      farPages[String(key)] = node.scrollTop > node.clientHeight * FAR;
+    };
+    node.addEventListener('scroll', onScroll, { passive: true });
+    return { destroy: () => node.removeEventListener('scroll', onScroll) };
+  }
+
+  $effect(() => {
+    const el = root;
+    if (fill || !el) return;
+    const onScroll = () => {
+      const rect = el.getBoundingClientRect();
+      farInFlow = -rect.top > window.innerHeight * FAR;
+      flowRight = window.innerWidth - rect.right;
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll, { passive: true });
+    onScroll();
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', onScroll);
+    };
+  });
+
   // A tab picked by a tap slides its page in. One picked by a swipe is
   // already where Embla is heading, so nothing changes.
   $effect(() => {
@@ -119,7 +157,12 @@
   });
 </script>
 
-<div class="flex w-full min-w-0 flex-1 flex-col {fill ? 'min-h-0' : ''}">
+<!-- In page flow, back to top lands with the bar where it starts pinning. -->
+<div
+  bind:this={root}
+  class="flex w-full min-w-0 flex-1 flex-col {fill ? 'min-h-0' : ''}"
+  style:scroll-margin-top={fill ? undefined : 'var(--safe-top)'}
+>
   <div
     class="z-10 bg-bg {fill ? 'shrink-0' : 'sticky'}"
     style={fill ? undefined : 'top: var(--safe-top)'}
@@ -198,10 +241,16 @@
             data-scroll-root
             class="h-full min-w-0 shrink-0 grow-0 basis-full overflow-y-auto overscroll-y-contain"
             inert={key !== (activeTab ?? null)}
+            use:trackScroll={key}
           >
             <div class="flex min-h-full flex-col p-4 {pageClass}">
               {@render children(key)}
             </div>
+            {@render toTop(!!farPages[String(key)], (e) =>
+              (e.currentTarget as HTMLElement)
+                .closest('[data-scroll-root]')
+                ?.scrollTo({ top: 0, behavior: 'smooth' })
+            )}
           </div>
         {/each}
       </div>
@@ -210,5 +259,29 @@
     <div class="flex flex-1 flex-col p-4">
       {@render children(activeTab ?? null)}
     </div>
+    {@render toTop(farInFlow, () => root?.scrollIntoView({ behavior: 'smooth' }))}
   {/if}
 </div>
+
+{#snippet toTop(show: boolean, onclick: (e: MouseEvent) => void)}
+  <!-- Takes no room, and sits clear of the mobile tab bar. A `fill` page's
+       list runs to the bottom of its scroll, so sticky holds there; in page
+       flow the page goes on under the list, so it's fixed to the screen,
+       lined up with the list's edge. -->
+  <div
+    class="pointer-events-none bottom-0 z-10 h-0 {fill ? 'sticky' : 'fixed'}"
+    style:right={fill ? undefined : `${flowRight}px`}
+  >
+    {#if show}
+      <button
+        transition:fade={{ duration: 150 }}
+        class="pointer-events-auto absolute right-4 bottom-[calc(4.75rem_+_var(--safe-bottom))] flex size-14 cursor-pointer items-center justify-center border-2 border-line bg-bg text-soft hover:text-fg md:bottom-4"
+        aria-label="Back to top"
+        title="Back to top"
+        {onclick}
+      >
+        <ArrowUp size={24} />
+      </button>
+    {/if}
+  </div>
+{/snippet}
