@@ -2,8 +2,7 @@ import type { ChapterNumber, RawMangaMeta, ZipEntry } from './index';
 
 type Resolver = { resolve: (v: unknown) => void; reject: (e: Error) => void };
 type WorkerResponse =
-  | { id: number; result: unknown }
-  | { id: number; error: string; name?: string };
+  { id: number; result: unknown } | { id: number; error: string; name?: string };
 
 let worker: Worker | null = null;
 let nextId = 0;
