@@ -403,6 +403,9 @@
                       ? 'border-fg'
                       : 'border-line hover:border-fg/50'}"
                     onclick={() => startListening(binding.action)}
+                    aria-label="{binding.label}: {listening === binding.action
+                      ? 'press a key'
+                      : binding.keys.map(formatKey).join(', ') || 'unbound'}"
                   >
                     {#if listening === binding.action}
                       <span class="text-xs text-dim">Press a key...</span>
@@ -463,6 +466,8 @@
               bind:value={serverUrl}
               placeholder="192.168.1.x:3000"
               onkeydown={handleServerUrlKey}
+              aria-label="Server URL"
+              aria-invalid={probeStatus === 'error'}
               class="w-full border-2 bg-bg py-2 pr-9 pl-3 text-sm text-fg placeholder:text-dim pointer-coarse:py-3"
               style:border-color={probeStatus === 'ok'
                 ? 'color-mix(in oklab, var(--color-success) 60%, transparent)'
@@ -491,9 +496,10 @@
                 >
               </span>
             </Button>
-            {#if connectError}
-              <span class="text-sm text-error">{connectError}</span>
-            {/if}
+            <!-- In words too, not only the field's border colour. -->
+            <span role="status" class="text-sm {connectError ? 'text-error' : 'text-dim'}">
+              {#if connectError}{connectError}{:else if probeStatus === 'ok'}Server found{/if}
+            </span>
           </div>
         </div>
       </div>

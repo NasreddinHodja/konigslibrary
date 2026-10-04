@@ -165,7 +165,7 @@
             class="flex items-center justify-center opacity-60"
             style="height: {pageHeight(i)}px"
           >
-            <Loader />
+            <Loader label="Loading page {i + 1}" />
           </div>
         {/if}
       </div>

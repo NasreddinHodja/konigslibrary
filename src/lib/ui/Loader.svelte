@@ -1,4 +1,8 @@
-<div class="flex h-full flex-1 items-center justify-center">
+<script lang="ts">
+  let { label = 'Loading' }: { label?: string } = $props();
+</script>
+
+<div class="flex h-full flex-1 items-center justify-center" role="status" aria-label={label}>
   <div class="bars">
     <span></span>
     <span></span>

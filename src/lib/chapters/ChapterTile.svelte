@@ -54,6 +54,7 @@
   class="relative flex aspect-[2/3] cursor-pointer flex-col justify-end overflow-hidden border-2 text-left
     {highlighted ? 'border-fg' : 'border-line hover:border-line-strong'}"
   {title}
+  aria-label={title}
   {onclick}
   use:nearViewport={(v) => (near = v)}
 >
