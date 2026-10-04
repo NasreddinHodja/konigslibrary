@@ -1,7 +1,7 @@
 <script lang="ts">
   import { getReaderContext } from '$lib/context';
   import type { ViewerProps } from './types';
-  import { DEFAULT_PAGE_RATIO } from '$lib/utils/constants';
+  import { DEFAULT_PAGE_RATIO, reducedMotion } from '$lib/utils/constants';
   import Loader from '$lib/ui/Loader.svelte';
   import EndOfChapter from '$lib/chapters/EndOfChapter.svelte';
 
@@ -94,7 +94,7 @@
       manga.currentPage++;
       containerEl?.scrollTo({
         top: scrollOffsetFor(manga.currentPage),
-        behavior: 'smooth'
+        behavior: reducedMotion ? 'instant' : 'smooth'
       });
     }
   };
@@ -104,7 +104,7 @@
       manga.currentPage--;
       containerEl?.scrollTo({
         top: scrollOffsetFor(manga.currentPage),
-        behavior: 'smooth'
+        behavior: reducedMotion ? 'instant' : 'smooth'
       });
     }
   };
