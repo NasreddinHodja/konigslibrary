@@ -12,7 +12,7 @@
         "@tauri-apps/plugin-dialog": "^2.8.1",
         "@tauri-apps/plugin-opener": "^2.7.0",
         "embla-carousel": "^8.6.0",
-        "lucide-svelte": "^0.563.0",
+        "lucide-svelte": "^1.0.1",
         "qrcode-generator": "^2.0.4",
       },
       "devDependencies": {
@@ -508,7 +508,7 @@
 
     "lru-cache": ["lru-cache@11.5.3", "", {}, "sha512-U4N8FgzmWxc8k1VH8Kr6lQg18U7Fjvby6wXHVRX/ZZ7IwWbRMgrRbP0Wrb5q5NVinryp4SQampHKdvtecItxUg=="],
 
-    "lucide-svelte": ["lucide-svelte@0.563.0", "", { "peerDependencies": { "svelte": "^3 || ^4 || ^5.0.0-next.42" } }, "sha512-pjZKw7TpQcamfQrx7YdbOHgmrcNeKiGGMD0tKZQaVktwSsbqw28CsKc2Q97ttwjytiCWkJyOa8ij2Q+Og0nPfQ=="],
+    "lucide-svelte": ["lucide-svelte@1.0.1", "", { "peerDependencies": { "svelte": "^3 || ^4 || ^5.0.0-next.42" } }, "sha512-WvzZgk0pqzgda+AErLvgWxHkfg/+GgUwqKMRHvzt0IqyMdmyEDzDCk3Z+Wo/3y753oIgx8u9Q4eUbWkghFa8Jg=="],
 
     "lz-string": ["lz-string@1.5.0", "", { "bin": { "lz-string": "bin/bin.js" } }, "sha512-h5bgJWpxJNswbU7qCrV0tIKQCaS3blPDrqKWx+QxzuzL1zGUzij9XCWLrSLsJPu5t+eWA/ycetzYAO5IOMcWAQ=="],
 
