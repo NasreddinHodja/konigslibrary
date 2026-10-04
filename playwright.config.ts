@@ -4,6 +4,7 @@ import { defineConfig, devices } from '@playwright/test';
 // (scripts/gen-dev-library.js) behind the Vite dev server.
 export default defineConfig({
   testDir: 'e2e',
+  globalSetup: './e2e/global-setup.ts',
   // Each test opens its own browser context, so tests share only the server's
   // library, which none of them change.
   fullyParallel: true,
