@@ -20,7 +20,9 @@ One SvelteKit frontend runs in four places. What changes between them is where t
 | Desktop   | Tauri 2 (Rust)                                 |
 | Server    | Rust, axum, SQLite                             |
 | Icons     | Lucide Svelte                                  |
-| Quality   | ESLint 9, Prettier, Vitest, svelte-check       |
+| Quality   | ESLint 9, Prettier, svelte-check               |
+| Tests     | Vitest, Testing Library (jsdom), cargo test    |
+| Coverage  | Vitest v8 coverage, cargo-llvm-cov             |
 
 * Rust crates
 

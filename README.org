@@ -4,6 +4,8 @@
 
 Manga reader for ZIP and CBZ archives. Runs in the browser, as a desktop or Android app (Tauri), or as a self-hosted server.
 
+#+html: <p><a href="https://github.com/NasreddinHodja/konigslibrary/actions/workflows/ci.yml"><img src="https://github.com/NasreddinHodja/konigslibrary/actions/workflows/ci.yml/badge.svg" alt="CI"></a></p>
+
 #+html: <p align="center"><img src="static/help/home-mobile.jpeg" alt="Mobile home" width="260">&nbsp;&nbsp;<img src="static/help/manga-mobile.jpeg" alt="Mobile manga detail" width="260">&nbsp;&nbsp;<img src="static/help/reader-mobile.jpeg" alt="Mobile reader" width="260"></p>
 
 * Documentation
@@ -12,6 +14,10 @@ Manga reader for ZIP and CBZ archives. Runs in the browser, as a desktop or Andr
 - [[file:docs/guide/library.org][Library structure]]
 - [[file:docs/README.org][Everything else]]: architecture, HTTP and Tauri API, keyboard shortcuts
 - [[file:CONTRIBUTING.org][Contributing]]
+
+* Testing
+
+Every push and pull request runs the Rust tests (parser, server, app) and the frontend's, components included, in jsdom with Testing Library. Coverage in October 2026: 92% of the Rust crates' lines, 76% of the frontend's; each CI run reports the current figures. Every test file was mutation-checked: each behaviour it covers was broken on purpose, to make sure a test fails. See [[file:CONTRIBUTING.org][Contributing]] for running them.
 
 * License
 
