@@ -10,6 +10,27 @@ One SvelteKit frontend runs in four places. What changes between them is where t
 | Desktop / Android  | On the device's disk             | Tauri commands (=src-tauri=)       | =NativeFilesystemProvider= |
 | LAN share          | On the desktop's disk            | =klserver=, run by the desktop app | =ServerLibraryProvider=    |
 
+#+begin_example
+                         SvelteKit frontend
+                                 │ SourceProvider
+       ┌─────────────────────────┼─────────────────────────┐
+       ▼                         ▼                         ▼
+ UploadProvider        ServerLibraryProvider     NativeFilesystemProvider
+       │                         │ HTTP, ?key=             │ Tauri commands
+       ▼                         ▼                         ▼
+ Web Worker:                 klserver     spawned for   src-tauri
+ klwasm                  (axum, SQLite) ◄────────────── (desktop, Android)
+       │                         │         LAN share       │
+       │                         ▼                         ▼
+       │                       klfs                      klfs
+       ▼                         ▼                         ▼
+    klparse                   klparse                   klparse
+       │                         │                         │
+       ▼                         ▼                         ▼
+ picked or dropped         server's or               device's disk
+ File objects              desktop's disk
+#+end_example
+
 * Stack
 
 | Layer     | Technology                                     |
