@@ -16,7 +16,6 @@
   import { isLocalServer } from '$lib/utils/constants';
   import { pushState } from '$app/navigation';
   import { page } from '$app/state';
-  import { CircleQuestionMark } from 'lucide-svelte';
   import AppShell from '$lib/ui/AppShell.svelte';
   import ToastStack from '$lib/ui/ToastStack.svelte';
   import UpdateBanner from '$lib/ui/UpdateBanner.svelte';
@@ -198,7 +197,7 @@
   <AppShell active="library" {isDragOver}>
     {#if chapters.length === 0}
       <div
-        class="flex h-dvh w-full flex-col md:pl-14"
+        class="flex h-dvh w-full flex-col md:pl-24"
         style="padding-top: var(--safe-top)"
         out:fadeOut
         in:fadeInAfter
@@ -212,7 +211,7 @@
         </div>
       </div>
     {:else}
-      <div class="md:pl-14" out:fadeOut in:fadeInAfter>
+      <div class="md:pl-24" out:fadeOut in:fadeInAfter>
         <MangaDetail />
       </div>
     {/if}
@@ -221,44 +220,33 @@
   <div class="flex h-dvh w-full flex-col items-center" out:fadeOut in:fadeInAfter>
     <a
       href="/about"
-      class="hit fixed z-10 text-dim hover:text-fg"
+      class="hit fixed z-10 text-ink hover:text-hi hover:underline"
       style="top: calc(1rem + var(--safe-top)); right: calc(1rem + var(--safe-right))"
-      aria-label="How to use"
     >
-      <CircleQuestionMark size={18} />
+      how to use
     </a>
 
     <div
-      class="mx-auto flex w-full max-w-lg flex-1 flex-col items-center justify-center gap-10 px-6 py-12"
+      class="mx-auto flex w-full max-w-lg flex-1 flex-col items-center justify-center gap-8 px-3 py-12"
       style="padding-top: var(--safe-top); padding-bottom: var(--safe-bottom)"
     >
-      <div class="flex w-full flex-col items-center gap-8">
-        <h1 class="text-4xl font-bold tracking-widest">KONIGSLIBRARY</h1>
+      <div class="flex w-full flex-col items-center gap-6">
+        <h1 class="panel px-3 text-4xl">KONIGSLIBRARY</h1>
         <UploadButton {isDragOver} />
       </div>
 
-      <div class="w-full border-t border-line pt-6">
-        <p class="mb-1 text-xs font-bold tracking-widest text-dim">RUN LOCALLY</p>
-        <p class="mb-5 text-sm text-dim">Serve manga from your PC to any device on your network.</p>
+      <div class="flex w-full flex-col gap-3 panel p-3">
+        <h2 class="underline">run locally</h2>
+        <p class="text-dim">Serve manga from your PC to any device on your network.</p>
         <div class="flex flex-wrap gap-3">
-          <a
-            href={downloads.windows}
-            class="hit relative border-2 border-line-strong px-4 py-2 text-sm hover:border-fg hover:bg-fg/10"
-          >
-            Windows
-          </a>
-          <a
-            href={downloads.linux}
-            class="hit relative border-2 border-line-strong px-4 py-2 text-sm hover:border-fg hover:bg-fg/10"
-          >
-            Linux
-          </a>
-          <a
-            href={downloads.android}
-            class="hit relative border-2 border-line-strong px-4 py-2 text-sm hover:border-fg hover:bg-fg/10"
-          >
-            Android
-          </a>
+          {#each [['Windows', downloads.windows], ['Linux', downloads.linux], ['Android', downloads.android]] as [name, href] (name)}
+            <a
+              {href}
+              class="hit relative flex h-8 items-center border border-ink px-3 text-ink hover:bg-ink hover:text-bg pointer-coarse:h-10"
+            >
+              {name}
+            </a>
+          {/each}
         </div>
       </div>
     </div>

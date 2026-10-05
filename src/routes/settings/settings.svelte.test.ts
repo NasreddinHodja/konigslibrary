@@ -56,15 +56,15 @@ describe('settings on the web', () => {
     const jumps = screen
       .getAllByRole('link')
       .filter((a) => a.getAttribute('href')?.startsWith('#'));
-    expect(jumps.map((a) => a.textContent?.trim())).toEqual(['Theme', 'Shortcuts']);
-    expect(screen.getByRole('link', { name: /HOW TO USE/ })).toHaveAttribute('href', '/about');
+    expect(jumps.map((a) => a.textContent?.trim())).toEqual(['› theme', '› shortcuts']);
+    expect(screen.getByRole('link', { name: /how to use/ })).toHaveAttribute('href', '/about');
   });
 
   describe('back', () => {
     it('goes home when the page was opened directly', async () => {
       const user = userEvent.setup();
       render(Settings);
-      await user.click(screen.getByRole('button', { name: /BACK/ }));
+      await user.click(screen.getByRole('button', { name: /back/ }));
       expect(nav.goto).toHaveBeenCalledWith('/', { replaceState: true });
     });
 
@@ -73,7 +73,7 @@ describe('settings on the web', () => {
       const back = vi.spyOn(history, 'back').mockImplementation(() => {});
       nav.state = { fromApp: true };
       render(Settings);
-      await user.click(screen.getByRole('button', { name: /BACK/ }));
+      await user.click(screen.getByRole('button', { name: /back/ }));
       expect(back).toHaveBeenCalled();
     });
   });
@@ -82,27 +82,37 @@ describe('settings on the web', () => {
     it('applies a preset, and keeps it for next time', async () => {
       const user = userEvent.setup();
       render(Settings);
-      await user.click(screen.getByRole('button', { name: /Cloud/ }));
-      expect(rootColor('--color-bg')).toBe('#f6f7f9');
-      expect(JSON.parse(localStorage.getItem('kl:theme')!)).toMatchObject({ bg: '#f6f7f9' });
+      await user.click(screen.getByRole('button', { name: /paper/ }));
+      expect(rootColor('--color-bg')).toBe('#f4f0e8');
+      expect(JSON.parse(localStorage.getItem('kl:theme')!)).toMatchObject({ bg: '#f4f0e8' });
     });
 
     it('changes one colour', async () => {
       render(Settings);
-      const row = screen.getByText('Reader background').parentElement!;
+      const row = screen.getByText('ink').parentElement!;
       // A colour picker can't be typed into; this is the event it fires.
       await fireEvent.input(row.querySelector('input[type="color"]')!, {
         target: { value: '#123456' }
       });
-      expect(rootColor('--color-reader-bg')).toBe('#123456');
+      expect(rootColor('--color-ink')).toBe('#123456');
+    });
+
+    it('carries a theme saved before the three-colour palettes over, its border as the ink', () => {
+      localStorage.setItem(
+        'kl:theme',
+        JSON.stringify({ bg: '#000000', fg: '#ffffff', surface: '#000000', border: '#123456' })
+      );
+      render(Settings);
+      const row = screen.getByText('ink').parentElement!;
+      expect(row.querySelector('input[type="color"]')).toHaveValue('#123456');
     });
 
     it('goes back to the default colours', async () => {
       const user = userEvent.setup();
       render(Settings);
-      await user.click(screen.getByRole('button', { name: /One Bark/ }));
-      await user.click(screen.getByRole('button', { name: 'Reset to default' }));
-      expect(rootColor('--color-bg')).toBe('#000000');
+      await user.click(screen.getByRole('button', { name: /paper/ }));
+      await user.click(screen.getByRole('button', { name: 'reset colours' }));
+      expect(rootColor('--color-bg')).toBe('#282c34');
     });
   });
 
@@ -127,7 +137,7 @@ describe('settings on the web', () => {
       const user = userEvent.setup();
       render(Settings);
       await user.click(shortcut('Next page'));
-      expect(shortcut('Next page')).toHaveTextContent('Press a key...');
+      expect(shortcut('Next page')).toHaveTextContent('press a key…');
       expect(shortcut('Next page')).toHaveAccessibleName('Next page: press a key');
       await user.keyboard('x');
       expect(shortcut('Next page')).toHaveTextContent('x');
@@ -167,7 +177,7 @@ describe('settings on the web', () => {
       render(Settings);
       await user.click(shortcut('Next page'));
       await user.keyboard('x');
-      await user.click(screen.getByRole('button', { name: 'Reset to defaults' }));
+      await user.click(screen.getByRole('button', { name: 'reset keys' }));
       expect(shortcut('Next page')).toHaveTextContent('j↓');
       expect(resolveKey('j')).toBe('nextPage');
       expect(localStorage.getItem('kl:keybindings')).toBeNull();
@@ -185,10 +195,10 @@ describe('settings in the app', () => {
       .getAllByRole('link')
       .filter((a) => a.getAttribute('href')?.startsWith('#'));
     expect(jumps.map((a) => a.textContent?.trim())).toEqual([
-      'Library',
-      'Server',
-      'Theme',
-      'Diagnostics'
+      '› library',
+      '› server',
+      '› theme',
+      '› diagnostics'
     ]);
   });
 
@@ -217,7 +227,7 @@ describe('settings in the app', () => {
       if (cmd === 'read_logs') return 'konigslibrary 0.9.0 (linux x86_64)\nsome log';
     });
     render(Settings);
-    await user.click(screen.getByRole('button', { name: 'Copy logs' }));
+    await user.click(screen.getByRole('button', { name: 'copy logs' }));
     await vi.waitFor(() => expect(getToasts().map((t) => t.label)).toContain('Logs copied'));
     expect(await navigator.clipboard.readText()).toBe(
       'konigslibrary 0.9.0 (linux x86_64)\nsome log'
@@ -230,7 +240,7 @@ describe('settings in the app', () => {
       if (cmd === 'read_logs') throw 'no log folder';
     });
     render(Settings);
-    await user.click(screen.getByRole('button', { name: 'Copy logs' }));
+    await user.click(screen.getByRole('button', { name: 'copy logs' }));
     await vi.waitFor(() =>
       expect(getToasts().map((t) => t.label)).toContain('Could not copy the logs')
     );
@@ -244,7 +254,7 @@ describe('settings in the app', () => {
     render(Settings);
     const box = screen.getByPlaceholderText('/home/user/Manga');
     await user.type(box, ' ~/Manga ');
-    await user.click(screen.getAllByRole('button', { name: 'Save' })[0]);
+    await user.click(screen.getAllByRole('button', { name: 'save' })[0]);
     await vi.waitFor(() =>
       expect(localStorage.getItem('kl:nativeMangaDir')).toBe('/home/me/Manga')
     );
@@ -270,7 +280,7 @@ describe('settings in the app', () => {
     const fetch = setUpServer();
     render(Settings);
     await user.type(serverUrlBox(), 'http://192.168.1.5:3000/?key=abc');
-    await user.click(screen.getByRole('button', { name: /^Connect/ }));
+    await user.click(screen.getByRole('button', { name: /^connect/ }));
     await vi.waitFor(() => expect(nav.goto).toHaveBeenCalledWith('/login'));
     expect(localStorage.getItem('kl:serverUrl')).toBe('http://192.168.1.5:3000');
     expect(getToasts().map((t) => t.label)).toContain('Connected to server');
@@ -284,7 +294,7 @@ describe('settings in the app', () => {
     localStorage.setItem('kl:serverToken', 'tok');
     setUpServer();
     render(Settings);
-    await user.click(screen.getByRole('button', { name: /^Connect/ }));
+    await user.click(screen.getByRole('button', { name: /^connect/ }));
     await vi.waitFor(() => expect(nav.goto).toHaveBeenCalledWith('/'));
     expect(localStorage.getItem('kl:serverToken')).toBe('tok');
   });
@@ -345,7 +355,7 @@ describe('settings in the app', () => {
     await user.type(serverUrlBox(), '192.168.1.5:3000');
     await vi.waitFor(() => expect(fetch).toHaveBeenCalled(), { timeout: 2000 });
     up = false;
-    await user.click(screen.getByRole('button', { name: /^Connect/ }));
+    await user.click(screen.getByRole('button', { name: /^connect/ }));
     expect(
       await screen.findByText('Server responded with 500', {}, { timeout: 2000 })
     ).toBeInTheDocument();

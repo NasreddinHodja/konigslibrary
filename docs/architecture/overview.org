@@ -33,19 +33,19 @@ One SvelteKit frontend runs in four places. What changes between them is where t
 
 * Stack
 
-| Layer     | Technology                                     |
-|-----------+------------------------------------------------|
-| Framework | Svelte 5 (runes), SvelteKit 2                  |
-| Language  | TypeScript (strict)                            |
-| Styling   | Tailwind CSS 4, Source Code Pro monospace font |
-| Desktop   | Tauri 2 (Rust)                                 |
-| Server    | Rust, axum, SQLite                             |
-| Icons     | Lucide Svelte                                  |
-| Quality   | ESLint 9, Prettier, svelte-check               |
-| Tests     | Vitest, Testing Library (jsdom), cargo test    |
-| E2E       | Playwright, axe                                |
-| Coverage  | Vitest v8 coverage, cargo-llvm-cov             |
-| Budgets   | Lighthouse CI, gzipped bundle size             |
+| Layer     | Technology                                                          |
+|-----------+---------------------------------------------------------------------|
+| Framework | Svelte 5 (runes), SvelteKit 2                                       |
+| Language  | TypeScript (strict)                                                 |
+| Styling   | Tailwind CSS 4, IBM VGA 9x16 bitmap font (=docs/design/system.org=) |
+| Desktop   | Tauri 2 (Rust)                                                      |
+| Server    | Rust, axum, SQLite                                                  |
+| Icons     | None: glyphs from the font                                          |
+| Quality   | ESLint 9, Prettier, svelte-check                                    |
+| Tests     | Vitest, Testing Library (jsdom), cargo test                         |
+| E2E       | Playwright, axe                                                     |
+| Coverage  | Vitest v8 coverage, cargo-llvm-cov                                  |
+| Budgets   | Lighthouse CI, gzipped bundle size                                  |
 
 * Rust crates
 

@@ -1,16 +1,18 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
 
+  // Primary is the one thing a screen is for: filled with ink and raised, and
+  // pressed it sinks into its shadow. Default is an ink outline that inverts
+  // on hover. Text is a bare word, only as tall as its line: `hit` gives it
+  // the touch target.
   let {
-    size = 'md',
     variant = 'default',
     disabled = false,
     class: className = '',
     onclick,
     children
   }: {
-    size?: 'lg' | 'md' | 'sm';
-    variant?: 'default' | 'primary' | 'ghost';
+    variant?: 'default' | 'primary' | 'text';
     disabled?: boolean;
     class?: string;
     onclick?: () => void;
@@ -19,25 +21,17 @@
 
   const variantClass = $derived(
     {
-      default: 'border-2 hover:bg-fg/10',
-      primary: 'bg-fg text-bg hover:bg-fg/90',
-      ghost: 'hover:bg-fg/10'
+      primary:
+        'h-8 border border-ink bg-ink px-3 pointer-coarse:h-10 text-bg shadow-raised enabled:hover:bg-hi enabled:active:translate-x-0.5 enabled:active:translate-y-0.5 enabled:active:shadow-sunk',
+      default:
+        'h-8 border border-ink px-3 pointer-coarse:h-10 text-ink enabled:hover:bg-ink enabled:hover:text-bg',
+      text: 'text-ink enabled:hover:text-hi enabled:hover:underline'
     }[variant]
-  );
-
-  const sizeClass = $derived(
-    {
-      lg: 'px-6 py-3 text-sm font-bold tracking-wide',
-      md: 'px-3 py-2 text-sm',
-      sm: 'px-2 py-1 text-xs'
-    }[size]
   );
 </script>
 
 <button
-  class="hit relative inline-flex items-center gap-2 {variantClass} {sizeClass} {className} {disabled
-    ? 'cursor-not-allowed opacity-60'
-    : 'cursor-pointer'}"
+  class="hit relative inline-flex shrink-0 cursor-pointer items-center justify-center gap-2 disabled:cursor-default disabled:opacity-40 {variantClass} {className}"
   {onclick}
   {disabled}
 >

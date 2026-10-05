@@ -1,7 +1,6 @@
 <script lang="ts">
-  import { CircleQuestionMark } from 'lucide-svelte';
+  import Icon from '$lib/ui/Icon.svelte';
   import AppShell from '$lib/ui/AppShell.svelte';
-  import PageContainer from '$lib/ui/PageContainer.svelte';
   import Button from '$lib/ui/Button.svelte';
   import BackLink from '$lib/ui/BackLink.svelte';
   import {
@@ -29,7 +28,6 @@
   } from '$lib/sources/server-connect';
   import ShareLan from '$lib/ui/ShareLan.svelte';
   import AccountSettings from '$lib/ui/AccountSettings.svelte';
-  import { FolderOpen, X } from 'lucide-svelte';
   import Skeleton from '$lib/ui/Skeleton.svelte';
   import DirectoryBrowser from '$lib/ui/DirectoryBrowser.svelte';
   import { PRESETS, getTheme, setTheme } from '$lib/theme';
@@ -38,13 +36,12 @@
   import { readLogs } from '$lib/utils/diagnostics';
   import { copyText } from '$lib/utils/bridge';
 
+  const FIELD = 'h-8 w-full border border-ink bg-bg px-2 placeholder:text-dim pointer-coarse:h-10';
+
   const TOKEN_LABELS: [keyof Theme, string][] = [
-    ['bg', 'Background'],
-    ['fg', 'Foreground'],
-    ['surface', 'Surface'],
-    ['border', 'Border'],
-    ['muted', 'Muted'],
-    ['readerBg', 'Reader background']
+    ['bg', 'background'],
+    ['fg', 'text'],
+    ['ink', 'ink']
   ];
 
   let theme = $state(getTheme());
@@ -54,7 +51,7 @@
   );
 
   function applyPreset(preset: (typeof PRESETS)[number]) {
-    theme = { ...preset };
+    theme = { bg: preset.bg, fg: preset.fg, ink: preset.ink };
     setTheme(theme);
   }
 
@@ -121,11 +118,11 @@
   // The page's sections, for the jump links; some only exist on some builds.
   // Android can't read shared storage by path; manga come in through Upload.
   const sections = [
-    { id: 'library', label: 'Library', show: isLocalServer || (native && !android) },
-    { id: 'server', label: 'Server', show: isLocalServer || native },
-    { id: 'theme', label: 'Theme', show: true },
-    { id: 'shortcuts', label: 'Shortcuts', show: !isMobile },
-    { id: 'diagnostics', label: 'Diagnostics', show: native }
+    { id: 'library', label: 'library', show: isLocalServer || (native && !android) },
+    { id: 'server', label: 'server', show: isLocalServer || native },
+    { id: 'theme', label: 'theme', show: true },
+    { id: 'shortcuts', label: 'shortcuts', show: !isMobile },
+    { id: 'diagnostics', label: 'diagnostics', show: native }
   ].filter((s) => s.show);
   let deviceDir = $state(getMangaDir());
 
@@ -260,116 +257,88 @@
   }
 </script>
 
-{#snippet sectionHeader(label: string)}
-  <div class="border-b border-line py-3">
-    <span class="text-xs font-bold tracking-widest text-dim">{label}</span>
-  </div>
-{/snippet}
-
 <svelte:window onkeydown={handleKeyCapture} />
 
+{#snippet field(label: string)}
+  <span class="text-dim">{label}</span>
+{/snippet}
+
 {#snippet settingsBody()}
-  <BackLink label="BACK" onclick={backOrHome} />
-
-  <p class="py-12 text-center text-4xl font-bold tracking-widest md:text-left">KONIGSLIBRARY</p>
-
-  <div class="flex items-center justify-between gap-3">
-    <h1 class="text-2xl font-bold">Settings</h1>
-    {#if !native}
-      <a
-        href="/about"
-        class="hit relative flex w-fit cursor-pointer items-center gap-1.5 text-xs tracking-widest text-dim hover:text-soft"
-      >
-        <CircleQuestionMark size={12} />
-        HOW TO USE
-      </a>
-    {/if}
-  </div>
-
-  <div class="flex items-center gap-2 overflow-x-auto">
-    {#each sections as { id, label } (id)}
-      <a
-        href="#settings-{id}"
-        onclick={jumpTo}
-        class="cursor-pointer border-2 border-line px-3 py-1.5 text-xs font-bold tracking-wide whitespace-nowrap text-dim hover:border-border/50 hover:text-fg pointer-coarse:py-3.5"
-      >
-        {label}
-      </a>
-    {/each}
+  <div class="flex flex-col gap-3 panel p-3">
+    <BackLink label="back" onclick={backOrHome} />
+    <div class="flex items-center justify-between gap-3 border-b border-ink">
+      <h1 class="text-2xl">settings</h1>
+      {#if !native}
+        <a href="/about" class="hit relative text-ink hover:text-hi hover:underline">how to use</a>
+      {/if}
+    </div>
+    <nav class="flex flex-wrap gap-x-4 gap-y-1">
+      {#each sections as { id, label } (id)}
+        <a
+          href="#settings-{id}"
+          onclick={jumpTo}
+          class="cursor-pointer text-ink hover:text-hi hover:underline pointer-coarse:py-2"
+        >
+          › {label}
+        </a>
+      {/each}
+    </nav>
   </div>
 
   {#if isLocalServer || (native && !android)}
-    <section id="settings-library" class="scroll-mt-[calc(1rem+var(--safe-top))]">
-      {@render sectionHeader('LIBRARY')}
+    <section
+      id="settings-library"
+      class="flex scroll-mt-[calc(1rem+var(--safe-top))] flex-col gap-3 panel p-3"
+    >
+      <h2 class="underline">library</h2>
 
       {#if isLocalServer}
-        <div class="py-4">
-          <h3 class="mb-3 text-sm font-bold text-dim">Manga directory</h3>
+        <label class="flex flex-col gap-1">
+          {@render field('manga directory')}
           {#if loadingDir}
-            <Skeleton class="h-10 w-full border-2 border-transparent" />
+            <Skeleton class="h-8 w-full" />
           {:else}
-            <div class="flex max-w-sm gap-2">
-              <input
-                type="text"
-                bind:value={mangaDir}
-                placeholder="/path/to/manga"
-                class="flex-1 border-2 bg-bg px-3 py-2 text-sm text-fg placeholder:text-dim pointer-coarse:py-3"
-              />
-              <button
-                class="border-2 px-3 text-dim hover:text-fg"
-                onclick={() => (browsingDir = true)}
-                aria-label="Browse"
-              >
-                <FolderOpen size={16} />
-              </button>
-            </div>
-            <div class="mt-3 flex items-center gap-3">
-              <Button size="md" onclick={saveDir}>Save</Button>
-              {#if saved}
-                <span class="text-sm text-dim">Saved - reload to see library</span>
-              {/if}
-              {#if error}
-                <span class="text-sm text-error">{error}</span>
-              {/if}
-            </div>
+            <input type="text" bind:value={mangaDir} placeholder="/path/to/manga" class={FIELD} />
           {/if}
-        </div>
-      {:else}
-        <div class="flex flex-col gap-5 py-4">
-          <div class="space-y-3">
-            <h3 class="text-sm font-bold text-dim">Manga directory</h3>
-            <div class="flex max-w-sm gap-2">
-              <input
-                type="text"
-                bind:value={deviceDir}
-                placeholder="/home/user/Manga"
-                class="flex-1 border-2 bg-bg px-3 py-2 text-sm text-fg placeholder:text-dim pointer-coarse:py-3"
-              />
-              <button
-                class="border-2 px-3 text-dim hover:text-fg"
-                onclick={browseDeviceDir}
-                aria-label="Browse"
-              >
-                <FolderOpen size={16} />
-              </button>
-            </div>
-            <Button size="md" onclick={saveDeviceDir}>Save</Button>
+        </label>
+        {#if !loadingDir}
+          <div class="flex flex-wrap items-center gap-3">
+            <Button onclick={() => (browsingDir = true)}><Icon name="folder" /> browse…</Button>
+            <Button onclick={saveDir}>save</Button>
+            {#if saved}
+              <span class="text-dim">Saved - reload to see library</span>
+            {/if}
+            {#if error}
+              <span class="text-ink">► <span>{error}</span></span>
+            {/if}
           </div>
-
-          <ShareLan />
+        {/if}
+      {:else}
+        <label class="flex flex-col gap-1">
+          {@render field('manga directory')}
+          <input type="text" bind:value={deviceDir} placeholder="/home/user/Manga" class={FIELD} />
+        </label>
+        <div class="flex gap-3">
+          <Button onclick={browseDeviceDir}><Icon name="folder" /> browse…</Button>
+          <Button onclick={saveDeviceDir}>save</Button>
         </div>
+
+        <ShareLan />
       {/if}
     </section>
   {/if}
 
   {#if isLocalServer || native}
-    <section id="settings-server" class="scroll-mt-[calc(1rem+var(--safe-top))]">
-      {@render sectionHeader('SERVER')}
+    <section
+      id="settings-server"
+      class="flex scroll-mt-[calc(1rem+var(--safe-top))] flex-col gap-3 panel p-3"
+    >
+      <h2 class="underline">server</h2>
 
       {#if native}
-        <div class="space-y-3 py-4">
-          <h3 class="text-sm font-bold text-dim">Server URL</h3>
-          <div class="relative max-w-sm">
+        <label class="flex flex-col gap-1">
+          {@render field('server url')}
+          <span class="relative">
             <input
               type="text"
               bind:this={serverUrlInput}
@@ -378,39 +347,35 @@
               onkeydown={handleServerUrlKey}
               aria-label="Server URL"
               aria-invalid={probeStatus === 'error'}
-              class="w-full border-2 bg-bg py-2 pr-9 pl-3 text-sm text-fg placeholder:text-dim pointer-coarse:py-3"
-              style:border-color={probeStatus === 'ok'
-                ? 'color-mix(in oklab, var(--color-success) 60%, transparent)'
-                : probeStatus === 'error'
-                  ? 'color-mix(in oklab, var(--color-error) 60%, transparent)'
-                  : undefined}
+              class="{FIELD} pr-8 {probeStatus === 'error' ? 'border-dashed' : ''}"
             />
             {#if serverUrl}
               <button
-                class="absolute inset-y-0 right-0 px-3 text-dim hover:text-fg"
+                class="absolute inset-y-0 right-0 flex cursor-pointer items-center px-2 text-ink hover:text-hi"
                 onclick={clearServerUrl}
                 aria-label="Clear"
               >
-                <X size={16} />
+                <Icon name="close" size={12} />
               </button>
             {/if}
-          </div>
-          <div class="flex items-center gap-3">
-            <Button size="md" onclick={connectServer} disabled={connecting}>
-              <!-- Both labels laid over each other: the button keeps the
-                   longer one's width, so the error beside it holds still. -->
-              <span class="grid">
-                <span class="col-start-1 row-start-1 {connecting ? 'invisible' : ''}">Connect</span>
-                <span class="col-start-1 row-start-1 {connecting ? '' : 'invisible'}"
-                  >Connecting…</span
-                >
-              </span>
-            </Button>
-            <!-- In words too, not only the field's border colour. -->
-            <span role="status" class="text-sm {connectError ? 'text-error' : 'text-dim'}">
-              {#if connectError}{connectError}{:else if probeStatus === 'ok'}Server found{/if}
+          </span>
+        </label>
+        <div class="flex flex-wrap items-center gap-3">
+          <Button onclick={connectServer} disabled={connecting}>
+            <!-- Both labels laid over each other: the button keeps the
+                 longer one's width, so the error beside it holds still. -->
+            <span class="grid">
+              <span class="col-start-1 row-start-1 {connecting ? 'invisible' : ''}">connect</span>
+              <span class="col-start-1 row-start-1 {connecting ? '' : 'invisible'}"
+                >connecting…</span
+              >
             </span>
-          </div>
+          </Button>
+          <!-- In words too, not only the field's border. -->
+          <span role="status" class={connectError ? 'text-ink' : 'text-dim'}>
+            {#if connectError}► <span>{connectError}</span>{:else if probeStatus === 'ok'}Server
+              found{/if}
+          </span>
         </div>
       {/if}
       {#if hasServer}
@@ -419,146 +384,129 @@
     </section>
   {/if}
 
-  <section id="settings-theme" class="scroll-mt-[calc(1rem+var(--safe-top))]">
-    {@render sectionHeader('THEME')}
-
-    <div class="flex flex-col gap-5 py-4">
-      <div>
-        <h3 class="mb-3 text-sm font-bold text-dim">Presets</h3>
-        <div class="grid grid-cols-3 gap-2">
-          {#each PRESETS as preset (preset.id)}
-            <button
-              class="flex cursor-pointer flex-col gap-2 border-2 p-1.5 text-left {activePresetId ===
-              preset.id
-                ? 'border-fg'
-                : 'border-line hover:border-border/50'}"
-              onclick={() => applyPreset(preset)}
-            >
-              <!-- The library page in the preset's colours: title, search box, covers. -->
-              <div
-                class="flex aspect-[4/3] w-full flex-col gap-1.5 p-2 ring-1 ring-line"
-                style:background={preset.bg}
-              >
-                <div class="h-1.5 w-1/2" style:background={preset.fg}></div>
-                <div
-                  class="h-2.5 w-full border"
-                  style:border-color="color-mix(in oklab, {preset.border} 25%, transparent)"
-                ></div>
-                <div class="grid flex-1 grid-cols-3 gap-1">
-                  {#each { length: 6 }, i (i)}
-                    <div
-                      style:background="color-mix(in oklab, {preset.fg}
-                      {i === 0 ? 45 : 15}%, transparent)"
-                    ></div>
-                  {/each}
-                </div>
-              </div>
-              <span class="px-0.5 text-xs">{preset.name}</span>
-            </button>
-          {/each}
-        </div>
-      </div>
-
-      <div>
-        <div class="mb-1 flex items-center justify-between gap-3">
-          <h3 class="text-sm font-bold text-dim">Customize</h3>
-          <Button size="sm" onclick={() => applyPreset(PRESETS[0])}>Reset to default</Button>
-        </div>
-        <div class="divide-y divide-line">
-          {#each TOKEN_LABELS as [key, label] (key)}
-            <label class="flex items-center justify-between py-2">
-              <span class="text-sm text-soft">{label}</span>
-              <input
-                type="color"
-                value={theme[key]}
-                oninput={(e) => updateToken(key, (e.currentTarget as HTMLInputElement).value)}
-                class="h-7 w-12 cursor-pointer border-2 border-line bg-transparent p-0.5 pointer-coarse:h-12 pointer-coarse:w-16"
-              />
-            </label>
-          {/each}
-        </div>
-      </div>
+  <section
+    id="settings-theme"
+    class="flex scroll-mt-[calc(1rem+var(--safe-top))] flex-col gap-3 panel p-3"
+  >
+    <div class="flex items-center justify-between gap-3">
+      <h2 class="underline">theme</h2>
+      <Button variant="text" onclick={() => applyPreset(PRESETS[0])}>reset colours</Button>
+    </div>
+    <div class="grid grid-cols-[repeat(auto-fill,minmax(10rem,1fr))] gap-2">
+      {#each PRESETS as preset (preset.id)}
+        <button
+          class="flex cursor-pointer items-center gap-2 border border-ink p-1 text-left {activePresetId ===
+          preset.id
+            ? 'bg-ink text-bg'
+            : 'text-ink hover:bg-ink3 hover:text-hi'}"
+          onclick={() => applyPreset(preset)}
+        >
+          <!-- The preset's three colours. -->
+          <span class="flex shrink-0 border border-ink3">
+            <span class="size-5" style:background={preset.bg}></span>
+            <span class="size-5" style:background={preset.fg}></span>
+            <span class="size-5" style:background={preset.ink}></span>
+          </span>
+          {preset.name}
+        </button>
+      {/each}
+    </div>
+    <div class="flex flex-col">
+      {#each TOKEN_LABELS as [key, label] (key)}
+        <label class="flex items-center justify-between border-b border-ink3 py-1">
+          <span>{label}</span>
+          <input
+            type="color"
+            value={theme[key]}
+            oninput={(e) => updateToken(key, (e.currentTarget as HTMLInputElement).value)}
+            class="h-8 w-12 cursor-pointer border border-ink bg-bg p-0.5 pointer-coarse:h-10 pointer-coarse:w-16"
+          />
+        </label>
+      {/each}
     </div>
   </section>
 
   {#if !isMobile}
-    <section id="settings-shortcuts" class="scroll-mt-[calc(1rem+var(--safe-top))]">
-      <div class="flex items-center justify-between gap-3 border-b border-line py-3">
-        <span class="text-xs font-bold tracking-widest text-dim">KEYBOARD SHORTCUTS</span>
-        <Button size="sm" onclick={handleReset}>Reset to defaults</Button>
+    <section
+      id="settings-shortcuts"
+      class="flex scroll-mt-[calc(1rem+var(--safe-top))] flex-col gap-3 panel p-3"
+    >
+      <div class="flex items-center justify-between gap-3">
+        <h2 class="underline">keyboard shortcuts</h2>
+        <Button variant="text" onclick={handleReset}>reset keys</Button>
       </div>
 
-      <div class="flex flex-col gap-5 py-4">
-        {#each categories as [category, items] (category)}
-          <div>
-            <h3 class="mb-2 text-sm font-bold text-dim">{category}</h3>
-            <div class="divide-y divide-line">
-              {#each items as binding (binding.action)}
-                <div class="flex items-center justify-between py-2">
-                  <span class="text-sm text-soft">{binding.label}</span>
-                  <button
-                    class="flex min-w-[5rem] cursor-pointer justify-center gap-1 border-2 px-2 py-1 pointer-coarse:py-3 {listening ===
-                    binding.action
-                      ? 'border-fg'
-                      : 'border-line hover:border-fg/50'}"
-                    onclick={() => startListening(binding.action)}
-                    aria-label="{binding.label}: {listening === binding.action
-                      ? 'press a key'
-                      : binding.keys.map(formatKey).join(', ') || 'unbound'}"
-                  >
-                    {#if listening === binding.action}
-                      <span class="text-xs text-dim">Press a key...</span>
-                    {:else}
-                      {#each binding.keys as key (key)}
-                        <kbd class="text-xs">{formatKey(key)}</kbd>
-                      {/each}
-                      {#if binding.keys.length === 0}
-                        <span class="text-xs text-dim">unbound</span>
-                      {/if}
-                    {/if}
-                  </button>
-                </div>
-              {/each}
+      {#each categories as [category, items] (category)}
+        <div class="flex flex-col">
+          <h3 class="text-dim">{category.toLowerCase()}</h3>
+          {#each items as binding (binding.action)}
+            <div class="flex items-center justify-between gap-3 border-b border-ink3 py-1">
+              <span>{binding.label}</span>
+              <button
+                class="flex h-8 min-w-[5rem] cursor-pointer items-center justify-center gap-2 border border-ink px-2 pointer-coarse:h-10 {listening ===
+                binding.action
+                  ? 'bg-ink text-bg'
+                  : 'text-ink hover:bg-ink3 hover:text-hi'}"
+                onclick={() => startListening(binding.action)}
+                aria-label="{binding.label}: {listening === binding.action
+                  ? 'press a key'
+                  : binding.keys.map(formatKey).join(', ') || 'unbound'}"
+              >
+                {#if listening === binding.action}
+                  press a key…
+                {:else}
+                  {#each binding.keys as key (key)}
+                    <kbd>{formatKey(key)}</kbd>
+                  {/each}
+                  {#if binding.keys.length === 0}
+                    <span class="text-dim">unbound</span>
+                  {/if}
+                {/if}
+              </button>
             </div>
-          </div>
-        {/each}
-      </div>
+          {/each}
+        </div>
+      {/each}
     </section>
   {/if}
 
   {#if native}
-    <section id="settings-diagnostics" class="scroll-mt-[calc(1rem+var(--safe-top))]">
-      {@render sectionHeader('DIAGNOSTICS')}
-
-      <div class="space-y-3 py-4">
-        <p class="text-sm text-soft">
-          The app's logs, with its version and platform, for a bug report.
-        </p>
-        <Button size="md" onclick={copyLogs}>Copy logs</Button>
-      </div>
+    <section
+      id="settings-diagnostics"
+      class="flex scroll-mt-[calc(1rem+var(--safe-top))] flex-col gap-3 panel p-3"
+    >
+      <h2 class="underline">diagnostics</h2>
+      <p>The app's logs, with its version and platform, for a bug report.</p>
+      <div><Button onclick={copyLogs}>copy logs</Button></div>
     </section>
   {/if}
+
+  <!-- The app's name, signed. -->
+  <footer class="flex flex-col items-center gap-2 py-10">
+    <pre class="bg-bg text-2xl leading-none text-ink" aria-label="konigslibrary">╔═════════════╗
+║KONIGSLIBRARY║
+╚═════════════╝</pre>
+    <p class="bg-bg px-1 text-dim">by nas</p>
+  </footer>
+{/snippet}
+
+{#snippet page(bottom: string)}
+  <div
+    class="mx-auto flex w-full max-w-4xl flex-col gap-3 px-3 md:px-8 {bottom}"
+    style="padding-top: calc(0.75rem + var(--safe-top, 0px))"
+  >
+    {@render settingsBody()}
+  </div>
 {/snippet}
 
 {#if native || isLocalServer}
   <AppShell active="settings">
-    <div class="md:pl-14">
-      <PageContainer>
-        <div
-          class="space-y-6 pb-[calc(5.25rem_+_var(--safe-bottom,_0px))] md:pb-8"
-          style="padding-top: calc(2rem + var(--safe-top, 0px))"
-        >
-          {@render settingsBody()}
-        </div>
-      </PageContainer>
+    <div class="md:pl-24">
+      {@render page('pb-[calc(5.25rem_+_var(--safe-bottom,_0px))] md:pb-8')}
     </div>
   </AppShell>
 {:else}
-  <PageContainer>
-    <div class="space-y-6 pb-8" style="padding-top: calc(2rem + var(--safe-top, 0px))">
-      {@render settingsBody()}
-    </div>
-  </PageContainer>
+  {@render page('pb-8')}
 {/if}
 
 {#if browsingDir}

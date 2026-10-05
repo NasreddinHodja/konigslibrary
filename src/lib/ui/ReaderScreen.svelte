@@ -124,7 +124,7 @@
 
 <div
   bind:this={el}
-  class="flex h-dvh bg-reader-bg select-none"
+  class="flex h-dvh bg-bg select-none"
   role="presentation"
   out:fadeOut
   in:fadeInAfter

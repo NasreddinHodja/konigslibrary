@@ -31,7 +31,7 @@
   {@attach focusTrap}
 >
   <div
-    class="pointer-events-auto w-full border-2 {panelClass}"
+    class="pointer-events-auto w-full panel {panelClass}"
     in:fly={{ y: 10, duration: ANIM_DURATION, easing: ANIM_EASE }}
     out:fadeOut
   >

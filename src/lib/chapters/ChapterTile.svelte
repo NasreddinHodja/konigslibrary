@@ -50,9 +50,14 @@
   });
 </script>
 
+<!-- A 1px ink frame; the chapter to resume, 2px more drawn inside it as an
+     outline (it takes no room, so the bar stays level with the others') and
+     an inverted bar. -->
 <button
-  class="relative flex aspect-[2/3] cursor-pointer flex-col justify-end overflow-hidden border-2 text-left
-    {highlighted ? 'border-fg' : 'border-line hover:border-line-strong'}"
+  class="relative flex aspect-[2/3] cursor-pointer flex-col justify-end overflow-hidden border
+    border-ink text-left {highlighted
+    ? 'outline-2 -outline-offset-3 outline-ink outline-solid'
+    : 'hover:border-hi'}"
   {title}
   aria-label={title}
   {onclick}
@@ -64,10 +69,11 @@
     <img {src} alt="" class="absolute inset-0 h-full w-full object-cover object-top" />
   {/if}
   <div
-    class="relative flex items-baseline justify-between gap-1 px-1.5 py-1
-      {src ? 'bg-bg/85 backdrop-blur-md' : ''}"
+    class="relative flex items-baseline justify-between gap-1 border-t border-ink px-1 {highlighted
+      ? 'bg-ink text-bg'
+      : 'bg-bg'}"
   >
-    <span class="text-sm font-bold tabular-nums {highlighted ? '' : 'text-soft'}">{number}</span>
-    <span class="text-[11px] text-dim tabular-nums">{pageCount}p</span>
+    <span class="tabular-nums">{number}</span>
+    <span class="tabular-nums {highlighted ? '' : 'text-dim'}">{pageCount}p</span>
   </div>
 </button>

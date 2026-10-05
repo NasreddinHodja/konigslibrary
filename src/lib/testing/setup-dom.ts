@@ -28,6 +28,10 @@ Element.prototype.scrollTo ??= () => {};
 
 globalThis.IntersectionObserver ??= FakeIntersectionObserver;
 
+// No canvas: the theme's dither texture is left out, as the app does where
+// a canvas can't be had. jsdom's own logs "not implemented" for each.
+HTMLCanvasElement.prototype.getContext = () => null;
+
 // No `inert`: without it Svelte's `inert={…}` sets a plain property and leaves
 // no trace in the DOM. Reflected to the attribute, as the spec has it. Testing
 // Library still doesn't treat inert content as hidden, so tests scope to it.

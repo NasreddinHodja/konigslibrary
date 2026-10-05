@@ -4,9 +4,4 @@
   let { onclick }: { onclick: () => void } = $props();
 </script>
 
-<button
-  class="fixed inset-0 z-40 bg-bg opacity-50 backdrop-blur-sm"
-  aria-label="Close"
-  {onclick}
-  out:fadeOut
-></button>
+<button class="fixed inset-0 z-40 checker" aria-label="Close" {onclick} out:fadeOut></button>

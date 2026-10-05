@@ -1,6 +1,7 @@
 <script lang="ts">
+  import Icon from './Icon.svelte';
+  import Button from './Button.svelte';
   import { onMount } from 'svelte';
-  import { X, Download } from 'lucide-svelte';
   import { openUrl } from '@tauri-apps/plugin-opener';
   import { checkForUpdate, dismissUpdate, type UpdateInfo } from '$lib/utils/update';
 
@@ -23,19 +24,19 @@
 
 {#if update}
   <div
-    class="fixed top-0 right-0 left-0 z-50 flex items-center gap-3 border-b-2 border-border bg-bg px-4 py-2"
+    class="fixed top-0 right-0 left-0 z-50 flex items-center gap-3 border-b border-ink bg-bg px-3 py-2"
     style="padding-top: calc(0.5rem + var(--safe-top))"
   >
-    <span class="font-mono text-sm text-fg">Update available: v{update.version}</span>
-    <button
-      class="hit relative ml-auto flex items-center gap-1 border-2 border-border px-2 py-1 font-mono text-xs font-bold tracking-widest text-fg hover:bg-fg hover:text-bg"
-      onclick={download}
+    <span>update available: v{update.version}</span>
+    <span class="ml-auto"
+      ><Button onclick={download}><Icon name="download" /> download</Button></span
     >
-      <Download size={12} />
-      DOWNLOAD
-    </button>
-    <button class="hit relative text-fg hover:text-muted" onclick={dismiss} aria-label="Dismiss">
-      <X size={16} />
+    <button
+      class="hit relative flex cursor-pointer items-center justify-center text-ink hover:text-hi"
+      onclick={dismiss}
+      aria-label="Dismiss"
+    >
+      <Icon name="close" />
     </button>
   </div>
 {/if}

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { ArrowLeft, Minus, Plus, Settings } from 'lucide-svelte';
+  import Icon from '$lib/ui/Icon.svelte';
   import { getReaderContext } from '$lib/context';
   import { chapterLabel } from '$lib/utils/chapters';
   import Toggle from '$lib/ui/Toggle.svelte';
@@ -31,98 +31,97 @@
 
 <!-- Top bar -->
 <div
-  class="fixed inset-x-0 top-0 z-40 flex items-center gap-4 bg-surface/85 px-4 backdrop-blur-2xl transition-transform duration-200 ease-out
+  class="fixed inset-x-0 top-0 z-40 flex items-center gap-3 bg-bg px-3 transition-transform duration-(--duration-anim) ease-out
     {shown ? 'pointer-events-auto translate-y-0' : 'pointer-events-none -translate-y-full'}"
-  style="padding-top: calc(0.75rem + var(--safe-top)); padding-bottom: 0.75rem;"
+  style="padding-top: calc(0.5rem + var(--safe-top)); padding-bottom: 0.625rem;"
   inert={!shown}
 >
   <button
-    class="hit relative shrink-0 cursor-pointer p-1 text-soft hover:text-fg"
+    class="hit relative flex shrink-0 cursor-pointer items-center justify-center text-ink hover:text-hi"
     onclick={onback}
     aria-label="Back"
   >
-    <ArrowLeft size={18} />
+    <Icon name="back" size={18} />
   </button>
 
-  <div class="flex min-w-0 flex-1 items-baseline gap-2 overflow-hidden">
-    <span class="shrink-0 truncate text-sm font-bold">{mangaName}</span>
+  <div class="flex min-w-0 flex-1 flex-col">
+    <span class="truncate">{mangaName}</span>
     {#if manga.selectedChapter}
-      <span class="shrink-0 text-xs text-dim">·</span>
-      <span class="truncate text-xs text-soft">{chapterLabel(manga.selectedChapter)}</span>
+      <span class="truncate text-dim">{chapterLabel(manga.selectedChapter)}</span>
     {/if}
   </div>
 
   <button
-    class="hit relative shrink-0 cursor-pointer text-xs tabular-nums hover:text-soft"
+    class="hit relative flex h-8 shrink-0 cursor-pointer items-center border border-ink px-2 text-ink tabular-nums hover:bg-ink hover:text-bg pointer-coarse:h-10"
     onclick={() => (pickerOpen = true)}
     title="Jump to page"
   >
-    {manga.currentPage + 1} / {totalPages}
+    {manga.currentPage + 1}/{totalPages}
   </button>
 
-  <!-- Chapter progress line -->
-  <div class="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-line-strong">
+  <!-- The bar's bottom edge is the chapter's progress. -->
+  <div class="pointer-events-none absolute inset-x-0 bottom-0 h-0.5 bg-ink3">
     <div
-      class="h-full bg-fg/65 transition-[width] duration-300 ease-out"
+      class="h-full bg-ink transition-[width] duration-(--duration-anim) ease-out"
       style="width: {progress}%"
     ></div>
   </div>
 </div>
 
-<!-- Bottom controls island -->
+<!-- Bottom controls -->
 <div
-  class="fixed bottom-4 left-1/2 z-40 w-full max-w-xs -translate-x-1/2 border border-line-strong bg-surface/85 px-4 backdrop-blur-2xl transition-transform duration-200 ease-out
+  class="fixed bottom-4 left-1/2 z-40 w-[calc(100%-2rem)] max-w-xs -translate-x-1/2 panel p-3 transition-transform duration-(--duration-anim) ease-out
       {shown
     ? 'pointer-events-auto translate-y-0'
     : 'pointer-events-none translate-y-[calc(100%+1rem)]'}"
-  style="padding-top: 1rem; padding-bottom: calc(1rem + var(--safe-bottom, 0px));"
+  style="padding-bottom: calc(0.75rem + var(--safe-bottom, 0px));"
   inert={!shown}
 >
-  <div class="w-full space-y-3">
-    <!-- Mode-dependent controls share one grid cell so swapping them never changes the island height -->
+  <div class="flex w-full flex-col gap-3">
+    <!-- Mode-dependent controls share one grid cell so swapping them never changes the panel's height -->
     <div class="grid">
       <div
-        class="col-start-1 row-start-1 flex items-center justify-between border-2 px-3 transition-opacity duration-150 ease-out
-          {manga.scrollMode ? 'opacity-100 delay-150' : 'pointer-events-none opacity-0'}"
+        class="col-start-1 row-start-1 flex items-center justify-between transition-opacity duration-(--duration-anim) ease-out
+          {manga.scrollMode ? 'opacity-100' : 'pointer-events-none opacity-0'}"
         inert={!manga.scrollMode}
       >
-        <span class="text-xs font-bold tracking-widest">ZOOM</span>
-        <div class="flex items-center gap-3">
+        <span class="text-dim">zoom</span>
+        <div class="flex items-center gap-2">
           <button
-            class="hit relative cursor-pointer p-1 text-soft hover:text-fg"
+            class="hit relative flex size-8 cursor-pointer items-center justify-center border border-ink text-ink hover:bg-ink hover:text-bg pointer-coarse:size-10"
             onclick={zoomOut}
             aria-label="Zoom out"
           >
-            <Minus size={14} />
+            <Icon name="zoomOut" size={15} />
           </button>
-          <span class="w-10 text-center text-sm tabular-nums">{Math.round(manga.zoom * 100)}%</span>
+          <span class="w-12 text-center tabular-nums">{Math.round(manga.zoom * 100)}%</span>
           <button
-            class="hit relative cursor-pointer p-1 text-soft hover:text-fg"
+            class="hit relative flex size-8 cursor-pointer items-center justify-center border border-ink text-ink hover:bg-ink hover:text-bg pointer-coarse:size-10"
             onclick={zoomIn}
             aria-label="Zoom in"
           >
-            <Plus size={14} />
+            <Icon name="zoomIn" size={15} />
           </button>
         </div>
       </div>
 
       <div
-        class="col-start-1 row-start-1 transition-opacity duration-150 ease-out
-          {manga.scrollMode ? 'pointer-events-none opacity-0' : 'opacity-100 delay-150'}"
+        class="col-start-1 row-start-1 transition-opacity duration-(--duration-anim) ease-out
+          {manga.scrollMode ? 'pointer-events-none opacity-0' : 'opacity-100'}"
         inert={manga.scrollMode}
       >
-        <Toggle labelA="LTR" labelB="RTL" active={manga.rtl} onclick={toggleRtl} />
+        <Toggle labelA="ltr" labelB="rtl" active={manga.rtl} onclick={toggleRtl} />
       </div>
     </div>
 
-    <Toggle labelA="Turn" labelB="Scroll" active={manga.scrollMode} onclick={toggleScrollMode} />
+    <Toggle labelA="turn" labelB="scroll" active={manga.scrollMode} onclick={toggleScrollMode} />
 
     <a
       href="/settings"
-      class="hit relative flex items-center justify-center gap-1.5 pt-1 text-xs tracking-widest text-dim hover:text-fg"
+      class="hit relative flex items-center gap-2 self-center text-ink hover:text-hi hover:underline"
     >
-      <Settings size={12} />
-      SETTINGS
+      <Icon name="settings" />
+      settings
     </a>
   </div>
 </div>

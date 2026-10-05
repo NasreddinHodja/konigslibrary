@@ -1,14 +1,13 @@
 <script lang="ts">
+  import Icon from './Icon.svelte';
   import { tick } from 'svelte';
   import { MediaQuery } from 'svelte/reactivity';
   import { fade } from 'svelte/transition';
   import { ANIM_DURATION, ANIM_EASE } from '$lib/utils/constants';
-  import { ArrowDown01, ArrowDown10, BookOpen, Download } from 'lucide-svelte';
   import ListPanel from '$lib/ui/ListPanel.svelte';
   import { TILE, TILE_DESKTOP_QUERY } from '$lib/ui/tile-grid';
   import Skeleton from '$lib/ui/Skeleton.svelte';
   import Button from '$lib/ui/Button.svelte';
-  import PageContainer from '$lib/ui/PageContainer.svelte';
   import BackLink from '$lib/ui/BackLink.svelte';
   import { getReaderContext } from '$lib/context';
   import { isNative } from '$lib/utils/platform';
@@ -48,17 +47,27 @@
   let tagsEl: HTMLDivElement | undefined = $state();
   let tagsCollapsedH = 0;
 
+  /// The tags' laid-out height. Not scrollHeight: that counts overflow, and
+  /// the more/less button's touch area (`hit`) reaches below the row.
+  function naturalHeight(el: HTMLElement) {
+    const set = el.style.height;
+    el.style.height = 'auto';
+    const h = el.offsetHeight;
+    el.style.height = set;
+    return h;
+  }
+
   async function expandTags() {
     if (!tagsEl) {
       tagsExpanded = true;
       return;
     }
-    tagsCollapsedH = tagsEl.scrollHeight;
+    tagsCollapsedH = naturalHeight(tagsEl);
     tagsEl.style.height = tagsCollapsedH + 'px';
     tagsEl.style.overflow = 'hidden';
     tagsExpanded = true;
     await tick();
-    const to = tagsEl.scrollHeight;
+    const to = naturalHeight(tagsEl);
     requestAnimationFrame(() => {
       if (!tagsEl) return;
       tagsEl.style.transition = `height ${ANIM_DURATION}ms ease-out`;
@@ -74,7 +83,7 @@
       tagsExpanded = false;
       return;
     }
-    tagsEl.style.height = tagsEl.scrollHeight + 'px';
+    tagsEl.style.height = naturalHeight(tagsEl) + 'px';
     tagsEl.style.overflow = 'hidden';
     void tagsEl.offsetHeight; // force reflow so the browser registers the starting height
     tagsEl.style.transition = `height ${ANIM_DURATION}ms ease-out`;
@@ -154,6 +163,13 @@
     saveManga(serverSource.slug, reader.title, serverSource.getServerChapters(), reader.events);
   }
 
+  /// "resume ch. 12 p. 4": the app's own words are lowercase.
+  const resumeLabel = $derived(
+    savedProgress
+      ? `resume ${chapterLabel(savedProgress.chapter).toLowerCase()} p. ${savedProgress.page + 1}`
+      : ''
+  );
+
   function resume() {
     if (!savedProgress) return;
     manga.selectedChapter = savedProgress.chapter;
@@ -172,127 +188,76 @@
   }
 </script>
 
-{#snippet tagsValue()}
-  {#if meta && meta.tags.length}
-    {#each meta.tags.slice(0, tagsExpanded ? TAGS_EXPANDED : TAGS_COLLAPSED) as tag (tag)}
-      <span class="border border-line-strong px-2 py-0.5 text-xs text-dim">{tag}</span>
-    {/each}
-    {#if tagsExpanded}
-      <button
-        class="hit relative cursor-pointer border border-line px-2 py-0.5 text-xs text-dim hover:text-fg"
-        onclick={collapseTags}>less</button
-      >
-    {:else if meta.tags.length > TAGS_COLLAPSED}
-      <button
-        class="hit relative cursor-pointer border border-line px-2 py-0.5 text-xs text-dim hover:text-fg"
-        onclick={expandTags}>more</button
-      >
-    {/if}
-  {:else}
-    <span class="text-faint">—</span>
-  {/if}
+{#snippet fact(key: string, value: string)}
+  <div class="flex items-baseline gap-2">
+    <span class="shrink-0 text-dim">{key}</span>
+    <span class="min-w-4 flex-1 border-b border-dotted border-ink3"></span>
+    <span class="min-w-0 text-right wrap-break-word">{value}</span>
+  </div>
 {/snippet}
 
-{#snippet actions(layout: string)}
-  {#if savedProgress || canDownload}
-    <div class="flex {layout} justify-end gap-3">
-      {#if canDownload}
-        <Button
-          size="md"
-          variant="default"
-          class="border-line-strong"
-          onclick={() => (confirmingDownload = true)}
+{#snippet tags()}
+  <div class="flex flex-wrap items-baseline gap-x-2" bind:this={tagsEl}>
+    <span class="text-dim">tags</span>
+    {#if meta && meta.tags.length}
+      <span
+        >{#each meta.tags.slice(0, tagsExpanded ? TAGS_EXPANDED : TAGS_COLLAPSED) as tag, i (tag)}{i >
+          0
+            ? ', '
+            : ''}<span>{tag}</span>{/each}</span
+      >
+      {#if tagsExpanded}
+        <button
+          class="hit relative cursor-pointer text-ink hover:text-hi hover:underline"
+          onclick={collapseTags}>less</button
         >
-          <Download size={14} />
-          DOWNLOAD
-        </Button>
+      {:else if meta.tags.length > TAGS_COLLAPSED}
+        <button
+          class="hit relative cursor-pointer text-ink hover:text-hi hover:underline"
+          onclick={expandTags}>more</button
+        >
       {/if}
+    {:else}
+      <span class="text-dim">—</span>
+    {/if}
+  </div>
+{/snippet}
+
+{#snippet facts()}
+  <div class="flex min-w-0 flex-1 flex-col gap-1">
+    {#if meta}
+      <div class="flex flex-col gap-1" in:fade={{ duration: ANIM_DURATION, easing: ANIM_EASE }}>
+        {@render fact('status', meta.status || '—')}
+        {@render fact('author', meta.authors.join(', ') || '—')}
+        {@render fact('year', meta.year ? String(meta.year) : '—')}
+        {@render fact('filename', mangaName)}
+        {@render tags()}
+      </div>
+    {:else}
+      {#each ['author', 'year'] as key (key)}
+        <div class="flex items-center gap-2">
+          <span class="text-dim">{key}</span>
+          <Skeleton class="h-4 flex-1" />
+        </div>
+      {/each}
+      {@render fact('filename', mangaName)}
+    {/if}
+  </div>
+{/snippet}
+
+{#snippet actions()}
+  {#if savedProgress || canDownload}
+    <div class="flex flex-wrap gap-3">
       {#if savedProgress}
-        <Button size="md" variant="default" onclick={resume}>
-          RESUME: {chapterLabel(savedProgress.chapter)}, p.{savedProgress.page + 1}
-        </Button>
+        <Button variant="primary" class="max-md:w-full" onclick={resume}>{resumeLabel}</Button>
+      {/if}
+      {#if canDownload}
+        <Button class="max-md:w-full" onclick={() => (confirmingDownload = true)}
+          ><Icon name="download" /> download</Button
+        >
       {/if}
     </div>
   {/if}
-{/snippet}
-
-{#snippet specKey(label: string)}
-  <div
-    class="w-24 shrink-0 border-r border-line px-3 py-2.5 text-[11px] font-bold tracking-widest text-faint sm:w-28"
-  >
-    {label}
-  </div>
-{/snippet}
-
-{#snippet filenameRow()}
-  <div class="flex">
-    {@render specKey('FILENAME')}
-    <div class="min-w-0 flex-1 truncate px-3 py-2.5 text-sm text-dim">{mangaName}</div>
-  </div>
-{/snippet}
-
-{#snippet specTable()}
-  <div class="w-full divide-y divide-line border-2 border-line">
-    {#if meta}
-      <div class="flex" in:fade={{ duration: ANIM_DURATION, easing: ANIM_EASE }}>
-        {@render specKey('STATUS')}
-        <div class="flex min-w-0 flex-1 items-center px-3 py-2.5">
-          {#if meta.status}
-            <span
-              class="border px-2 py-0.5 text-xs font-bold tracking-widest uppercase {meta.status.toLowerCase() ===
-              'ongoing'
-                ? 'border-success/50 text-success'
-                : 'border-line text-dim'}"
-            >
-              {meta.status}
-            </span>
-          {:else}
-            <span class="text-sm text-faint">—</span>
-          {/if}
-        </div>
-      </div>
-      <div class="flex" in:fade={{ duration: ANIM_DURATION, easing: ANIM_EASE }}>
-        {@render specKey('AUTHOR')}
-        <div class="min-w-0 flex-1 px-3 py-2.5 text-sm">{meta.authors.join(', ') || '—'}</div>
-      </div>
-      <div class="flex" in:fade={{ duration: ANIM_DURATION, easing: ANIM_EASE }}>
-        {@render specKey('YEAR')}
-        <div class="min-w-0 flex-1 px-3 py-2.5 text-sm">{meta.year ?? '—'}</div>
-      </div>
-      {@render filenameRow()}
-      <div class="flex" in:fade={{ duration: ANIM_DURATION, easing: ANIM_EASE }}>
-        {@render specKey('TAGS')}
-        <div
-          class="flex min-w-0 flex-1 flex-wrap items-center gap-1.5 px-3 py-2.5"
-          bind:this={tagsEl}
-        >
-          {@render tagsValue()}
-        </div>
-      </div>
-    {:else}
-      <div class="flex">
-        {@render specKey('AUTHOR')}
-        <div class="flex min-w-0 flex-1 items-center px-3 py-2.5">
-          <Skeleton class="h-4 w-32" />
-        </div>
-      </div>
-      <div class="flex">
-        {@render specKey('YEAR')}
-        <div class="flex min-w-0 flex-1 items-center px-3 py-2.5">
-          <Skeleton class="h-4 w-10" />
-        </div>
-      </div>
-      {@render filenameRow()}
-      <div class="flex">
-        {@render specKey('TAGS')}
-        <div class="flex min-w-0 flex-1 flex-wrap items-center gap-1.5 px-3 py-2.5">
-          {#each [60, 52, 56, 48] as w (w)}
-            <Skeleton class="h-[18px]" style="width: {w}px" />
-          {/each}
-        </div>
-      </div>
-    {/if}
-  </div>
 {/snippet}
 
 {#snippet chapterTile(chapter: (typeof filteredChapters)[number])}
@@ -311,10 +276,7 @@
 
 {#snippet chapterGrid()}
   {#if filteredChapters.length === 0}
-    <p
-      class="py-8 text-center text-xs text-dim"
-      in:fade={{ duration: ANIM_DURATION, easing: ANIM_EASE }}
-    >
+    <p class="py-8 text-center text-dim" in:fade={{ duration: ANIM_DURATION, easing: ANIM_EASE }}>
       No chapters match "{search}"
     </p>
   {:else}
@@ -326,7 +288,7 @@
       minItemWidth={isDesktop ? TILE.desktop.min : TILE.phone.min}
       gap={isDesktop ? TILE.desktop.gap : TILE.phone.gap}
       overscan={5}
-      frameClass="bg-line"
+      frameClass="bg-ink3"
       key={(c) => c.name}
     >
       {#snippet item(chapter)}
@@ -337,7 +299,7 @@
 {/snippet}
 
 {#snippet cover(sizeClass: string)}
-  <div class="relative shrink-0 border-2 border-line {sizeClass}">
+  <div class="relative shrink-0 border-3 border-double border-ink {sizeClass}">
     {#if coverSrc.current && !coverFailed}
       <img
         src={coverSrc.current}
@@ -348,9 +310,7 @@
     {:else if reader.metaState === 'loading' || coverSrc.pending}
       <Skeleton class="absolute inset-0" />
     {:else}
-      <div class="flex h-full w-full items-center justify-center bg-fg/[0.03]">
-        <BookOpen size={22} class="opacity-20" />
-      </div>
+      <div class="flex h-full w-full items-center justify-center text-dim">no cover</div>
     {/if}
   </div>
 {/snippet}
@@ -358,56 +318,38 @@
 <!-- One page scroll for both layouts: the metadata scrolls away and the
      chapters' bar pins below the status bar, like the library's. -->
 <div
-  class="flex min-h-dvh w-full flex-col {showShell
-    ? 'pb-[calc(5.25rem_+_var(--safe-bottom))] md:pb-8'
+  class="relative flex min-h-dvh w-full flex-col {showShell
+    ? 'pb-[calc(5.5rem_+_var(--safe-bottom))] md:pb-3'
     : 'pb-[calc(2rem_+_var(--safe-bottom))]'}"
   style="padding-top: var(--safe-top)"
 >
-  <PageContainer>
-    <div class="flex flex-col gap-6 pt-8">
-      <BackLink label="LIBRARY" onclick={() => history.back()} />
+  <div class="relative mx-auto flex w-full max-w-4xl flex-1 flex-col gap-3 px-3 pt-3 md:px-8">
+    <div class="flex flex-col gap-3 panel p-3">
+      <BackLink label="library" onclick={() => history.back()} />
 
-      <h1 class="text-2xl leading-tight font-bold">{meta?.title || mangaName}</h1>
+      <h1 class="border-b border-ink text-2xl">{meta?.title || mangaName}</h1>
 
       {#if metaError && !meta}
-        {#if savedProgress}
-          <Button size="lg" variant="default" class="self-start" onclick={resume}>
-            RESUME: {chapterLabel(savedProgress.chapter)}, p.{savedProgress.page + 1}
-          </Button>
-        {/if}
-      {:else if isDesktop}
-        <div class="flex items-start gap-6">
-          {@render cover('h-56 w-40')}
-          <div class="min-w-0 flex-1">
-            {@render specTable()}
-          </div>
-        </div>
-
-        {@render actions('items-center')}
+        {@render actions()}
       {:else}
-        <div class="mx-auto">
-          {@render cover('h-64 w-44')}
+        <div class="flex gap-3">
+          {@render cover(isDesktop ? 'h-56 w-40' : 'aspect-[2/3] w-28 self-start')}
+          {@render facts()}
         </div>
-
-        {@render specTable()}
-
-        {@render actions('flex-wrap')}
+        {@render actions()}
       {/if}
     </div>
-  </PageContainer>
 
-  <!-- Same width as the metadata above; ListPanel's own px-4 makes up the
-       rest of PageContainer's md:px-8, so the edges line up. -->
-  <div class="mx-auto mt-6 flex w-full max-w-4xl flex-1 flex-col md:px-4">
-    <ListPanel label="CHAPTERS ({chapters.length})" bind:search placeholder="Search chapters…">
+    <ListPanel label="chapters ({chapters.length})" bind:search placeholder="Search chapters…">
       {#snippet actions()}
         <button
-          class="hit relative flex size-8 cursor-pointer items-center justify-center text-faint hover:bg-fg/10 hover:text-soft pointer-coarse:size-10"
+          class="hit relative flex cursor-pointer items-center text-ink hover:text-hi hover:underline"
           onclick={toggleSort}
           aria-label={descending ? 'Sort oldest first' : 'Sort newest first'}
-          title={descending ? 'Newest first' : 'Oldest first'}
         >
-          {#if descending}<ArrowDown10 size={18} />{:else}<ArrowDown01 size={18} />{/if}
+          <span class="flex items-center gap-2"
+            ><Icon name={descending ? 'down' : 'up'} />{descending ? 'newest' : 'oldest'}</span
+          >
         </button>
       {/snippet}
       {@render chapterGrid()}
@@ -418,7 +360,7 @@
 {#if confirmingDownload}
   <ConfirmDialog
     message={`Download "${reader.title}"? This may take a while depending on size.`}
-    confirmLabel="Download"
+    confirmLabel="download"
     onconfirm={download}
     oncancel={() => (confirmingDownload = false)}
   />

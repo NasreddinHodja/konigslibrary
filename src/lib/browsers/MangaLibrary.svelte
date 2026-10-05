@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Icon from '$lib/ui/Icon.svelte';
   import { Channel } from '@tauri-apps/api/core';
   import { untrack } from 'svelte';
   import { fade, type TransitionConfig } from 'svelte/transition';
@@ -48,11 +49,11 @@
     finishBatchToast
   } from '$lib/ui/toast.svelte';
   import { describeOpenFileError } from '$lib/utils/errors';
-  import { Download, Trash2, RefreshCw, LibraryBig, ListChecks, X } from 'lucide-svelte';
   import ListPanel from '$lib/ui/ListPanel.svelte';
   import Skeleton from '$lib/ui/Skeleton.svelte';
   import ConfirmDialog from '$lib/ui/ConfirmDialog.svelte';
   import Button from '$lib/ui/Button.svelte';
+  import Spinner from '$lib/ui/Spinner.svelte';
   import MangaCard from './MangaCard.svelte';
   import { TILE_GRID_CLASS } from '$lib/ui/tile-grid';
   import LoadMore from './LoadMore.svelte';
@@ -332,7 +333,7 @@
     if (row.origin === 'import') {
       const folder = row.name;
       return {
-        icon: Trash2,
+        icon: 'delete' as const,
         label: 'Delete',
         loading: false,
         onclick: () => (pendingDelete = { folder, name: displayName(row) })
@@ -344,7 +345,7 @@
     // Device tab too, where it lists from its first file.
     if (busy(slug)) {
       return {
-        icon: X,
+        icon: 'cancel' as const,
         label: 'Cancel download of',
         // Already cancelled: pulses until its files are gone.
         loading: !downloadProgress.has(slug),
@@ -353,7 +354,7 @@
     }
     if (downloads.has(slug)) {
       return {
-        icon: Trash2,
+        icon: 'delete' as const,
         label: 'Delete',
         loading: false,
         onclick: () => (pendingDelete = { slug, name: displayName(row) })
@@ -361,7 +362,7 @@
     }
     if (row.path) return null;
     return {
-      icon: Download,
+      icon: 'download' as const,
       label: 'Download',
       loading: false,
       onclick: () => (pendingDownload = { slug, name: displayName(row) })
@@ -546,11 +547,9 @@
     return () => window.removeEventListener('nativeback', onNativeBack);
   });
 
-  /// A small title-row button, drawn as tall as the icon buttons on touch.
-  const TOUCH_BUTTON = 'pointer-coarse:h-10 pointer-coarse:px-4 pointer-coarse:text-sm';
-  /// The bar's square icon buttons, without their opacity.
-  const ICON_BUTTON =
-    'hit relative flex size-8 cursor-pointer items-center justify-center hover:bg-fg/10 pointer-coarse:size-10';
+  /// The title row's word buttons, with names of their own for screen readers.
+  const WORD_BUTTON =
+    'hit relative flex cursor-pointer items-center justify-center text-ink hover:text-hi hover:underline';
 
   async function refresh() {
     if (refreshing) return;
@@ -594,7 +593,7 @@
 {#if pendingDownload}
   <ConfirmDialog
     message={`Download "${pendingDownload.name}"? This may take a while depending on size.`}
-    confirmLabel="Download"
+    confirmLabel="download"
     onconfirm={confirmDownload}
     oncancel={() => (pendingDownload = null)}
   />
@@ -605,7 +604,7 @@
     message={pendingBulk.kind === 'download'
       ? `Download ${pendingBulk.rows.length} manga? This may take a while depending on size.`
       : `Delete ${pendingBulk.rows.length} manga? This will remove all their chapters from this device.`}
-    confirmLabel={pendingBulk.kind === 'download' ? 'Download' : 'Delete'}
+    confirmLabel={pendingBulk.kind === 'download' ? 'download' : 'delete'}
     onconfirm={confirmBulk}
     oncancel={() => (pendingBulk = null)}
   />
@@ -614,7 +613,7 @@
 {#if pendingDelete}
   <ConfirmDialog
     message={`Delete "${pendingDelete.name}"? This will remove all its chapters from this device.`}
-    confirmLabel="Delete"
+    confirmLabel="delete"
     onconfirm={confirmDelete}
     oncancel={() => (pendingDelete = null)}
   />
@@ -626,36 +625,32 @@
 {#snippet serverDot()}
   {@const status = serverStatus()}
   <span
-    class="flex items-center gap-1.5 text-[11px] font-bold tracking-widest"
+    class="flex items-center gap-2"
     title={status === 'online'
       ? 'Server connected'
       : status === 'offline'
         ? 'Server unreachable'
         : 'Checking server'}
   >
-    <span
-      class="size-2 rounded-full {status === 'online'
-        ? 'bg-success'
-        : status === 'offline'
-          ? 'bg-muted'
-          : 'animate-pulse bg-muted'}"
-    ></span>
-    {#if status === 'offline'}<span class="text-dim">OFFLINE</span>{/if}
+    {#if status === 'online'}
+      <span class="size-2 bg-current"></span>
+    {:else if status === 'offline'}
+      <span>offline</span>
+    {:else}
+      <span class="size-2 animate-pulse bg-current"></span>
+    {/if}
   </span>
 {/snippet}
 
 {#snippet body(t: Tab | null)}
   {#if t === 'device' && deviceError}
-    <p class="mb-2 text-xs text-dim">{deviceError}</p>
+    <p class="mb-2 text-ink">► <span>{deviceError}</span></p>
   {/if}
 
   {#if t && (isLoading(t) || refreshing)}
     <div class={TILE_GRID_CLASS}>
       {#each { length: skeletons[t] }, i (i)}
-        <div class="flex flex-col gap-1.5">
-          <Skeleton class="aspect-[2/3] w-full" />
-          <Skeleton class="h-3 w-4/5" />
-        </div>
+        <Skeleton class="aspect-[2/3] w-full" />
       {/each}
     </div>
   {:else if t && visibleRows(t).length > 0}
@@ -685,120 +680,108 @@
     </div>
     <LoadMore onvisible={() => loadMore(t)} watch={lists[t].rows.length} />
   {:else if !deviceError || t !== 'device'}
-    <div class="flex flex-1 flex-col items-center justify-center gap-3 py-12 text-center">
-      <LibraryBig size={40} class="opacity-25" />
-      <div class="flex max-w-64 flex-col gap-1">
-        {#if tabs.length === 0}
-          <p class="text-base font-bold text-soft">No manga sources configured</p>
-          <p class="text-xs text-dim">
-            <a href="/settings" class="underline">Set one up in Settings</a>
-          </p>
-        {:else if searchQuery.trim()}
-          <p class="text-base font-bold text-soft">No results for "{searchQuery.trim()}"</p>
-        {:else if t === 'server' && serverStatus() === 'offline'}
-          <p class="text-base font-bold text-soft">Server unreachable</p>
-        {:else if t === 'device' && !mangaDir}
-          <p class="text-base font-bold text-soft">No manga on this device yet</p>
-          <p class="text-xs text-dim">Download some from the server</p>
-        {:else}
-          <p class="text-base font-bold text-soft">No manga found</p>
-        {/if}
-      </div>
+    <div class="flex flex-1 flex-col items-center justify-center gap-2 py-12 text-center">
+      {#if tabs.length === 0}
+        <p>No manga sources configured</p>
+        <p class="text-dim">
+          <a href="/settings" class="text-ink underline hover:text-hi">Set one up in Settings</a>
+        </p>
+      {:else if searchQuery.trim()}
+        <p>No results for "{searchQuery.trim()}"</p>
+      {:else if t === 'server' && serverStatus() === 'offline'}
+        <p>Server unreachable</p>
+      {:else if t === 'device' && !mangaDir}
+        <p>No manga on this device yet</p>
+        <p class="text-dim">Download some from the server</p>
+      {:else}
+        <p>No manga found</p>
+      {/if}
     </div>
   {/if}
 {/snippet}
 
-<!-- One height in both modes, so the list doesn't jump. On touch screens its
-     controls are drawn 40px tall (48px to tap, via `hit`). -->
-<div class="box-content flex h-8 shrink-0 items-center gap-3 px-4 pt-8 pb-2 pointer-coarse:h-10">
-  {#if selecting && tab}
-    <button
-      class="{ICON_BUTTON} text-dim hover:text-fg"
-      onclick={stopSelecting}
-      aria-label="Cancel selection"
-    >
-      <X size={18} />
-    </button>
-    <span class="text-sm font-bold tabular-nums">{selectedRows.length} selected</span>
-    <span class="ml-auto flex items-center gap-2">
-      <Button size="sm" variant="ghost" class={TOUCH_BUTTON} onclick={selectAll}>All</Button>
-      <Button
-        size="sm"
-        variant="primary"
-        class={TOUCH_BUTTON}
-        disabled={selectedRows.length === 0}
-        onclick={() =>
-          (pendingBulk = {
-            kind: tab === 'server' ? 'download' : 'delete',
-            rows: selectedRows
-          })}
+<!-- The title row. One height in both modes, so the list doesn't jump. -->
+{#snippet titleRow()}
+  <div class="flex h-10 items-center gap-3 border-b border-ink pointer-coarse:h-12">
+    {#if selecting && tab}
+      <button class={WORD_BUTTON} onclick={stopSelecting} aria-label="Cancel selection"
+        ><Icon name="close" /></button
       >
-        {#if tab === 'server'}<Download size={13} /> Download{:else}<Trash2 size={13} /> Delete{/if}
-      </Button>
-    </span>
-  {:else}
-    <h1 class="text-2xl font-bold">Library</h1>
-    {#if tabs.length === 1 && serverEnabled}{@render serverDot()}{/if}
-    <span class="ml-auto flex items-center gap-1">
-      <!-- Here while anything downloads or waits to: its toast can be closed,
-           and the notification's button is out of sight. -->
-      {#if downloadProgress.size > 0}
-        <span
-          class="flex"
-          in:grow
-          out:fade={{ duration: ANIM_EXIT_DURATION, easing: ANIM_EASE_IN }}
+      <span class="tabular-nums">{selectedRows.length} selected</span>
+      <span class="ml-auto flex items-center gap-3">
+        <Button variant="text" onclick={selectAll}>all</Button>
+        <Button
+          variant="primary"
+          disabled={selectedRows.length === 0}
+          onclick={() =>
+            (pendingBulk = {
+              kind: tab === 'server' ? 'download' : 'delete',
+              rows: selectedRows
+            })}
         >
-          <Button size="sm" variant="ghost" class={TOUCH_BUTTON} onclick={cancelAllDownloads}>
-            <X size={13} /> Cancel all
-          </Button>
-        </span>
-      {/if}
-      {#if native && tab && (lists[tab].rows.length > 0 || (refreshing && hadRows[tab]))}
-        <!-- On a wrapper: grow's opacity would override the button's own. -->
-        <span class="flex" transition:grow>
-          <button
-            class="{ICON_BUTTON} text-faint hover:text-soft"
-            onclick={() => startSelecting()}
-            aria-label="Select"
+          {tab === 'server' ? 'download' : 'delete'}
+        </Button>
+      </span>
+    {:else}
+      <h1 class="text-2xl">library</h1>
+      {#if tabs.length === 1 && serverEnabled}<span class="text-ink">{@render serverDot()}</span
+        >{/if}
+      <span class="ml-auto flex items-center gap-3">
+        <!-- Here while anything downloads or waits to: its toast can be closed,
+             and the notification's button is out of sight. -->
+        {#if downloadProgress.size > 0}
+          <span
+            class="flex"
+            in:grow
+            out:fade={{ duration: ANIM_EXIT_DURATION, easing: ANIM_EASE_IN }}
           >
-            <ListChecks size={18} />
-          </button>
-        </span>
-      {/if}
-      <!-- Comes and goes with the tab (no refresh for an unset device folder). -->
-      {#if tab && !(tab === 'device' && !mangaDir)}
-        <span class="flex" transition:grow>
-          <button
-            class="{ICON_BUTTON} text-faint hover:text-soft"
-            onclick={refresh}
-            aria-label="Refresh"
-          >
-            <RefreshCw size={17} class={refreshing ? 'animate-spin' : ''} />
-          </button>
-        </span>
-      {/if}
-    </span>
+            <Button variant="text" onclick={cancelAllDownloads}>cancel all</Button>
+          </span>
+        {/if}
+        {#if native && tab && (lists[tab].rows.length > 0 || (refreshing && hadRows[tab]))}
+          <!-- On a wrapper: grow's opacity would override the button's own. -->
+          <span class="flex" transition:grow>
+            <button class={WORD_BUTTON} onclick={() => startSelecting()} aria-label="Select">
+              <Icon name="select" />
+            </button>
+          </span>
+        {/if}
+        <!-- Comes and goes with the tab (no refresh for an unset device folder). -->
+        {#if tab && !(tab === 'device' && !mangaDir)}
+          <span class="flex" transition:grow>
+            <!-- One size for the icon and the spinner that stands in for it. -->
+            <button class="{WORD_BUTTON} size-6" onclick={refresh} aria-label="Refresh">
+              {#if refreshing}<Spinner />{:else}<Icon name="refresh" />{/if}
+            </button>
+          </span>
+        {/if}
+      </span>
+    {/if}
+  </div>
+{/snippet}
+
+<!-- Ends 12px above the phone's tab bar, so the list's frame does too. -->
+<div class="flex min-h-0 flex-1 flex-col p-3 pb-[calc(5.5rem_+_var(--safe-bottom))] md:pb-3">
+  {#if tabs.length > 0}
+    <ListPanel
+      tabs={tabs.map((t) =>
+        t === 'device' ? { key: t, label: 'device' } : { key: t, label: 'server', badge: serverDot }
+      )}
+      activeTab={tab}
+      ontab={(key) => selectTab(key as Tab)}
+      bind:search={searchQuery}
+      placeholder="Search library"
+      fill
+      header={titleRow}
+    >
+      {#snippet children(key)}
+        {@render body(key as Tab | null)}
+      {/snippet}
+    </ListPanel>
+  {:else}
+    <div class="panel p-3">{@render titleRow()}</div>
+    <div class="mt-3 flex flex-1 flex-col panel p-3">
+      {@render body(null)}
+    </div>
   {/if}
 </div>
-
-{#if tabs.length > 0}
-  <ListPanel
-    tabs={tabs.map((t) =>
-      t === 'device' ? { key: t, label: 'DEVICE' } : { key: t, label: 'SERVER', badge: serverDot }
-    )}
-    activeTab={tab}
-    ontab={(key) => selectTab(key as Tab)}
-    bind:search={searchQuery}
-    placeholder="Search library"
-    fill
-    pageClass="pb-[calc(5.25rem_+_var(--safe-bottom))] md:pb-8"
-  >
-    {#snippet children(key)}
-      {@render body(key as Tab | null)}
-    {/snippet}
-  </ListPanel>
-{:else}
-  <div class="flex flex-1 flex-col p-4">
-    {@render body(null)}
-  </div>
-{/if}

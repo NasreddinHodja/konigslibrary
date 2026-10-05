@@ -1,6 +1,7 @@
 <script lang="ts">
-  import { untrack, type ComponentType, type SvelteComponent } from 'svelte';
-  import { Check, CloudCheck, type IconProps } from 'lucide-svelte';
+  import type { IconName } from '$lib/ui/icons';
+  import Icon from '$lib/ui/Icon.svelte';
+  import { untrack } from 'svelte';
   import { knownMeta, queueMeta } from './cover-queue';
   import type { CardMeta } from '$lib/api/meta';
   import CoverThumbnail from '$lib/ui/CoverThumbnail.svelte';
@@ -28,7 +29,7 @@
     /// Device tab everything is on the device).
     downloaded: boolean;
     action?: {
-      icon: ComponentType<SvelteComponent<IconProps>>;
+      icon: IconName;
       label: string;
       loading: boolean;
       onclick: () => void;
@@ -147,12 +148,12 @@
              count isn't known yet (queued, listing chapters) it's empty and
              the track pulses. -->
         <div
-          class="pointer-events-none absolute inset-x-0 top-0 h-1 bg-bg/85 {progress.total
+          class="pointer-events-none absolute inset-x-0 top-0 h-1 bg-bg {progress.total
             ? ''
             : 'animate-pulse'}"
         >
           <div
-            class="h-full bg-fg transition-[width]"
+            class="h-full bg-ink transition-[width]"
             style:width="{progress.total ? (progress.done / progress.total) * 100 : 0}%"
           ></div>
         </div>
@@ -160,27 +161,27 @@
 
       {#if selection === 'selected' || selection === 'unselected'}
         <div
-          class="pointer-events-none absolute top-1.5 left-1.5 flex h-7 w-7 items-center justify-center border-2 backdrop-blur-md {selection ===
+          class="pointer-events-none absolute top-1 left-1 flex size-6 items-center justify-center border border-ink leading-none {selection ===
           'selected'
-            ? 'border-fg bg-fg text-bg'
-            : 'border-fg/60 bg-bg/85'}"
+            ? 'bg-ink text-bg'
+            : 'bg-bg'}"
         >
-          {#if selection === 'selected'}<Check size={16} strokeWidth={3} />{/if}
+          {#if selection === 'selected'}<Icon name="check" size={16} />{/if}
         </div>
       {:else if downloaded && !selection}
         <div
-          class="pointer-events-none absolute top-1.5 left-1.5 flex h-7 w-7 items-center justify-center bg-bg/85 backdrop-blur-md"
+          class="pointer-events-none absolute top-1 left-1 flex size-6 items-center justify-center border border-ink bg-bg leading-none text-ink"
           title="Downloaded"
         >
-          <CloudCheck size={15} class="text-success" />
+          <Icon name="check" size={16} />
         </div>
       {/if}
 
       {#if action && !selection}
         <button
-          class="hit absolute top-1.5 right-1.5 flex h-7 w-7 items-center justify-center bg-bg/85 backdrop-blur-md {action.loading
-            ? 'cursor-wait'
-            : 'group cursor-pointer hover:bg-fg/20'}"
+          class="hit absolute top-1 right-1 flex size-6 items-center justify-center border border-ink bg-bg leading-none text-ink {action.loading
+            ? 'animate-pulse cursor-wait'
+            : 'cursor-pointer hover:bg-ink hover:text-bg'}"
           onclick={(e) => {
             e.stopPropagation();
             action.onclick();
@@ -188,11 +189,7 @@
           disabled={action.loading}
           aria-label="{action.label} {displayName}"
         >
-          <!-- Faded on the icon, not the button, so the backdrop matches the badge's. -->
-          <action.icon
-            size={16}
-            class={action.loading ? 'animate-pulse opacity-40' : 'text-soft group-hover:text-fg'}
-          />
+          <Icon name={action.icon} size={16} />
         </button>
       {/if}
     {/snippet}

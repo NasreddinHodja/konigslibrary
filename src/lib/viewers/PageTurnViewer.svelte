@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Icon from '$lib/ui/Icon.svelte';
   import { inSystemGesture } from '$lib/utils/system-gestures';
   import { getReaderContext } from '$lib/context';
   import type { ViewerProps } from './types';
@@ -6,7 +7,6 @@
   import { PAGE_TURN_ZOOM } from '$lib/utils/constants';
   import Loader from '$lib/ui/Loader.svelte';
   import EndOfChapter from '$lib/chapters/EndOfChapter.svelte';
-  import { ChevronLeft, ChevronRight } from 'lucide-svelte';
 
   let { chapter, commands = $bindable(), ontap }: ViewerProps = $props();
 
@@ -438,7 +438,7 @@
 
 <div
   bind:this={containerEl}
-  class="relative flex h-full flex-1 items-center justify-center overflow-hidden bg-reader-bg select-none"
+  class="relative flex h-full flex-1 items-center justify-center overflow-hidden bg-bg select-none"
   style="padding-bottom: calc(var(--safe-bottom) - var(--safe-top))"
   onmousemove={handleMouseMove}
   ontouchstart={onTouchStart}
@@ -486,11 +486,11 @@
 
   <!-- Hover-only (Tailwind's hover variants skip touch screens), so it shows
        with a mouse and never sticks after a tap. -->
-  {#snippet arrow(Icon: typeof ChevronLeft)}
+  {#snippet arrow(icon: 'back' | 'next')}
     <div
-      class="pointer-events-none mx-3 flex h-12 w-12 items-center justify-center bg-bg/70 opacity-0 transition-opacity duration-150 group-hover:opacity-100"
+      class="pointer-events-none mx-3 flex size-12 items-center justify-center panel text-ink opacity-0 transition-opacity duration-(--duration-anim) group-hover:opacity-100"
     >
-      <Icon size={24} />
+      <Icon name={icon} />
     </div>
   {/snippet}
 
@@ -507,7 +507,7 @@
       {...zoneEvents(handleClickLeft)}
     >
       {#if !zoomHeld && canTurnLeft()}
-        {@render arrow(ChevronLeft)}
+        {@render arrow('back')}
       {/if}
     </div>
 
@@ -533,7 +533,7 @@
       {...zoneEvents(handleClickRight)}
     >
       {#if !zoomHeld && canTurnRight()}
-        {@render arrow(ChevronRight)}
+        {@render arrow('next')}
       {/if}
     </div>
   {/if}

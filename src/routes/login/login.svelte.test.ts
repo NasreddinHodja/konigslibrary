@@ -41,9 +41,9 @@ async function loginWhileLocked(options: Parameters<typeof server>[0]) {
   const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
   const posted = server(options);
   render(Login);
-  await user.type(await screen.findByLabelText('Username'), 'admin');
-  await user.type(field('Password'), 'hunter22{Enter}');
-  await screen.findByRole('heading', { name: 'Waiting for approval' });
+  await user.type(await screen.findByLabelText('username'), 'admin');
+  await user.type(field('password'), 'hunter22{Enter}');
+  await screen.findByRole('heading', { name: 'waiting for approval' });
   return { user, posted };
 }
 
@@ -54,11 +54,11 @@ describe('the login screen', () => {
     const user = userEvent.setup();
     const posted = server();
     render(Login);
-    expect(await screen.findByRole('heading', { name: 'Log in' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'log in' })).toBeInTheDocument();
     expect(screen.getByText(SERVER)).toBeInTheDocument();
-    await user.type(field('Username'), 'admin');
-    await user.type(field('Password'), 'hunter22');
-    await user.click(screen.getByRole('button', { name: 'Log in' }));
+    await user.type(field('username'), 'admin');
+    await user.type(field('password'), 'hunter22');
+    await user.click(screen.getByRole('button', { name: 'log in' }));
     await vi.waitFor(() => expect(nav.goto).toHaveBeenCalledWith('/', { replaceState: true }));
     expect(posted).toEqual([
       {
@@ -72,8 +72,8 @@ describe('the login screen', () => {
     const user = userEvent.setup();
     server();
     render(Login);
-    await user.type(await screen.findByLabelText('Username'), 'admin');
-    await user.type(field('Password'), 'hunter22{Enter}');
+    await user.type(await screen.findByLabelText('username'), 'admin');
+    await user.type(field('password'), 'hunter22{Enter}');
     await vi.waitFor(() => expect(nav.goto).toHaveBeenCalledWith('/', { replaceState: true }));
   });
 
@@ -81,8 +81,8 @@ describe('the login screen', () => {
     const user = userEvent.setup();
     server({ login: () => json({ error: 'Wrong username or password' }, 401) });
     render(Login);
-    await user.type(await screen.findByLabelText('Username'), 'admin');
-    await user.type(field('Password'), 'nope{Enter}');
+    await user.type(await screen.findByLabelText('username'), 'admin');
+    await user.type(field('password'), 'nope{Enter}');
     expect(await screen.findByRole('alert')).toHaveTextContent('Wrong username or password');
     expect(nav.goto).not.toHaveBeenCalled();
   });
@@ -91,11 +91,11 @@ describe('the login screen', () => {
     const user = userEvent.setup();
     const posted = server({ needed: true });
     render(Login);
-    expect(await screen.findByRole('heading', { name: 'Set up the server' })).toBeInTheDocument();
-    await user.type(field('Setup token'), ' 0123abcd ');
-    await user.type(field('Username'), 'admin');
-    await user.type(field('Password'), 'hunter22');
-    await user.click(screen.getByRole('button', { name: 'Create account' }));
+    expect(await screen.findByRole('heading', { name: 'set up the server' })).toBeInTheDocument();
+    await user.type(field('setup token'), ' 0123abcd ');
+    await user.type(field('username'), 'admin');
+    await user.type(field('password'), 'hunter22');
+    await user.click(screen.getByRole('button', { name: 'create account' }));
     await vi.waitFor(() => expect(nav.goto).toHaveBeenCalledWith('/', { replaceState: true }));
     expect(posted).toEqual([
       {
@@ -112,7 +112,7 @@ describe('the login screen', () => {
   it('gives the password rule when setting up', async () => {
     server({ needed: true });
     render(Login);
-    expect(await screen.findByLabelText('Password')).toHaveAccessibleDescription(
+    expect(await screen.findByLabelText('password')).toHaveAccessibleDescription(
       'At least 8 characters.'
     );
   });
@@ -120,18 +120,18 @@ describe('the login screen', () => {
   it('asks for no setup token once set up', async () => {
     server();
     render(Login);
-    await screen.findByRole('heading', { name: 'Log in' });
-    expect(screen.queryByLabelText('Setup token')).not.toBeInTheDocument();
+    await screen.findByRole('heading', { name: 'log in' });
+    expect(screen.queryByLabelText('setup token')).not.toBeInTheDocument();
   });
 
   it("says when the server can't be reached, and tries again", async () => {
     const user = userEvent.setup();
     localStorage.setItem('kl:serverUrl', SERVER);
     render(Login);
-    expect(await screen.findByRole('heading', { name: "Can't reach the server" })).toBeVisible();
+    expect(await screen.findByRole('heading', { name: "can't reach the server" })).toBeVisible();
     server();
-    await user.click(screen.getByRole('button', { name: 'Try again' }));
-    expect(await screen.findByRole('heading', { name: 'Log in' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'try again' }));
+    expect(await screen.findByRole('heading', { name: 'log in' })).toBeInTheDocument();
   });
 
   it('waits for a logged-in device to allow it, showing the code to match', async () => {
@@ -159,7 +159,7 @@ describe('the login screen', () => {
     });
     await vi.advanceTimersByTimeAsync(3000);
     expect(await screen.findByRole('alert')).toHaveTextContent('The login was denied.');
-    expect(screen.getByRole('heading', { name: 'Log in' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'log in' })).toBeInTheDocument();
     expect(nav.goto).not.toHaveBeenCalled();
   });
 
@@ -174,8 +174,8 @@ describe('the login screen', () => {
 
   it('stops waiting on cancel', async () => {
     const { user, posted } = await loginWhileLocked({ login: approval });
-    await user.click(screen.getByRole('button', { name: 'Cancel' }));
-    expect(screen.getByRole('heading', { name: 'Log in' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'cancel' }));
+    expect(screen.getByRole('heading', { name: 'log in' })).toBeInTheDocument();
     await vi.advanceTimersByTimeAsync(9000);
     expect(posted.filter((p) => p.path === '/api/auth/login/wait')).toHaveLength(0);
   });
@@ -183,8 +183,8 @@ describe('the login screen', () => {
   it('sends the app to Settings without a server', async () => {
     const user = userEvent.setup();
     render(Login);
-    expect(screen.getByRole('heading', { name: 'No server' })).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Settings' }));
+    expect(screen.getByRole('heading', { name: 'no server' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'settings' }));
     expect(nav.goto).toHaveBeenCalledWith('/settings');
   });
 });
