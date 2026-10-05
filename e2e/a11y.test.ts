@@ -73,5 +73,18 @@ test('keyboard help', async ({ page }) => {
 test('settings', async ({ page }) => {
   await page.goto('/settings');
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+  await expect(
+    page.getByRole('list', { name: 'Logged-in devices' }).getByRole('listitem').first()
+  ).toBeVisible();
   await expectNoViolations(page);
+});
+
+test.describe('logged out', () => {
+  test.use({ storageState: { cookies: [], origins: [] } });
+
+  test('login', async ({ page }) => {
+    await page.goto('/login');
+    await expect(page.getByRole('heading', { level: 1, name: 'Log in' })).toBeVisible();
+    await expectNoViolations(page);
+  });
 });

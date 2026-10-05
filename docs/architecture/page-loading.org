@@ -19,7 +19,7 @@ Entry sizes are checked against limits before anything is read, so a zip bomb is
 * Server: ServerLibraryProvider
 
 1. =GET /api/library/{manga}/chapters= returns every chapter with its page entry paths. The server stores each archive's page list in its database and re-reads it only when the archive's size or mtime changes.
-2. Page URLs are built client-side as =/api/library/{manga}/{chapter}/{page}=. The browser fetches them like any image, and since they're served as =immutable=, they're cached.
+2. Page URLs are built client-side as =/api/library/{manga}/{chapter}/{page}=. On the server's own page (=ServerUrlProvider=) the browser fetches them like any image, sending the session cookie. From another origin (=ServerBlobProvider=) each page is fetched with the bearer header and shown through a blob URL, one at a time, as a lazy provider. Either way they're served as =public, immutable=, so the HTTP cache keeps them.
 
 On the server, =klfs= keeps a cache of parsed central directories, keyed by path and invalidated by mtime, so each page request is a seek and an inflate.
 

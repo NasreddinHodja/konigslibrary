@@ -6,7 +6,7 @@ import WithReader from '$lib/testing/WithReader.svelte';
 import { FakeProvider } from '$lib/testing/reader';
 import { fakeServer, json } from '$lib/testing/server';
 import { mockApp } from '$lib/testing/tauri';
-import { ServerLibraryProvider, type SourceProvider } from '$lib/sources';
+import { openServerManga, type SourceProvider } from '$lib/sources';
 import type { Reader } from '$lib/context';
 import type { MangaMeta } from '$lib/api/meta';
 
@@ -187,7 +187,7 @@ describe('MangaDetail', () => {
           return downloaded ? [{ slug: 'berserk', name: 'berserk', path: '/dl/berserk' }] : [];
         if (cmd === 'download_file') return new Promise(() => {});
       });
-      const v = await renderDetail(new ServerLibraryProvider('berserk', 'berserk'));
+      const v = await renderDetail(openServerManga('berserk', 'berserk'));
       return { ...v, calls };
     }
 
@@ -219,7 +219,7 @@ describe('MangaDetail', () => {
       fakeServer((url) => {
         if (url.pathname === '/api/library/berserk/chapters') return json([]);
       });
-      await renderDetail(new ServerLibraryProvider('berserk', 'berserk'));
+      await renderDetail(openServerManga('berserk', 'berserk'));
       expect(screen.queryByRole('button', { name: 'DOWNLOAD' })).not.toBeInTheDocument();
     });
   });

@@ -125,6 +125,18 @@ describe('startDownload', () => {
     expect((await next()).args.fileName).toBe('Vol 1 Ch 1.cbz');
   });
 
+  it("sends the session's token with each file, not in its URL", async () => {
+    localStorage.setItem('kl:serverUrl', 'http://192.168.1.5:3000');
+    localStorage.setItem('kl:serverToken', 'tok');
+    server({ berserk: [chapter('c1.cbz')] });
+    const { next } = app();
+    await dl.startDownload('berserk', 'Berserk', events);
+    expect((await next()).args).toMatchObject({
+      url: 'http://192.168.1.5:3000/api/library/berserk/c1.cbz',
+      token: 'tok'
+    });
+  });
+
   it('fails without a trace when the chapter list cannot be fetched', async () => {
     server({ berserk: 'fail' });
     const { commands } = app();

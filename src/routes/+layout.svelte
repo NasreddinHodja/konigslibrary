@@ -6,26 +6,17 @@
   import { initTheme } from '$lib/theme';
   import { createReader, setReaderContext } from '$lib/context';
   import { isAndroid, isNative } from '$lib/utils/platform';
-  import { showSuccess, showError } from '$lib/ui/toast.svelte';
-  import { errorMessage } from '$lib/utils/errors';
-  import { parseConnectLink, validateAndConnect } from '$lib/sources/server-connect';
-  import { isLocalServer, setServerKey } from '$lib/utils/constants';
   import { afterNavigate, goto, onNavigate, replaceState } from '$app/navigation';
   import { page } from '$app/state';
   import CrashReport from '$lib/ui/CrashReport.svelte';
   import { logWebviewErrors } from '$lib/utils/diagnostics';
+  import { sessionLost } from '$lib/api/auth.svelte';
 
   let { children } = $props();
 
-  // A device opening the server's `/?key=…` link stores the key before any
-  // page asks the server for anything, then drops it from the address bar.
-  const linkKey = isLocalServer ? new URL(location.href).searchParams.get('key') : null;
-  if (linkKey) setServerKey(linkKey);
+  // The server turned a request away for want of a session.
   $effect(() => {
-    if (!linkKey) return;
-    const url = new URL(location.href);
-    url.searchParams.delete('key');
-    replaceState(url, page.state);
+    if (sessionLost() && page.url.pathname !== '/login') goto('/login');
   });
 
   const reader = createReader();
@@ -68,40 +59,6 @@
   // The app's log gets the page's uncaught errors too, for "Copy logs".
   $effect(() => {
     if (isNative()) return logWebviewErrors();
-  });
-
-  async function handleDeepLink(raw: string) {
-    const link = parseConnectLink(raw);
-    if (!link) return;
-    try {
-      await validateAndConnect(link.url, link.key);
-      showSuccess('Connected via QR code');
-      goto('/');
-    } catch (e) {
-      showError(errorMessage(e, 'Could not connect'));
-    }
-  }
-
-  $effect(() => {
-    if (!isNative()) return;
-    let unlisten: (() => void) | undefined;
-    let disposed = false;
-    import('@tauri-apps/plugin-deep-link').then(async ({ getCurrent, onOpenUrl }) => {
-      // The layout may have gone while the plugin was loading.
-      if (disposed) return;
-      const initial = await getCurrent();
-      if (disposed) return;
-      if (initial?.[0]) handleDeepLink(initial[0]);
-      const stop = await onOpenUrl((urls) => {
-        if (urls[0]) handleDeepLink(urls[0]);
-      });
-      if (disposed) stop();
-      else unlisten = stop;
-    });
-    return () => {
-      disposed = true;
-      unlisten?.();
-    };
   });
 </script>
 

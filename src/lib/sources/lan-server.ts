@@ -4,8 +4,8 @@ export type LanServerStatus = {
   running: boolean;
   url: string | null;
   port: number | null;
-  /// The access key other devices need; see `crates/klserver/src/auth.rs`.
-  key: string | null;
+  /// No admin yet: other devices have no account to log in with.
+  setupNeeded: boolean;
 };
 
 export async function startLanServer(mangaDir: string): Promise<LanServerStatus> {
@@ -18,4 +18,14 @@ export async function stopLanServer(): Promise<void> {
 
 export async function getLanServerStatus(): Promise<LanServerStatus> {
   return invoke('lan_server_status');
+}
+
+/// Creates the account other devices log in with, on the running server.
+export async function setupLanServer(username: string, password: string): Promise<LanServerStatus> {
+  return invoke('setup_lan_server', { username, password });
+}
+
+/// Forgets that account and stops the server; sharing again asks for a new one.
+export async function resetLanAccount(): Promise<void> {
+  return invoke('reset_lan_account');
 }

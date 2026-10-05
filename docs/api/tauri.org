@@ -99,9 +99,10 @@ Returns the same metadata shape as [[file:http.org::*GET /api/library/{manga}/me
 | =slug=     | =string=                    | Folder name under =offline/=            |
 | =fileName= | =string=                    | File name to save as                    |
 | =url=      | =string=                    | URL to fetch                            |
+| =token=    | =string= or =null=          | Session token, sent as =Bearer=         |
 | =channel=  | =Channel<DownloadProgress>= | Byte progress                           |
 
-Downloads =url= to =offline/<slug>/<fileName>=. Does nothing if the file already exists. Writes to =<fileName>.part= and renames when done, so an interrupted download never looks finished.
+Downloads =url= to =offline/<slug>/<fileName>=, with =Authorization: Bearer <token>= when there's a token. Does nothing if the file already exists. Writes to =<fileName>.part= and renames when done, so an interrupted download never looks finished.
 
 ** cancel_download
 
@@ -170,7 +171,7 @@ type LanServerStatus = {
   running: boolean;
   url: string | null;
   port: number | null;
-  key: string | null;
+  setupNeeded: boolean; // no admin yet
 };
 #+end_src
 
@@ -181,9 +182,9 @@ type LanServerStatus = {
 | =mangaDir= | =string=           | Directory to serve            |
 | =port=     | =number= or =null= | Port; =null= picks a free one |
 
-Starts the server bound to =0.0.0.0= and waits for =/api/ping= to answer, for about 9 seconds at most. Returns its status, with =url= on the machine's LAN address. If it's already running, returns the current status.
+Starts the server bound to =0.0.0.0= and waits for =/api/ping= to answer, for about 9 seconds at most. Returns its status, with =url= on the machine's LAN address, over plain HTTP. If it's already running, returns the current status.
 
-The server's database is =lan-library.db= in the app data directory. Its access key, which =key= returns, is kept in =lan-key= there and passed in as =KL_KEY=.
+The server's databases are in the app data directory: =lan-library.db= (=KL_DB=) and =lan-auth.db= (=KL_AUTH_DB=), which keeps the admin and sessions across restarts. Each start passes a new random =KL_SETUP_TOKEN= that only the app knows, so only =setup_lan_server= can create the admin.
 
 ** stop_lan_server
 
@@ -192,6 +193,19 @@ Stops the server. The app also stops it on exit.
 ** lan_server_status
 
 Returns the current =LanServerStatus=.
+
+** setup_lan_server
+
+| Argument   | Type     | Description      |
+|------------+----------+------------------|
+| =username= | =string= | Admin name       |
+| =password= | =string= | 8–256 characters |
+
+Creates the admin on the running server with =POST /api/auth/setup=, then logs the session that returns out again: the app reads its library from disk and needs none. Returns the new status. Fails with the server's message (a short password, say), or if the server isn't running.
+
+** reset_lan_account
+
+Stops the server, then runs =konigslibrary-server reset-admin= on =lan-auth.db=: the admin, every session and known device are removed. For an admin who lost the password; starting the server again has =setupNeeded= set.
 
 * Diagnostics
 

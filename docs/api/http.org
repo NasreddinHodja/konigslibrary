@@ -9,13 +9,147 @@ Any path not listed here serves the built SPA, falling back to its =index.html=.
 
 - ={manga}= is a manga folder name, percent-encoded. Use the =slug= the library returns.
 - JSON errors have the shape ={"error": "<message>"}=. Some routes answer with plain text instead; each route says which.
-- The library routes send CORS headers allowing any origin, so the packaged app and the web deployment can read a server on another host. The settings routes send none.
+- The library and auth routes send CORS headers allowing any origin, without credentials, so the packaged app and the web deployment can read a server on another host. The settings routes send none.
+- A JSON body that doesn't parse is rejected by axum with a plain-text =400=, =415= or =422=.
+- Every response gets =X-Content-Type-Options: nosniff= and =Referrer-Policy: strict-origin-when-cross-origin=; over HTTPS, =Strict-Transport-Security: max-age=63072000=. The SPA's page gets a =Content-Security-Policy= allowing its inline scripts by hash (=crates/klserver/src/headers.rs=).
 
-* Access key
+* Sessions
 
-Every =/api= route except =/api/ping= needs the server's key as the =key= query parameter, e.g. =/api/library?key=…=. Without it, or with a wrong one: =401= with a JSON error. Requests from the server's own page on this machine need no key; that's the same check the settings routes use (see [[*Settings][Settings]]).
+Every =/api= route except =/api/ping=, =/api/auth/setup= and =/api/auth/login= needs a session. Without one, or with an expired or revoked one: =401= with a JSON error. A session comes one of two ways, chosen by =client= at login:
 
-The key is =KL_KEY= if set, otherwise the one in =konigslibrary.key= next to =konigslibrary.json=, created on first run. Defined in =crates/klserver/src/auth.rs=.
+- =cookie= :: the =kl_session= cookie, =HttpOnly; SameSite=Strict=, plus =Secure= over HTTPS. For the server's own page. A request other than =GET=, =HEAD= or =OPTIONS= with it needs =Sec-Fetch-Site: same-origin=, or, from a browser that doesn't send that, an =Origin= matching =Host=. Otherwise: =403= with a JSON error.
+- =bearer= :: a token in the response body, sent back as =Authorization: Bearer <token>=. For other origins: the apps, the web reader hosted elsewhere.
+
+A token only works the way it was issued: a bearer token in a cookie is =401=, and the other way round. When a request has both, the bearer token is used.
+
+Sessions end after 30 days unused or 180 days after login, whichever comes first. Tokens are 256-bit random and stored as their SHA-256 (=crates/klserver/src/auth/store.rs=).
+
+** Rate limit
+
+Failed logins back off: after 5, each failure doubles the wait, up to 15 minutes. Meanwhile the route answers =429= with a JSON error and =Retry-After= in seconds. Counts are in memory, so a restart clears them.
+
+- A client sending a known device token (see [[*POST /api/auth/login][login]]) is counted on its own.
+- Every other client is counted per address (per =/64= for IPv6) and, when the username is right, against the account. A locked account locks out every client without a device token.
+- Wrong setup tokens are counted per address; wrong current passwords per session.
+
+** Behind a reverse proxy
+
+=KL_TRUSTED_PROXIES= is a comma-separated list of addresses and CIDR ranges, e.g. =127.0.0.1,10.0.0.0/8=. Only from those peers are these headers believed (=crates/klserver/src/auth/proxy.rs=):
+
+- =X-Forwarded-For= :: the client's address is the rightmost hop that isn't a trusted proxy.
+- =X-Forwarded-Proto: https= :: the request counts as HTTPS, for =Secure= cookies and HSTS.
+
+From anyone else they're ignored, and the client is the peer address.
+
+* Auth
+
+Defined in =crates/klserver/src/auth.rs=.
+
+** GET /api/auth/setup
+
+Whether the server still needs its admin. No session needed.
+
+#+begin_src json
+{ "needed": true }
+#+end_src
+
+** POST /api/auth/setup
+
+Creates the admin, then logs in as it. No session needed. The setup token is printed in the server's log on start while there's no admin, or is =KL_SETUP_TOKEN= when that's set (32 characters at least; not printed).
+
+#+begin_src json
+{ "token": "…", "username": "me", "password": "…", "client": "bearer", "device": "Pixel 8" }
+#+end_src
+
+| Field      | Description                                                          |
+|------------+----------------------------------------------------------------------|
+| =token=    | The setup token                                                      |
+| =username= | 1–64 characters, trimmed, no control characters                      |
+| =password= | 8–256 characters                                                     |
+| =client=   | =cookie= or =bearer=; see [[*Sessions][Sessions]]                                   |
+| =device=   | Optional. Name the session is listed under; default the =User-Agent= |
+
+Answers like [[*POST /api/auth/login][login]].
+
+| Status | When                                                         |
+|--------+--------------------------------------------------------------|
+| =200=  | Created and logged in                                        |
+| =400=  | Bad username or password, with the reason as a JSON error    |
+| =403=  | Wrong setup token; or =client= is =cookie= from another site |
+| =409=  | There's already an admin                                     |
+| =429=  | Too many wrong tokens from this address                      |
+
+** POST /api/auth/login
+
+No session needed.
+
+#+begin_src json
+{ "username": "me", "password": "…", "client": "bearer", "device": "Pixel 8", "deviceToken": "…" }
+#+end_src
+
+| Field         | Description                                                                       |
+|---------------+-----------------------------------------------------------------------------------|
+| =client=      | =cookie= or =bearer=; see [[*Sessions][Sessions]]                                                |
+| =device=      | Optional. Name the session is listed under; default the =User-Agent=              |
+| =deviceToken= | Optional. What an earlier login returned; exempts the client from others' lockout |
+
+With =bearer=:
+
+#+begin_src json
+{ "username": "me", "token": "…", "deviceToken": "…" }
+#+end_src
+
+=deviceToken= is =null= when a valid one was sent. Keep it per server and send it on every login: it's valid until unused for a year.
+
+With =cookie=: ={"username": "me"}=, the =kl_session= cookie, and on first login a =kl_device= cookie on =Path=/api/auth=, which does the device token's job.
+
+| Status | When                                             |
+|--------+--------------------------------------------------|
+| =200=  | Logged in                                        |
+| =401=  | Wrong username or password. Which one isn't said |
+| =403=  | =client= is =cookie= from another site           |
+| =429=  | Locked out for now; see [[*Rate limit][Rate limit]]               |
+
+** POST /api/auth/logout
+
+Ends this session. =204=; with a cookie session, the cookie is cleared.
+
+** GET /api/auth/me
+
+#+begin_src json
+{ "username": "me", "session": "…" }
+#+end_src
+
+=session= is this session's ID, as in [[*GET /api/auth/sessions][GET /api/auth/sessions]].
+
+** POST /api/auth/password
+
+#+begin_src json
+{ "currentPassword": "…", "newPassword": "…" }
+#+end_src
+
+Changes the password and ends every other session.
+
+| Status | When                                          |
+|--------+-----------------------------------------------|
+| =204=  | Changed                                       |
+| =400=  | The new password isn't 8–256 characters       |
+| =403=  | Wrong current password                        |
+| =429=  | Too many wrong current passwords this session |
+
+** GET /api/auth/sessions
+
+Live sessions, most recently used first. Times are Unix seconds.
+
+#+begin_src json
+[
+  { "id": "…", "device": "Pixel 8", "created": 1759600000, "lastSeen": 1759650000, "current": true }
+]
+#+end_src
+
+** DELETE /api/auth/sessions/{id}
+
+Ends that session, which can be this one. =204=, or =404= with a JSON error when there's no such session.
 
 * Library
 
@@ -119,11 +253,9 @@ A file from the manga folder. Each segment of ={path}= is percent-decoded on its
 
 * Settings
 
-These are only for the SPA the server serves. Write and browse requests must come from loopback (=127.0.0.1=, =::1=) and from a page with a loopback =Host= and, if one is sent, a matching =Origin=. Otherwise: =403= with a JSON error.
+These are only for the SPA the server serves: they need a session, like the rest, and send no CORS headers, so another site's page can't read them.
 
 ** GET /api/settings
-
-Not restricted to loopback, but needs the key.
 
 #+begin_src json
 { "mangaDir": "~/Manga" }
@@ -141,7 +273,6 @@ Sets the manga directory, saved to =konigslibrary.json= in the server's working 
 |--------+--------------------------------------------------------------|
 | =200=  | Saved. Echoes the body as sent, before =~= expansion         |
 | =400=  | =mangaDir= missing or not a string                           |
-| =403=  | Not from this machine                                        |
 | =409=  | The directory is set by the =MANGA_DIR= environment variable |
 | =500=  | The config file couldn't be written                          |
 
@@ -161,4 +292,4 @@ Lists subdirectories, for the folder picker. Hidden folders are left out; sorted
 }
 #+end_src
 
-=400= with a JSON error when the directory can't be read. =403= when not from this machine.
+=400= with a JSON error when the directory can't be read.

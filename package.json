@@ -39,6 +39,8 @@
     "build:local": "bun run clean:kit && bun run prepare && LOCAL_BUILD=1 bun run build",
     "tauri:local": "LOCAL_BUILD=1 bun tauri dev",
     "dev:android": "bun tauri android dev",
+    "dev:mobile": "bun scripts/gen-dev-library.js --if-missing && bun scripts/dev-mobile.js",
+    "dev:share": "bun scripts/dev-mobile.js --share",
     "build:android": "bun run clean:kit && bun run prepare && bun tauri android build --target aarch64 && APK=$(ls -t src-tauri/gen/android/app/build/outputs/apk/universal/release/app-universal-release*.apk | head -1) && mkdir -p dist && cp \"$APK\" dist/konigslibrary_$(bun -p \"require('./package.json').version\")_arm64.apk",
     "build:sidecar": "bun scripts/build-sidecar.js",
     "build:desktop": "bun scripts/build-appimage.js",
@@ -84,11 +86,9 @@
     "@sveltejs/mcp": "^0.1.26",
     "@tanstack/svelte-virtual": "^3.13.39",
     "@tauri-apps/api": "^2.12.1",
-    "@tauri-apps/plugin-deep-link": "^2.6.1",
     "@tauri-apps/plugin-dialog": "^2.8.1",
     "@tauri-apps/plugin-opener": "^2.7.0",
     "embla-carousel": "^8.6.0",
-    "lucide-svelte": "^1.0.1",
-    "qrcode-generator": "^2.0.4"
+    "lucide-svelte": "^1.0.1"
   }
 }

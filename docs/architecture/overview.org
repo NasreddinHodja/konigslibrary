@@ -16,7 +16,7 @@ One SvelteKit frontend runs in four places. What changes between them is where t
        ┌─────────────────────────┼─────────────────────────┐
        ▼                         ▼                         ▼
  UploadProvider        ServerLibraryProvider     NativeFilesystemProvider
-       │                         │ HTTP, ?key=             │ Tauri commands
+       │                         │ HTTP, session           │ Tauri commands
        ▼                         ▼                         ▼
  Web Worker:                 klserver     spawned for   src-tauri
  klwasm                  (axum, SQLite) ◄────────────── (desktop, Android)
@@ -54,7 +54,7 @@ crates/
 ├── klparse/   ZIP and ZIP64 parsing, chapter numbers and sorting, ComicInfo, collation
 ├── klfs/      klparse over files on disk, with a cache of parsed central directories
 ├── klwasm/    wasm-bindgen bindings to klparse, for the browser
-└── klserver/  axum server, with a SQLite index of the library
+└── klserver/  axum server, with a SQLite index of the library and an auth store
 src-tauri/     desktop and Android app; uses klparse and klfs
 #+end_example
 
@@ -85,13 +85,20 @@ src/lib/
 
 The reader doesn't know which mode it's in. It's given a =SourceProvider= (=src/lib/sources/types.ts=), which lists chapters, reads metadata and turns a page into a URL. There are two kinds:
 
-- Bulk (=getPageUrls=) :: returns every page URL of a chapter at once. Used when pages are plain HTTP URLs, as with a server.
-- Lazy (=getPageUrl=) :: returns one page at a time. Used when getting a page means extracting it into a blob URL, as with uploaded files and native archives.
+- Bulk (=getPageUrls=) :: returns every page URL of a chapter at once. Used when pages are plain HTTP URLs, as with the server's own page.
+- Lazy (=getPageUrl=) :: returns one page at a time. Used when getting a page means extracting or fetching it into a blob URL, as with uploaded files, native archives, and a server that needs the bearer header.
 
 See [[file:page-loading.org][Page loading]] for how each is read.
 
 * Which server
 
-=apiUrl()= (=src/lib/utils/constants.ts=) prefixes API paths with the server URL stored in =localStorage= under =kl:serverUrl=, and appends the server's access key, stored under =kl:serverKey= (see [[file:../api/http.org][HTTP server]]). Empty URL means same-origin, which is the case when =klserver= serves the frontend itself; that page takes the key from a =?key== in its own address. The packaged apps set both when connecting to a server, including through a =konigslibrary://connect= link (=src/lib/sources/server-connect.ts=), which is what the LAN share QR code holds.
+=apiUrl()= (=src/lib/utils/constants.ts=) prefixes API paths with the server URL stored in =localStorage= under =kl:serverUrl=. Empty URL means same-origin, which is the case when =klserver= serves the frontend itself. The packaged apps set it when connecting to a server (=src/lib/sources/server-connect.ts=); a new server drops the old one's session.
+
+Requests go through =apiFetch()= (=src/lib/api/auth.svelte.ts=), which carries the session:
+
+- Same origin :: the =kl_session= cookie. Covers and pages stay plain URLs, since =<img>= sends the cookie; =ServerUrlProvider= is bulk.
+- Another server :: =Authorization: Bearer=, with the token kept under =kl:serverToken=. =<img>= can't send the header, so covers are fetched into blob URLs (=authedSrc()=, =src/lib/api/authed-src.svelte.ts=) and =ServerBlobProvider= is lazy. Downloads pass the token to =download_file=.
+
+=openServerManga()= (=src/lib/sources/library.ts=) picks the provider. A =401= anywhere sends the app to =/login=, which sets up a server with no admin yet (the setup token is in its log) or logs in. Logins from the apps also keep the server's device token under =kl:deviceTokens=, per server, so a lockout from someone guessing the password doesn't lock them out.
 
 =src/lib/sources/connection.svelte.ts= polls =/api/ping= every 3 seconds while anything is watching, to show the server going offline or coming back.

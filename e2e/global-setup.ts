@@ -1,14 +1,28 @@
 import { chromium, expect, type FullConfig } from '@playwright/test';
+import { ADMIN, SETUP_TOKEN, STORAGE_STATE } from './auth';
 
-/// Loads the library once before any test: on a fresh server Vite compiles the
-/// app on its first visit, which can outlast a test's 5s wait for the page.
+/// Sets the server up (or logs in, once it is), keeps the session for every
+/// test, and loads the library once: on a fresh server Vite compiles the app
+/// on its first visit, which can outlast a test's 5s wait for the page.
+///
+/// A dev:sim that was already running is reused, and has its own admin: stop
+/// it first.
 export default async function globalSetup(config: FullConfig) {
   const { baseURL } = config.projects[0].use;
   const browser = await chromium.launch();
   const page = await browser.newPage({ baseURL });
-  await page.goto('/');
+  await page.goto('/login');
+  const heading = page.getByRole('heading', { level: 1, name: /^(Set up the server|Log in)$/ });
+  await expect(heading).toBeVisible({ timeout: 120_000 });
+  if ((await heading.textContent()) === 'Set up the server') {
+    await page.getByLabel('Setup token').fill(SETUP_TOKEN);
+  }
+  await page.getByLabel('Username').fill(ADMIN.username);
+  await page.getByLabel('Password').fill(ADMIN.password);
+  await page.getByLabel('Password').press('Enter');
   await expect(page.getByRole('button', { name: /^Open / }).first()).toBeVisible({
     timeout: 120_000
   });
+  await page.context().storageState({ path: STORAGE_STATE });
   await browser.close();
 }

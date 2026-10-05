@@ -236,28 +236,52 @@ describe('settings in the app', () => {
     expect(serverUrlBox()).toBeInTheDocument();
   });
 
-  it('connects to a server, keeping the key from a pasted link', async () => {
+  /// A server that's set up, answering only the check made before logging in.
+  const setUpServer = () =>
+    fakeServer((url) => (url.pathname === '/api/auth/setup' ? json({ needed: false }) : undefined));
+
+  it('connects to a server, then asks to log in', async () => {
     const user = userEvent.setup();
     mockApp();
-    const fetch = fakeServer((url) =>
-      url.pathname === '/api/library' && url.searchParams.get('key') === 'abc'
-        ? json({ entries: [], next: null })
-        : new Response('', { status: 401 })
-    );
+    const fetch = setUpServer();
     render(Settings);
     await user.type(serverUrlBox(), 'http://192.168.1.5:3000/?key=abc');
     await user.click(screen.getByRole('button', { name: /^Connect/ }));
-    await vi.waitFor(() => expect(nav.goto).toHaveBeenCalledWith('/'));
+    await vi.waitFor(() => expect(nav.goto).toHaveBeenCalledWith('/login'));
     expect(localStorage.getItem('kl:serverUrl')).toBe('http://192.168.1.5:3000');
-    expect(localStorage.getItem('kl:serverKey')).toBe('abc');
     expect(getToasts().map((t) => t.label)).toContain('Connected to server');
     expect(fetch).toHaveBeenCalled();
+  });
+
+  it('goes straight home when still logged in to that server', async () => {
+    const user = userEvent.setup();
+    mockApp();
+    localStorage.setItem('kl:serverUrl', 'http://192.168.1.5:3000');
+    localStorage.setItem('kl:serverToken', 'tok');
+    setUpServer();
+    render(Settings);
+    await user.click(screen.getByRole('button', { name: /^Connect/ }));
+    await vi.waitFor(() => expect(nav.goto).toHaveBeenCalledWith('/'));
+    expect(localStorage.getItem('kl:serverToken')).toBe('tok');
+  });
+
+  it("drops the old server's session for a new server", async () => {
+    const user = userEvent.setup();
+    mockApp();
+    localStorage.setItem('kl:serverUrl', 'http://192.168.1.5:3000');
+    localStorage.setItem('kl:serverToken', 'tok');
+    setUpServer();
+    render(Settings);
+    await user.clear(serverUrlBox());
+    await user.type(serverUrlBox(), '192.168.1.6:3000{Enter}');
+    await vi.waitFor(() => expect(nav.goto).toHaveBeenCalledWith('/login'));
+    expect(localStorage.getItem('kl:serverToken')).toBeNull();
   });
 
   it('says when the address reaches a server, as it is typed', async () => {
     const user = userEvent.setup();
     mockApp();
-    fakeServer(() => json({ entries: [], next: null }));
+    setUpServer();
     render(Settings);
     await user.type(serverUrlBox(), '192.168.1.5:3000');
     await vi.waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('Server found'), {
@@ -269,12 +293,13 @@ describe('settings in the app', () => {
   it('says why a server would not connect', async () => {
     const user = userEvent.setup();
     mockApp();
-    fakeServer(() => new Response('', { status: 401 }));
+    // A server from before accounts: the route falls through to its page.
+    fakeServer(() => new Response('<!doctype html>', { headers: { 'Content-Type': 'text/html' } }));
     render(Settings);
     await user.type(serverUrlBox(), '192.168.1.5:3000{Enter}');
     expect(
       await screen.findByText(
-        'Needs a key: paste the full link from the host',
+        'Not a konigslibrary server, or an outdated one',
         {},
         { timeout: 2000 }
       )
@@ -284,23 +309,13 @@ describe('settings in the app', () => {
     expect(localStorage.getItem('kl:serverUrl')).toBeNull();
   });
 
-  it('connects on Enter', async () => {
-    const user = userEvent.setup();
-    mockApp();
-    fakeServer(() => json({ entries: [], next: null }));
-    render(Settings);
-    await user.type(serverUrlBox(), '192.168.1.5:3000{Enter}');
-    await vi.waitFor(() => expect(nav.goto).toHaveBeenCalledWith('/'));
-    expect(localStorage.getItem('kl:serverUrl')).toBe('http://192.168.1.5:3000');
-  });
-
   // The address is checked as it's typed; this server passes that, then stops.
   it('says why a server that was up would not connect', async () => {
     const user = userEvent.setup();
     mockApp();
     let up = true;
     const fetch = fakeServer(() =>
-      up ? json({ entries: [], next: null }) : new Response('', { status: 500 })
+      up ? json({ needed: false }) : new Response('', { status: 500 })
     );
     render(Settings);
     await user.type(serverUrlBox(), '192.168.1.5:3000');

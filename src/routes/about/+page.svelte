@@ -115,8 +115,9 @@
   <section class="space-y-3">
     <h3 class="text-lg font-bold text-soft">From your computer to your phone</h3>
     <p class="text-sm leading-relaxed text-soft">
-      With the desktop app open and your phone on the same Wi-Fi, go to Settings → Share to LAN and
-      scan the QR code with your phone's camera. The Android app must already be installed.
+      With the desktop app open and your phone on the same Wi-Fi, go to Settings → Share to LAN. The
+      first time, create the account your phone will log in with. Then enter the address it shows in
+      the Android app's Settings, or open it in the phone's browser, and log in.
     </p>
   </section>
 

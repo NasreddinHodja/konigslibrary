@@ -20,6 +20,7 @@
   import ConfirmDialog from '$lib/ui/ConfirmDialog.svelte';
   import ChapterTile from '$lib/chapters/ChapterTile.svelte';
   import VirtualGrid from '$lib/ui/virtual/VirtualGrid.svelte';
+  import { authedSrc } from '$lib/api/authed-src.svelte';
 
   const reader = getReaderContext();
   const { state: manga } = reader;
@@ -31,6 +32,7 @@
   const savedProgress = $derived(reader.getSavedProgress());
 
   const meta = $derived(reader.meta);
+  const coverSrc = authedSrc(() => meta?.coverUrl ?? null);
   const metaError = $derived(reader.metaState === 'missing');
   // Both reset when another manga opens; writable so the page can set them.
   let coverFailed = $derived.by(() => {
@@ -336,14 +338,14 @@
 
 {#snippet cover(sizeClass: string)}
   <div class="relative shrink-0 border-2 border-line {sizeClass}">
-    {#if meta?.coverUrl && !coverFailed}
+    {#if coverSrc.current && !coverFailed}
       <img
-        src={meta.coverUrl}
+        src={coverSrc.current}
         alt={meta?.title ?? mangaName}
         class="absolute inset-0 h-full w-full object-cover"
         onerror={() => (coverFailed = true)}
       />
-    {:else if reader.metaState === 'loading'}
+    {:else if reader.metaState === 'loading' || coverSrc.pending}
       <Skeleton class="absolute inset-0" />
     {:else}
       <div class="flex h-full w-full items-center justify-center bg-fg/[0.03]">

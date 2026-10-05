@@ -62,6 +62,7 @@ src-tauri/binaries/*
 # config
 konigslibrary.json
 konigslibrary.key
+konigslibrary-auth.db
 
 # library database (klserver), a cache of the manga directory
 konigslibrary.db*
@@ -74,6 +75,8 @@ AUDIT.org
 
 # appimage output
 /dist/
+
+# notes
 /TODO.org
 
 # playwright

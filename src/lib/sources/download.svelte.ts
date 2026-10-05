@@ -7,6 +7,7 @@ import { errorMessage } from '$lib/utils/errors';
 import { deleteOfflineManga } from './native-library';
 import { nativeBridge } from '$lib/utils/bridge';
 import { fetchServerChapters, fetchServerRawMeta, serverFileUrl } from '$lib/api/server';
+import { getServerToken } from '$lib/utils/constants';
 
 let nextId = 0;
 
@@ -72,6 +73,7 @@ async function copyManga(
       slug,
       fileName,
       url: serverFileUrl(slug, fileName),
+      token: getServerToken() || null,
       channel: new Channel()
     });
   };

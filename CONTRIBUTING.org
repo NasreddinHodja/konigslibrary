@@ -31,6 +31,8 @@ bun dev
 | =bun run build:server=  | Build the =konigslibrary-server= binary                  |
 | =bun run serve=         | Build and start the local server                         |
 | =bun run dev:sim=       | Dev server against a generated library in =dev-library/= |
+| =bun run dev:mobile=    | Server on the LAN (=dev-library/=) + the Android app     |
+| =bun run dev:share=     | Desktop app (Share to LAN) + the Android app             |
 | =bun run check=         | Svelte type checking                                     |
 | =bun run lint=          | Prettier and ESLint check                                |
 | =bun run format=        | Auto-format with Prettier                                |
