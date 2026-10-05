@@ -115,16 +115,16 @@
   const native = isNative();
   const android = isAndroid();
 
-  // A server to log in to: this page's own, or the one set below.
+  // A server to log in to: this page's own, or the one connected to below.
   const hasServer = isLocalServer || !!getServerUrl();
 
   // The page's sections, for the jump links; some only exist on some builds.
+  // Android can't read shared storage by path; manga come in through Upload.
   const sections = [
-    { id: 'sources', label: 'Sources', show: isLocalServer },
-    { id: 'account', label: 'Account', show: hasServer },
+    { id: 'library', label: 'Library', show: isLocalServer || (native && !android) },
+    { id: 'server', label: 'Server', show: isLocalServer || native },
     { id: 'theme', label: 'Theme', show: true },
     { id: 'shortcuts', label: 'Shortcuts', show: !isMobile },
-    { id: 'providers', label: 'Providers', show: native },
     { id: 'diagnostics', label: 'Diagnostics', show: native }
   ].filter((s) => s.show);
   let deviceDir = $state(getMangaDir());
@@ -298,48 +298,124 @@
     {/each}
   </div>
 
-  {#if isLocalServer}
-    <section id="settings-sources" class="scroll-mt-[calc(1rem+var(--safe-top))]">
-      {@render sectionHeader('SOURCES')}
+  {#if isLocalServer || (native && !android)}
+    <section id="settings-library" class="scroll-mt-[calc(1rem+var(--safe-top))]">
+      {@render sectionHeader('LIBRARY')}
 
-      <div class="py-4">
-        <h3 class="mb-3 text-sm font-bold text-dim">Manga directory</h3>
-        {#if loadingDir}
-          <Skeleton class="h-10 w-full border-2 border-transparent" />
-        {:else}
-          <div class="flex max-w-sm gap-2">
-            <input
-              type="text"
-              bind:value={mangaDir}
-              placeholder="/path/to/manga"
-              class="flex-1 border-2 bg-bg px-3 py-2 text-sm text-fg placeholder:text-dim pointer-coarse:py-3"
-            />
-            <button
-              class="border-2 px-3 text-dim hover:text-fg"
-              onclick={() => (browsingDir = true)}
-              aria-label="Browse"
-            >
-              <FolderOpen size={16} />
-            </button>
+      {#if isLocalServer}
+        <div class="py-4">
+          <h3 class="mb-3 text-sm font-bold text-dim">Manga directory</h3>
+          {#if loadingDir}
+            <Skeleton class="h-10 w-full border-2 border-transparent" />
+          {:else}
+            <div class="flex max-w-sm gap-2">
+              <input
+                type="text"
+                bind:value={mangaDir}
+                placeholder="/path/to/manga"
+                class="flex-1 border-2 bg-bg px-3 py-2 text-sm text-fg placeholder:text-dim pointer-coarse:py-3"
+              />
+              <button
+                class="border-2 px-3 text-dim hover:text-fg"
+                onclick={() => (browsingDir = true)}
+                aria-label="Browse"
+              >
+                <FolderOpen size={16} />
+              </button>
+            </div>
+            <div class="mt-3 flex items-center gap-3">
+              <Button size="md" onclick={saveDir}>Save</Button>
+              {#if saved}
+                <span class="text-sm text-dim">Saved - reload to see library</span>
+              {/if}
+              {#if error}
+                <span class="text-sm text-error">{error}</span>
+              {/if}
+            </div>
+          {/if}
+        </div>
+      {:else}
+        <div class="flex flex-col gap-5 py-4">
+          <div class="space-y-3">
+            <h3 class="text-sm font-bold text-dim">Manga directory</h3>
+            <div class="flex max-w-sm gap-2">
+              <input
+                type="text"
+                bind:value={deviceDir}
+                placeholder="/home/user/Manga"
+                class="flex-1 border-2 bg-bg px-3 py-2 text-sm text-fg placeholder:text-dim pointer-coarse:py-3"
+              />
+              <button
+                class="border-2 px-3 text-dim hover:text-fg"
+                onclick={browseDeviceDir}
+                aria-label="Browse"
+              >
+                <FolderOpen size={16} />
+              </button>
+            </div>
+            <Button size="md" onclick={saveDeviceDir}>Save</Button>
           </div>
-          <div class="mt-3 flex items-center gap-3">
-            <Button size="md" onclick={saveDir}>Save</Button>
-            {#if saved}
-              <span class="text-sm text-dim">Saved - reload to see library</span>
-            {/if}
-            {#if error}
-              <span class="text-sm text-error">{error}</span>
-            {/if}
-          </div>
-        {/if}
-      </div>
+
+          <ShareLan />
+        </div>
+      {/if}
     </section>
   {/if}
 
-  {#if hasServer}
-    <section id="settings-account" class="scroll-mt-[calc(1rem+var(--safe-top))]">
-      {@render sectionHeader('ACCOUNT')}
-      <AccountSettings />
+  {#if isLocalServer || native}
+    <section id="settings-server" class="scroll-mt-[calc(1rem+var(--safe-top))]">
+      {@render sectionHeader('SERVER')}
+
+      {#if native}
+        <div class="space-y-3 py-4">
+          <h3 class="text-sm font-bold text-dim">Server URL</h3>
+          <div class="relative max-w-sm">
+            <input
+              type="text"
+              bind:this={serverUrlInput}
+              bind:value={serverUrl}
+              placeholder="192.168.1.x:3000"
+              onkeydown={handleServerUrlKey}
+              aria-label="Server URL"
+              aria-invalid={probeStatus === 'error'}
+              class="w-full border-2 bg-bg py-2 pr-9 pl-3 text-sm text-fg placeholder:text-dim pointer-coarse:py-3"
+              style:border-color={probeStatus === 'ok'
+                ? 'color-mix(in oklab, var(--color-success) 60%, transparent)'
+                : probeStatus === 'error'
+                  ? 'color-mix(in oklab, var(--color-error) 60%, transparent)'
+                  : undefined}
+            />
+            {#if serverUrl}
+              <button
+                class="absolute inset-y-0 right-0 px-3 text-dim hover:text-fg"
+                onclick={clearServerUrl}
+                aria-label="Clear"
+              >
+                <X size={16} />
+              </button>
+            {/if}
+          </div>
+          <div class="flex items-center gap-3">
+            <Button size="md" onclick={connectServer} disabled={connecting}>
+              <!-- Both labels laid over each other: the button keeps the
+                   longer one's width, so the error beside it holds still. -->
+              <span class="grid">
+                <span class="col-start-1 row-start-1 {connecting ? 'invisible' : ''}">Connect</span>
+                <span class="col-start-1 row-start-1 {connecting ? '' : 'invisible'}"
+                  >Connecting…</span
+                >
+              </span>
+            </Button>
+            <!-- In words too, not only the field's border colour. -->
+            <span role="status" class="text-sm {connectError ? 'text-error' : 'text-dim'}">
+              {#if connectError}{connectError}{:else if probeStatus === 'ok'}Server found{/if}
+            </span>
+          </div>
+        </div>
+      {/if}
+      {#if hasServer}
+        <AccountSettings />
+      {/if}
     </section>
   {/if}
 
@@ -446,85 +522,6 @@
             </div>
           </div>
         {/each}
-      </div>
-    </section>
-  {/if}
-
-  {#if native}
-    <section id="settings-providers" class="scroll-mt-[calc(1rem+var(--safe-top))]">
-      {@render sectionHeader('PROVIDERS')}
-
-      <div class="flex flex-col gap-5 py-4">
-        <!-- Android can't read shared storage by path; manga come in through Upload. -->
-        {#if !android}
-          <div class="space-y-3">
-            <h3 class="text-sm font-bold text-dim">Local directory</h3>
-            <div class="flex max-w-sm gap-2">
-              <input
-                type="text"
-                bind:value={deviceDir}
-                placeholder="/home/user/Manga"
-                class="flex-1 border-2 bg-bg px-3 py-2 text-sm text-fg placeholder:text-dim pointer-coarse:py-3"
-              />
-              <button
-                class="border-2 px-3 text-dim hover:text-fg"
-                onclick={browseDeviceDir}
-                aria-label="Browse"
-              >
-                <FolderOpen size={16} />
-              </button>
-            </div>
-            <Button size="md" onclick={saveDeviceDir}>Save</Button>
-          </div>
-
-          <ShareLan />
-        {/if}
-
-        <div class="space-y-3">
-          <h3 class="text-sm font-bold text-dim">Server URL</h3>
-          <div class="relative max-w-sm">
-            <input
-              type="text"
-              bind:this={serverUrlInput}
-              bind:value={serverUrl}
-              placeholder="192.168.1.x:3000"
-              onkeydown={handleServerUrlKey}
-              aria-label="Server URL"
-              aria-invalid={probeStatus === 'error'}
-              class="w-full border-2 bg-bg py-2 pr-9 pl-3 text-sm text-fg placeholder:text-dim pointer-coarse:py-3"
-              style:border-color={probeStatus === 'ok'
-                ? 'color-mix(in oklab, var(--color-success) 60%, transparent)'
-                : probeStatus === 'error'
-                  ? 'color-mix(in oklab, var(--color-error) 60%, transparent)'
-                  : undefined}
-            />
-            {#if serverUrl}
-              <button
-                class="absolute inset-y-0 right-0 px-3 text-dim hover:text-fg"
-                onclick={clearServerUrl}
-                aria-label="Clear"
-              >
-                <X size={16} />
-              </button>
-            {/if}
-          </div>
-          <div class="flex items-center gap-3">
-            <Button size="md" onclick={connectServer} disabled={connecting}>
-              <!-- Both labels laid over each other: the button keeps the
-                   longer one's width, so the error beside it holds still. -->
-              <span class="grid">
-                <span class="col-start-1 row-start-1 {connecting ? 'invisible' : ''}">Connect</span>
-                <span class="col-start-1 row-start-1 {connecting ? '' : 'invisible'}"
-                  >Connecting…</span
-                >
-              </span>
-            </Button>
-            <!-- In words too, not only the field's border colour. -->
-            <span role="status" class="text-sm {connectError ? 'text-error' : 'text-dim'}">
-              {#if connectError}{connectError}{:else if probeStatus === 'ok'}Server found{/if}
-            </span>
-          </div>
-        </div>
       </div>
     </section>
   {/if}

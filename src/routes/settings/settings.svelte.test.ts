@@ -178,14 +178,37 @@ describe('settings on the web', () => {
 describe('settings in the app', () => {
   const serverUrlBox = () => screen.getByRole('textbox', { name: 'Server URL' });
 
-  it('jumps to the providers and diagnostics too', () => {
+  it('jumps to the library, server and diagnostics too', () => {
     mockApp();
     render(Settings);
     const jumps = screen
       .getAllByRole('link')
       .filter((a) => a.getAttribute('href')?.startsWith('#'));
-    expect(jumps.map((a) => a.textContent?.trim())).toContain('Providers');
-    expect(jumps.map((a) => a.textContent?.trim())).toContain('Diagnostics');
+    expect(jumps.map((a) => a.textContent?.trim())).toEqual([
+      'Library',
+      'Server',
+      'Theme',
+      'Diagnostics'
+    ]);
+  });
+
+  it('shows the account under the server once connected', async () => {
+    mockApp();
+    localStorage.setItem('kl:serverUrl', 'http://192.168.1.5:3000');
+    fakeServer((url) => (url.pathname === '/api/auth/me' ? json({ username: 'ann' }) : undefined));
+    render(Settings);
+    expect(await screen.findByText('ann')).toBeInTheDocument();
+  });
+
+  it('has no account before connecting', async () => {
+    mockApp();
+    const fetch = fakeServer((url) =>
+      url.pathname === '/api/auth/me' ? new Response('', { status: 401 }) : undefined
+    );
+    render(Settings);
+    await new Promise((r) => setTimeout(r, 50));
+    expect(screen.queryByText('Not logged in.')).not.toBeInTheDocument();
+    expect(fetch).not.toHaveBeenCalled();
   });
 
   it('copies the logs', async () => {
@@ -233,6 +256,7 @@ describe('settings in the app', () => {
     mockApp();
     render(Settings);
     expect(screen.queryByPlaceholderText('/home/user/Manga')).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Library' })).not.toBeInTheDocument();
     expect(serverUrlBox()).toBeInTheDocument();
   });
 

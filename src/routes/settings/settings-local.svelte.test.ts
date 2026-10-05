@@ -29,13 +29,20 @@ function settingsServer(dir: string, { saveFails = false } = {}) {
 }
 
 describe('settings of the local server', () => {
-  it('starts with the sources', () => {
+  it('starts with the library, then the server', () => {
     settingsServer('/srv/manga');
     render(Settings);
     const jumps = screen
       .getAllByRole('link')
       .filter((a) => a.getAttribute('href')?.startsWith('#'));
-    expect(jumps[0]).toHaveTextContent('Sources');
+    expect(jumps.map((a) => a.textContent?.trim())).toEqual(['Library', 'Server', 'Theme']);
+  });
+
+  it('has the account but no address to connect to', async () => {
+    fakeServer((url) => (url.pathname === '/api/auth/me' ? json({ username: 'ann' }) : undefined));
+    render(Settings);
+    expect(await screen.findByText('ann')).toBeInTheDocument();
+    expect(screen.queryByRole('textbox', { name: 'Server URL' })).not.toBeInTheDocument();
   });
 
   it("shows the server's manga directory", async () => {
