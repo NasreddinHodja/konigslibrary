@@ -10,9 +10,10 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use klfs::ZipCache;
+use klserver::auth::{self, proxy::TrustedProxies, Auth};
 use klserver::config::Config;
 use klserver::routes::{AppState, SharedState};
-use klserver::{auth, db, routes};
+use klserver::{db, routes};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -24,7 +25,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
   let static_dir = static_dir();
 
   let config = Config::from_env();
-  let (key, key_source) = auth::load_key(std::env::var("KL_KEY").ok(), &config.key_path())?;
+  let proxies = TrustedProxies::parse(&std::env::var("KL_TRUSTED_PROXIES").unwrap_or_default())?;
+  // Unlike the library database, no fallback: sessions in a temp directory
+  // would vanish, and the admin with them.
+  let auth = Auth::new(auth::store::Store::open(&config.auth_db_path())?, proxies);
   let db = match db::Db::open(&config.db_path()) {
     Ok(db) => db,
     // A cache, so anywhere writable will do rather than not serving at all.
@@ -49,21 +53,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     cache: ZipCache::new(),
     db,
     static_dir,
-    key: key.clone(),
+    auth,
   });
 
   let addr: SocketAddr = format!("{host}:{port}").parse()?;
   let listener = tokio::net::TcpListener::bind(addr).await?;
   let bound = listener.local_addr()?;
 
-  // The app's sidecar logs its output, so it never prints the key.
-  let shown_key = (key_source == auth::KeySource::File).then_some(key.as_str());
-  print_banner(bound.port(), shown_key);
+  print_banner(bound.port(), state.auth.setup_token().as_deref());
   if std::env::var("NO_BROWSER").is_err() {
     open_browser(bound.port());
   }
 
-  // ConnectInfo is what the localhost-only guard on the settings routes reads,
+  // ConnectInfo is what the login limit counts attempts by,
   // so the service has to be built with it.
   axum::serve(
     listener,
@@ -92,19 +94,16 @@ fn static_dir() -> PathBuf {
   PathBuf::from("build-local")
 }
 
-fn print_banner(port: u16, key: Option<&str>) {
+fn print_banner(port: u16, setup_token: Option<&str>) {
   println!("\nkonigslibrary running on:");
   println!("  Local:   http://localhost:{port}");
   for addr in lan_addresses() {
-    match key {
-      // Opening this on another device pairs it.
-      Some(key) => println!("  Network: http://{addr}:{port}/?key={key}"),
-      None => println!("  Network: http://{addr}:{port}"),
-    }
+    println!("  Network: http://{addr}:{port}");
   }
-  if key.is_some() {
-    println!("\n  Other devices need the key in the Network link.");
-    println!("  To change it, delete konigslibrary.key and restart.");
+  if let Some(token) = setup_token {
+    // Whoever reads the log is whoever runs the server.
+    println!("\n  First run: open the page and create the admin with this setup token:");
+    println!("  {token}");
   }
   println!();
 }

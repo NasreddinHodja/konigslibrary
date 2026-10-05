@@ -16,6 +16,8 @@ pub struct Config {
   /// `KL_DB`: where the library database goes, for a process whose working
   /// directory may not be writable (the desktop app's LAN server).
   env_db: Option<PathBuf>,
+  /// `KL_AUTH_DB`: where the admin and sessions go, for the same reason.
+  env_auth_db: Option<PathBuf>,
   /// Where `konigslibrary.json` lives — the process working directory in
   /// production, a temp directory in tests.
   config_path: PathBuf,
@@ -34,6 +36,9 @@ impl Config {
       env_db: std::env::var_os("KL_DB")
         .filter(|v| !v.is_empty())
         .map(PathBuf::from),
+      env_auth_db: std::env::var_os("KL_AUTH_DB")
+        .filter(|v| !v.is_empty())
+        .map(PathBuf::from),
       config_path: cwd.join("konigslibrary.json"),
       cwd,
       home,
@@ -47,6 +52,7 @@ impl Config {
     Self {
       env_manga_dir: env_manga_dir.map(str::to_string),
       env_db: None,
+      env_auth_db: None,
       config_path: cwd.join("konigslibrary.json"),
       cwd: cwd.to_path_buf(),
       home: home.to_string(),
@@ -66,9 +72,12 @@ impl Config {
       .unwrap_or_else(|| self.config_path.with_file_name("konigslibrary.db"))
   }
 
-  /// The access key file, next to `konigslibrary.json`.
-  pub fn key_path(&self) -> PathBuf {
-    self.config_path.with_file_name("konigslibrary.key")
+  /// The admin and sessions: `KL_AUTH_DB`, or next to `konigslibrary.json`.
+  pub fn auth_db_path(&self) -> PathBuf {
+    self
+      .env_auth_db
+      .clone()
+      .unwrap_or_else(|| self.config_path.with_file_name("konigslibrary-auth.db"))
   }
 
   pub fn home(&self) -> &str {

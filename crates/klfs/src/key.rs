@@ -23,7 +23,7 @@ pub fn access_key(path: &Path) -> io::Result<String> {
 }
 
 /// Writes a file only its owner can read, where the OS has such a thing.
-fn write_private(path: &Path, contents: &str) -> io::Result<()> {
+pub fn write_private(path: &Path, contents: &str) -> io::Result<()> {
   #[cfg(unix)]
   {
     use std::io::Write;
