@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onDestroy, onMount } from 'svelte';
   import Button from '$lib/ui/Button.svelte';
   import Skeleton from '$lib/ui/Skeleton.svelte';
   import { goto } from '$app/navigation';
@@ -7,17 +7,26 @@
   import { errorMessage } from '$lib/utils/errors';
   import {
     changePassword,
+    decideLogin,
     fetchMe,
     fetchSessions,
+    fetchWaitingLogins,
     logout,
     revokeSession,
-    type Session
+    type Session,
+    type WaitingLogin
   } from '$lib/api/auth.svelte';
 
   /// `null` once known to be logged out.
   let me: { username: string | null } | null | undefined = $state(undefined);
   let loadError: string | null = $state(null);
   let sessions: Session[] = $state([]);
+  let waiting: WaitingLogin[] = $state([]);
+
+  /// How often waiting logins are looked for while this is open: someone may
+  /// be on another device waiting for this one.
+  const WAITING_POLL = 5000;
+  let waitingTimer: ReturnType<typeof setTimeout> | undefined;
 
   let currentPassword = $state('');
   let newPassword = $state('');
@@ -32,15 +41,43 @@
     }
   }
 
+  async function loadWaiting() {
+    try {
+      waiting = await fetchWaitingLogins();
+    } catch {
+      // Asked again shortly; the sessions' error already says the server's
+      // unreachable.
+    }
+    waitingTimer = setTimeout(loadWaiting, WAITING_POLL);
+  }
+
   onMount(() => {
     fetchMe().then(
       (result) => {
         me = result;
-        if (result) loadSessions();
+        if (result) {
+          loadSessions();
+          loadWaiting();
+        }
       },
       (e) => (loadError = errorMessage(e, 'Could not load the account'))
     );
   });
+
+  onDestroy(() => clearTimeout(waitingTimer));
+
+  async function decide(login: WaitingLogin, allow: boolean) {
+    try {
+      await decideLogin(login.id, allow);
+      waiting = waiting.filter((w) => w.id !== login.id);
+      if (allow) {
+        showSuccess(`${login.device} is logged in`);
+        loadSessions();
+      }
+    } catch (e) {
+      showError(errorMessage(e, 'Could not answer that login'));
+    }
+  }
 
   async function logOut() {
     try {
@@ -129,6 +166,43 @@
         {/if}
       </div>
     </form>
+
+    {#if waiting.length > 0}
+      <div>
+        <h3 class="mb-2 text-sm font-bold text-dim">Waiting to log in</h3>
+        <p class="mb-2 text-xs text-dim">
+          Allow only a device you're logging in on yourself, showing the same code.
+        </p>
+        <ul class="divide-y divide-line" aria-label="Waiting to log in">
+          {#each waiting as login (login.id)}
+            <li class="flex items-center justify-between gap-3 py-2">
+              <div class="min-w-0">
+                <p class="truncate text-sm text-soft">{login.device}</p>
+                <p class="text-xs text-dim">
+                  Code <span class="font-mono font-bold text-fg">{login.code}</span> · from {login.address}
+                </p>
+              </div>
+              <div class="flex shrink-0 gap-2">
+                <button
+                  class="border-2 px-2 py-1 text-xs hover:bg-fg/10 pointer-coarse:py-3"
+                  onclick={() => decide(login, true)}
+                  aria-label="Allow {login.device}, code {login.code}"
+                >
+                  Allow
+                </button>
+                <button
+                  class="border-2 px-2 py-1 text-xs hover:bg-fg/10 pointer-coarse:py-3"
+                  onclick={() => decide(login, false)}
+                  aria-label="Deny {login.device}, code {login.code}"
+                >
+                  Deny
+                </button>
+              </div>
+            </li>
+          {/each}
+        </ul>
+      </div>
+    {/if}
 
     <div>
       <h3 class="mb-2 text-sm font-bold text-dim">Logged-in devices</h3>

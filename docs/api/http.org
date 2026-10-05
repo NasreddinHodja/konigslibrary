@@ -29,7 +29,7 @@ Sessions end after 30 days unused or 180 days after login, whichever comes first
 Failed logins back off: after 5, each failure doubles the wait, up to 15 minutes. Meanwhile the route answers =429= with a JSON error and =Retry-After= in seconds. Counts are in memory, so a restart clears them.
 
 - A client sending a known device token (see [[*POST /api/auth/login][login]]) is counted on its own.
-- Every other client is counted per address (per =/64= for IPv6) and, when the username is right, against the account. A locked account locks out every client without a device token.
+- Every other client is counted per address (per =/64= for IPv6) and, when the username is right, against the account. While the account is locked, a login from an address that isn't gets an approval to wait for instead of a session (see [[*Approving a new device][Approving a new device]]).
 - Wrong setup tokens are counted per address; wrong current passwords per session.
 
 ** Behind a reverse proxy
@@ -106,9 +106,58 @@ With =cookie=: ={"username": "me"}=, the =kl_session= cookie, and on first login
 | Status | When                                             |
 |--------+--------------------------------------------------|
 | =200=  | Logged in                                        |
+| =202=  | Waiting for approval; see [[*Approving a new device][Approving a new device]] |
 | =401=  | Wrong username or password. Which one isn't said |
 | =403=  | =client= is =cookie= from another site           |
 | =429=  | Locked out for now; see [[*Rate limit][Rate limit]]               |
+
+** Approving a new device
+
+While failed logins have the account locked, a client without a device token can't log in, but it isn't told so outright: =POST /api/auth/login= answers =202=, right password or wrong, so the lockout can't be used to test guesses. Only a login with the right password is kept for a logged-in device to allow; it counts against its address like a failure either way.
+
+#+begin_src json
+{ "approval": { "secret": "…", "code": "AB12CD", "expiresIn": 600 } }
+#+end_src
+
+| Field       | Description                                                                 |
+|-------------+-----------------------------------------------------------------------------|
+| =secret=    | What the waiting client asks with                                           |
+| =code=      | Shown to the waiting client and to whoever allows it, to tell it's this one |
+| =expiresIn= | Seconds until it's forgotten                                                |
+
+At most 20 logins wait at a time; past that, new ones get an answer that's never allowed. Kept in the auth database (=approvals=), so a restart doesn't drop them.
+
+*** POST /api/auth/login/wait
+
+Asked by the waiting client, every few seconds. No session needed.
+
+#+begin_src json
+{ "secret": "…" }
+#+end_src
+
+| Status | When                                                                                     |
+|--------+------------------------------------------------------------------------------------------|
+| =200=  | Allowed: answers like [[*POST /api/auth/login][login]], with the =client= it logged in with, and a new device token |
+| =202=  | ={"status": "pending"}=: not decided yet, or no such approval (unknown, used, expired)   |
+| =403=  | Denied; or allowed for =cookie= but asked from another site                              |
+
+An allowed approval is used up by the answer that gets the session.
+
+*** GET /api/auth/approvals
+
+Logins waiting now, oldest first.
+
+#+begin_src json
+[{ "id": "…", "code": "AB12CD", "device": "Pixel 8", "address": "203.0.113.7", "created": 1759650000 }]
+#+end_src
+
+*** POST /api/auth/approvals/{id}
+
+#+begin_src json
+{ "allow": true }
+#+end_src
+
+Allows or denies it. =204=, or =404= with a JSON error when it isn't waiting any more.
 
 ** POST /api/auth/logout
 
