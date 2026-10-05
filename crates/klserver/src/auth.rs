@@ -42,6 +42,8 @@ const COOKIE: &str = "kl_session";
 const DEVICE_COOKIE: &str = "kl_device";
 const MAX_USERNAME: usize = 64;
 const MAX_DEVICE: usize = 100;
+/// As long as the random setup token's hex.
+const MIN_SETUP_TOKEN: usize = 32;
 
 pub struct Auth {
   pub store: Store,
@@ -71,6 +73,27 @@ impl Auth {
       proxies,
       tls,
     }
+  }
+
+  /// Takes `token` (`KL_SETUP_TOKEN`) as the setup token instead of a random
+  /// one, for whatever starts the server and sets it up itself: the browser
+  /// tests, the desktop app's sidecar. Ignored once there's an admin.
+  pub fn with_setup_token(self, token: &str) -> Result<Self, String> {
+    let token = token.trim();
+    if token.len() < MIN_SETUP_TOKEN {
+      return Err(format!(
+        "KL_SETUP_TOKEN needs at least {MIN_SETUP_TOKEN} characters"
+      ));
+    }
+    if let Some(slot) = self
+      .setup_token
+      .lock()
+      .unwrap_or_else(PoisonError::into_inner)
+      .as_mut()
+    {
+      *slot = token.to_string();
+    }
+    Ok(self)
   }
 
   /// Whether the client reached us over HTTPS: our own TLS, or a trusted
@@ -620,6 +643,41 @@ mod tests {
       h.append(*k, HeaderValue::from_static(v));
     }
     h
+  }
+
+  fn auth_in(dir: &tempfile::TempDir) -> Auth {
+    let store = Store::open(&dir.path().join("auth.db")).unwrap();
+    Auth::new(store, TrustedProxies::default(), false)
+  }
+
+  #[test]
+  fn a_preset_setup_token_replaces_the_random_one() {
+    let dir = tempfile::tempdir().unwrap();
+    let preset = "p".repeat(MIN_SETUP_TOKEN);
+    let auth = auth_in(&dir)
+      .with_setup_token(&format!(" {preset}\n"))
+      .unwrap();
+    assert_eq!(auth.setup_token(), Some(preset));
+  }
+
+  #[test]
+  fn a_short_preset_setup_token_is_refused() {
+    let dir = tempfile::tempdir().unwrap();
+    let short = "p".repeat(MIN_SETUP_TOKEN - 1);
+    assert!(auth_in(&dir).with_setup_token(&short).is_err());
+  }
+
+  #[test]
+  fn a_preset_setup_token_is_ignored_once_set_up() {
+    let dir = tempfile::tempdir().unwrap();
+    auth_in(&dir)
+      .store
+      .create_admin("admin", &password::hash("correct horse"))
+      .unwrap();
+    let auth = auth_in(&dir)
+      .with_setup_token(&"p".repeat(MIN_SETUP_TOKEN))
+      .unwrap();
+    assert_eq!(auth.setup_token(), None);
   }
 
   #[test]

@@ -81,9 +81,10 @@ fn is_html(res: &Response) -> bool {
 /// - `'wasm-unsafe-eval'`: the archive reader is wasm.
 /// - `style-src 'unsafe-inline'`: `app.html`'s `<style>` and `style`
 ///   attributes.
-/// - `connect-src` and `img-src` take any `http:`/`https:`: the settings page
-///   can point the SPA at another server, whose covers and pages are still
-///   plain `<img>` URLs.
+/// - `connect-src`: this server, and GitHub's API for the About page's
+///   download links.
+/// - `img-src` needs no other origin: a server needing the bearer header has
+///   its covers and pages fetched, then shown as `blob:` URLs.
 fn csp(page: &[u8]) -> String {
   let hashes: String = inline_scripts(page)
     .map(|script| format!(" 'sha256-{}'", base64(&Sha256::digest(script))))
@@ -92,8 +93,8 @@ fn csp(page: &[u8]) -> String {
     "default-src 'self'; \
      script-src 'self' 'wasm-unsafe-eval'{hashes}; \
      style-src 'self' 'unsafe-inline'; \
-     img-src 'self' blob: data: http: https:; \
-     connect-src 'self' http: https:; \
+     img-src 'self' blob: data:; \
+     connect-src 'self' https://api.github.com; \
      object-src 'none'; \
      base-uri 'none'; \
      form-action 'self'; \
@@ -179,6 +180,16 @@ mod tests {
       "{policy}"
     );
     assert!(policy.ends_with("frame-ancestors 'none'"), "{policy}");
+  }
+
+  #[test]
+  fn images_and_requests_stay_on_this_server() {
+    let policy = csp(b"");
+    assert!(policy.contains("img-src 'self' blob: data:;"), "{policy}");
+    assert!(
+      policy.contains("connect-src 'self' https://api.github.com;"),
+      "{policy}"
+    );
   }
 
   #[test]

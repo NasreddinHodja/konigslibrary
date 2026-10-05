@@ -29,11 +29,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
   // Unlike the library database, no fallback: sessions in a temp directory
   // would vanish, and the admin with them.
   let tls = tls::Files::from_env()?;
-  let auth = Auth::new(
+  let mut auth = Auth::new(
     auth::store::Store::open(&config.auth_db_path())?,
     proxies,
     tls.is_some(),
   );
+  if let Ok(token) = std::env::var("KL_SETUP_TOKEN") {
+    auth = auth.with_setup_token(&token)?;
+  }
   let db = match db::Db::open(&config.db_path()) {
     Ok(db) => db,
     // A cache, so anywhere writable will do rather than not serving at all.
