@@ -53,6 +53,8 @@ pub fn router(state: SharedState) -> Router {
   let static_files = ServeDir::new(&state.static_dir).fallback(ServeFile::new(index));
 
   let require_session = middleware::from_fn_with_state(Arc::clone(&state), auth::require_session);
+  let security_headers =
+    middleware::from_fn_with_state(Arc::clone(&state), crate::headers::security_headers);
 
   // Read cross-origin; see `cors`. `/api/ping` and the routes that start a
   // session are added after the session check, so "unreachable" and "logged
@@ -86,6 +88,7 @@ pub fn router(state: SharedState) -> Router {
   api
     .merge(settings)
     .fallback_service(static_files)
+    .layer(security_headers)
     .with_state(state)
 }
 
@@ -367,7 +370,7 @@ mod tests {
       cache: ZipCache::new(),
       db: Db::open(&tmp.join(format!("{db}.db"))).unwrap(),
       static_dir,
-      auth: Auth::new(store, TrustedProxies::parse(proxies).unwrap()),
+      auth: Auth::new(store, TrustedProxies::parse(proxies).unwrap(), false),
     })
   }
 
@@ -425,7 +428,7 @@ mod tests {
       cache: ZipCache::new(),
       db: Db::open(&h.tmp.path().join("fresh.db")).unwrap(),
       static_dir: h.state.static_dir.clone(),
-      auth: Auth::new(store, TrustedProxies::default()),
+      auth: Auth::new(store, TrustedProxies::default(), false),
     });
     Harness { state, ..h }
   }
@@ -1518,6 +1521,135 @@ mod tests {
     assert_eq!(body, b"ICON");
   }
 
+  // --- security headers ---
+
+  /// A server that terminates TLS itself.
+  fn harness_tls() -> Harness {
+    let h = harness();
+    let store = Store::open(&h.tmp.path().join("tls-auth.db")).unwrap();
+    let state = Arc::new(AppState {
+      config: h.state.config.clone(),
+      cache: ZipCache::new(),
+      db: Db::open(&h.tmp.path().join("tls.db")).unwrap(),
+      static_dir: h.state.static_dir.clone(),
+      auth: Auth::new(store, TrustedProxies::default(), true),
+    });
+    Harness { state, ..h }
+  }
+
+  fn hsts(res: &Response<()>) -> Option<&HeaderValue> {
+    res.headers().get(header::STRICT_TRANSPORT_SECURITY)
+  }
+
+  #[tokio::test]
+  async fn hsts_only_over_https() {
+    let (_, _, res) = send(&harness(), get_from("/api/ping", LAN)).await;
+    assert_eq!(hsts(&res), None);
+
+    let (_, _, res) = send(&harness_tls(), get_from("/api/ping", LAN)).await;
+    assert_eq!(
+      hsts(&res),
+      Some(&HeaderValue::from_static("max-age=63072000"))
+    );
+  }
+
+  #[tokio::test]
+  async fn hsts_when_a_trusted_proxy_says_https() {
+    let h = harness_with(true, "127.0.0.1");
+    let proto = || [("x-forwarded-proto".parse().unwrap(), "https")];
+    let (_, _, res) = send(&h, with_headers(get_from("/settings", LOCAL_V4), &proto())).await;
+    assert!(hsts(&res).is_some());
+    let (_, _, res) = send(&h, with_headers(get_from("/settings", LAN), &proto())).await;
+    assert_eq!(hsts(&res), None, "only a trusted proxy is believed");
+  }
+
+  #[tokio::test]
+  async fn every_response_says_nosniff_and_its_referrer_policy() {
+    let h = harness();
+    for uri in ["/api/ping", "/api/library", "/favicon.png", "/settings"] {
+      let (_, _, res) = send(&h, get_from(uri, LAN)).await;
+      assert_eq!(
+        res.headers().get(header::X_CONTENT_TYPE_OPTIONS),
+        Some(&HeaderValue::from_static("nosniff")),
+        "{uri}"
+      );
+      assert_eq!(
+        res.headers().get(header::REFERRER_POLICY),
+        Some(&HeaderValue::from_static("strict-origin-when-cross-origin")),
+        "{uri}"
+      );
+    }
+  }
+
+  fn csp(res: &Response<()>) -> Option<&str> {
+    res
+      .headers()
+      .get(header::CONTENT_SECURITY_POLICY)
+      .map(|v| v.to_str().unwrap())
+  }
+
+  #[tokio::test]
+  async fn the_spa_allows_its_own_inline_script_and_no_framing() {
+    let h = harness();
+    std::fs::write(
+      h.state.static_dir.join("index.html"),
+      "<!doctype html><title>SPA</title><script>alert(1)</script>",
+    )
+    .unwrap();
+    for uri in ["/", "/settings"] {
+      let (status, body, res) = send(&h, get_from(uri, LAN)).await;
+      assert_eq!(status, StatusCode::OK);
+      assert!(String::from_utf8_lossy(&body).ends_with("<script>alert(1)</script>"));
+      let policy = csp(&res).unwrap_or_else(|| panic!("no CSP on {uri}"));
+      // `openssl dgst -sha256 -binary | base64` of `alert(1)`.
+      assert!(
+        policy.contains("'sha256-bhHHL3z2vDgxUt0W3dWQOrprscmda2Y5pLsLg4GF+pI='"),
+        "{policy}"
+      );
+      assert!(policy.contains("frame-ancestors 'none'"), "{policy}");
+    }
+  }
+
+  #[tokio::test]
+  async fn only_pages_get_a_csp() {
+    let h = harness();
+    for uri in ["/api/ping", "/api/library", "/favicon.png"] {
+      let (_, _, res) = send(&h, authed(&h, get_from(uri, LAN))).await;
+      assert_eq!(csp(&res), None, "{uri}");
+    }
+  }
+
+  #[tokio::test]
+  async fn a_revalidated_page_keeps_its_cached_csp() {
+    // A 304's headers replace the cached ones, and it has no body to hash.
+    let h = harness();
+    let (_, _, res) = send(&h, get_from("/", LAN)).await;
+    let modified = res.headers()[header::LAST_MODIFIED]
+      .to_str()
+      .unwrap()
+      .to_owned();
+    let mut req = get_from("/", LAN);
+    req
+      .headers_mut()
+      .insert(header::IF_MODIFIED_SINCE, modified.parse().unwrap());
+    let (status, _, res) = send(&h, req).await;
+    assert_eq!(status, StatusCode::NOT_MODIFIED);
+    assert_eq!(csp(&res), None);
+  }
+
+  #[tokio::test]
+  async fn part_of_a_page_gets_no_csp() {
+    // Its scripts may be cut short, so their hashes would be wrong.
+    let h = harness();
+    let mut req = get_from("/", LAN);
+    req
+      .headers_mut()
+      .insert(header::RANGE, HeaderValue::from_static("bytes=0-5"));
+    let (status, _, res) = send(&h, req).await;
+    assert_eq!(status, StatusCode::PARTIAL_CONTENT);
+    assert_eq!(csp(&res), None);
+  }
+
   // --- CORS (a LAN-paired phone reads this API from tauri.localhost) ---
 
   #[tokio::test]
@@ -1581,6 +1713,25 @@ mod tests {
       .unwrap()
       .to_ascii_lowercase();
     assert!(allowed.contains("authorization"), "{allowed}");
+  }
+
+  #[tokio::test]
+  async fn logging_in_works_cross_origin_without_credentials() {
+    // Bearer clients aren't ambient, so `*` stays safe: no cookies cross.
+    let h = harness();
+    for uri in ["/api/auth/login", "/api/auth/setup"] {
+      let (_, _, res) = send(&h, preflight(uri)).await;
+      assert_eq!(
+        res.headers().get(header::ACCESS_CONTROL_ALLOW_ORIGIN),
+        Some(&HeaderValue::from_static("*")),
+        "{uri}"
+      );
+      assert_eq!(
+        res.headers().get(header::ACCESS_CONTROL_ALLOW_CREDENTIALS),
+        None,
+        "{uri}"
+      );
+    }
   }
 
   // --- other sites in the host's browser (security-critical) ---

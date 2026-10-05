@@ -13,7 +13,7 @@ use klfs::ZipCache;
 use klserver::auth::{self, proxy::TrustedProxies, Auth};
 use klserver::config::Config;
 use klserver::routes::{AppState, SharedState};
-use klserver::{db, routes};
+use klserver::{db, routes, tls};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -28,7 +28,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
   let proxies = TrustedProxies::parse(&std::env::var("KL_TRUSTED_PROXIES").unwrap_or_default())?;
   // Unlike the library database, no fallback: sessions in a temp directory
   // would vanish, and the admin with them.
-  let auth = Auth::new(auth::store::Store::open(&config.auth_db_path())?, proxies);
+  let tls = tls::Files::from_env()?;
+  let auth = Auth::new(
+    auth::store::Store::open(&config.auth_db_path())?,
+    proxies,
+    tls.is_some(),
+  );
   let db = match db::Db::open(&config.db_path()) {
     Ok(db) => db,
     // A cache, so anywhere writable will do rather than not serving at all.
@@ -57,21 +62,29 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
   });
 
   let addr: SocketAddr = format!("{host}:{port}").parse()?;
-  let listener = tokio::net::TcpListener::bind(addr).await?;
+  let listener = std::net::TcpListener::bind(addr)?;
+  listener.set_nonblocking(true)?;
   let bound = listener.local_addr()?;
+  let scheme = if tls.is_some() { "https" } else { "http" };
 
-  print_banner(bound.port(), state.auth.setup_token().as_deref());
+  print_banner(scheme, bound.port(), state.auth.setup_token().as_deref());
   if std::env::var("NO_BROWSER").is_err() {
-    open_browser(bound.port());
+    open_browser(scheme, bound.port());
   }
 
   // ConnectInfo is what the login limit counts attempts by,
   // so the service has to be built with it.
-  axum::serve(
-    listener,
-    routes::router(state).into_make_service_with_connect_info::<SocketAddr>(),
-  )
-  .await?;
+  let app = routes::router(state).into_make_service_with_connect_info::<SocketAddr>();
+  match tls {
+    Some(files) => {
+      let (config, watcher) = files.load().await?;
+      tokio::spawn(watcher.run());
+      axum_server::from_tcp_rustls(listener, config)?
+        .serve(app)
+        .await?
+    }
+    None => axum::serve(tokio::net::TcpListener::from_std(listener)?, app).await?,
+  }
 
   Ok(())
 }
@@ -94,11 +107,11 @@ fn static_dir() -> PathBuf {
   PathBuf::from("build-local")
 }
 
-fn print_banner(port: u16, setup_token: Option<&str>) {
+fn print_banner(scheme: &str, port: u16, setup_token: Option<&str>) {
   println!("\nkonigslibrary running on:");
-  println!("  Local:   http://localhost:{port}");
+  println!("  Local:   {scheme}://localhost:{port}");
   for addr in lan_addresses() {
-    println!("  Network: http://{addr}:{port}");
+    println!("  Network: {scheme}://{addr}:{port}");
   }
   if let Some(token) = setup_token {
     // Whoever reads the log is whoever runs the server.
@@ -126,8 +139,8 @@ fn lan_addresses() -> Vec<String> {
   }
 }
 
-fn open_browser(port: u16) {
-  let url = format!("http://localhost:{port}");
+fn open_browser(scheme: &str, port: u16) {
+  let url = format!("{scheme}://localhost:{port}");
   let opener = if cfg!(target_os = "macos") {
     "open"
   } else if cfg!(target_os = "windows") {

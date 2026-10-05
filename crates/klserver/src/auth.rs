@@ -55,10 +55,12 @@ pub struct Auth {
   /// session: clients we know, counted apart from everyone else.
   known_limit: Limiter,
   proxies: TrustedProxies,
+  /// Whether this server terminates TLS itself (`KL_TLS_CERT`).
+  tls: bool,
 }
 
 impl Auth {
-  pub fn new(store: Store, proxies: TrustedProxies) -> Self {
+  pub fn new(store: Store, proxies: TrustedProxies, tls: bool) -> Self {
     let setup_token = (!store.has_admin()).then(|| store::random_hex(16));
     Self {
       store,
@@ -67,7 +69,14 @@ impl Auth {
       account_limit: Limiter::default(),
       known_limit: Limiter::default(),
       proxies,
+      tls,
     }
+  }
+
+  /// Whether the client reached us over HTTPS: our own TLS, or a trusted
+  /// proxy's.
+  pub fn https(&self, peer: IpAddr, headers: &HeaderMap) -> bool {
+    self.tls || self.proxies.forwarded_https(peer, headers)
   }
 
   /// What `POST /api/auth/setup` needs, while there's no admin.
@@ -187,7 +196,7 @@ struct Caller {
 fn caller(auth: &Auth, peer: SocketAddr, headers: &HeaderMap) -> Caller {
   Caller {
     ip: auth.proxies.client_ip(peer.ip(), headers),
-    https: auth.proxies.forwarded_https(peer.ip(), headers),
+    https: auth.https(peer.ip(), headers),
   }
 }
 
