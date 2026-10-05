@@ -8,7 +8,7 @@ on:
 
 jobs:
   ci:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
       - uses: actions/checkout@v7
@@ -84,7 +84,7 @@ jobs:
   # The self-hosted app in a browser (playwright.config.ts): reading flows and
   # axe's accessibility checks, against the simulated library.
   e2e:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
       - uses: actions/checkout@v7
@@ -123,7 +123,7 @@ jobs:
   # (scripts/bench-compare.js).
   bench:
     if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
       - uses: actions/checkout@v7
