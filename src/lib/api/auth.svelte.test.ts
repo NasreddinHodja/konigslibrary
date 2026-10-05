@@ -75,7 +75,7 @@ describe('server images', () => {
 
   it('are fetched with it into an object URL', async () => {
     inApp('tok');
-    const fetch = fakeServer(() => new Response(new Blob(['png'])));
+    const fetch = fakeServer(() => new Response('png'));
     const url = await auth.imageObjectUrl(`${SERVER}/api/library/berserk/cover.png`);
     expect(url).toMatch(/^blob:/);
     expect(header(fetch.mock.calls[0][1], 'Authorization')).toBe('Bearer tok');

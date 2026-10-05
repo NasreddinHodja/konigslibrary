@@ -28,7 +28,7 @@ describe('a cover', () => {
     localStorage.setItem('kl:serverUrl', SERVER);
     localStorage.setItem('kl:serverToken', 'tok');
     const fetch = fakeServer((url) =>
-      url.href === COVER ? new Response(new Blob(['png'])) : undefined
+      url.href === COVER ? new Response('png') : undefined
     );
     renderCover(COVER);
     await vi.waitFor(() => expect(image()).toHaveAttribute('src', expect.stringMatching(/^blob:/)));
@@ -39,7 +39,7 @@ describe('a cover', () => {
     localStorage.setItem('kl:serverUrl', SERVER);
     localStorage.setItem('kl:serverToken', 'tok');
     fakeServer((url) =>
-      url.href === COVER ? new Response(new Blob(['png'])) : new Promise(() => {})
+      url.href === COVER ? new Response('png') : new Promise(() => {})
     );
     const { rerender } = renderCover(COVER);
     await vi.waitFor(() => expect(image()).toBeInTheDocument());
@@ -50,7 +50,7 @@ describe('a cover', () => {
   it("is let go of once it's gone", async () => {
     localStorage.setItem('kl:serverUrl', SERVER);
     localStorage.setItem('kl:serverToken', 'tok');
-    fakeServer(() => new Response(new Blob(['png'])));
+    fakeServer(() => new Response('png'));
     const revoke = vi.spyOn(URL, 'revokeObjectURL');
     const { unmount } = renderCover(COVER);
     await vi.waitFor(() => expect(image()).toBeInTheDocument());

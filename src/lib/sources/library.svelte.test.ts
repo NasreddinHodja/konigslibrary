@@ -12,7 +12,7 @@ function server() {
     if (url.pathname === '/api/library/berserk/chapters')
       return json([{ name: 'ch1', slug: 'ch1.cbz', pageCount: 2, pages: ['1.jpg', 'b w/2.jpg'] }]);
     if (url.pathname.startsWith('/api/library/berserk/ch1.cbz/'))
-      return new Response(new Blob(['jpg']));
+      return new Response('jpg');
   });
 }
 
