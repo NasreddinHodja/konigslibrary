@@ -54,7 +54,7 @@ crates/
 ├── klparse/   ZIP and ZIP64 parsing, chapter numbers and sorting, ComicInfo, collation
 ├── klfs/      klparse over files on disk, with a cache of parsed central directories
 ├── klwasm/    wasm-bindgen bindings to klparse, for the browser
-└── klserver/  axum server, with a SQLite index of the library
+└── klserver/  axum server, with a SQLite index of the library and an auth store
 src-tauri/     desktop and Android app; uses klparse and klfs
 #+end_example
 

@@ -47,16 +47,49 @@ The manga directory can also be set from Settings in the UI, which saves it to =
 
 On first run, the server prints a setup token: open its page and create the admin account with it. Other devices then log in with that account, at the =Network= address it prints. Lost the password? Run =konigslibrary-server reset-admin= (with the same =KL_AUTH_DB=, if set) and restart: the admin and every session are gone, and a new setup token is printed.
 
+** HTTPS
+
+To serve HTTPS itself, point =KL_TLS_CERT= at the certificate's full chain and =KL_TLS_KEY= at its private key, both PEM; Let's Encrypt's =fullchain.pem= and =privkey.pem= work as they are. The files are checked every minute, so a renewed certificate is picked up without a restart. A renewal caught half-written keeps the old certificate until both files load.
+
+Responses over HTTPS carry HSTS for two years, without =includeSubDomains=. Without these variables the server speaks plain HTTP, which on anything but a network you trust sends the password and sessions in the clear.
+
+** Behind a reverse proxy
+
+Tell the server which proxy to believe with =KL_TRUSTED_PROXIES=, and bind it where only the proxy reaches it. With nginx on the same host:
+
+#+begin_src nginx
+location / {
+    proxy_pass http://127.0.0.1:3000;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+}
+#+end_src
+
+#+begin_src sh
+HOST=127.0.0.1 KL_TRUSTED_PROXIES=127.0.0.1 crates/target/release/konigslibrary-server
+#+end_src
+
+Without =KL_TRUSTED_PROXIES=, every client looks like the proxy: one person's failed logins, even with a wrong username, lock out every device that hasn't logged in before, and neither the =Secure= cookie flag nor HSTS is sent. =Host $host= matters only for browsers too old to send =Sec-Fetch-Site=, whose logins are otherwise refused as cross-site. See [[file:../api/http.org::*Behind a reverse proxy][HTTP server]] for exactly what's believed.
+
+** Upgrading from the access key
+
+Servers no longer use an access key. Devices that connected with one get the login screen: log in with the admin account (on a self-hosted server, create it first with the setup token). =konigslibrary.key= and =KL_KEY= are ignored; the file can be deleted. The desktop app deletes its old =lan-key= itself.
+
 ** Environment variables
 
-| Variable        | Default                                           | Description                                        |
-|-----------------+---------------------------------------------------+----------------------------------------------------|
-| =MANGA_DIR=     | from =konigslibrary.json=                         | Manga directory                                    |
-| =KL_DB=         | =./konigslibrary.db=                              | Library database. A cache; safe to delete          |
-| =PORT=          | =3000=                                            | Server port                                        |
-| =HOST=          | =0.0.0.0=                                         | Bind address                                       |
-| =KL_KEY=        | from =konigslibrary.key=                          | Access key; when set, it isn't printed             |
-| =KL_STATIC_DIR= | =client/= next to the binary, else =build-local/= | Built frontend to serve                            |
-| =NO_BROWSER=    | unset                                             | Set to anything to skip opening a browser on start |
+| Variable             | Default                                           | Description                                                                                |
+|----------------------+---------------------------------------------------+--------------------------------------------------------------------------------------------|
+| =MANGA_DIR=          | from =konigslibrary.json=                         | Manga directory                                                                            |
+| =KL_DB=              | =./konigslibrary.db=                              | Library database. A cache; safe to delete                                                  |
+| =PORT=               | =3000=                                            | Server port                                                                                |
+| =HOST=               | =0.0.0.0=                                         | Bind address                                                                               |
+| =KL_AUTH_DB=         | =./konigslibrary-auth.db=                         | Admin and sessions, readable only by its owner. Not a cache: deleting it removes the admin |
+| =KL_SETUP_TOKEN=     | random                                            | Setup token, 32 characters at least; when set, it isn't printed                            |
+| =KL_TLS_CERT=        | unset                                             | Certificate chain, PEM; see [[*HTTPS][HTTPS]]                                                          |
+| =KL_TLS_KEY=         | unset                                             | Private key, PEM; needs =KL_TLS_CERT=                                                      |
+| =KL_TRUSTED_PROXIES= | unset                                             | Proxy addresses and CIDR ranges, comma-separated; see [[*Behind a reverse proxy][Behind a reverse proxy]]               |
+| =KL_STATIC_DIR=      | =client/= next to the binary, else =build-local/= | Built frontend to serve                                                                    |
+| =NO_BROWSER=         | unset                                             | Set to anything to skip opening a browser on start                                         |
 
-If the database can't be opened, the server falls back to =konigslibrary.db= in the system temp directory.
+If the library database can't be opened, the server falls back to =konigslibrary.db= in the system temp directory. The auth database has no fallback: the server doesn't start without it.

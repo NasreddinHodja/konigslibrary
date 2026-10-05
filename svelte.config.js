@@ -1,5 +1,36 @@
+import { createHash } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 import adapterAuto from '@sveltejs/adapter-auto';
 import adapterStatic from '@sveltejs/adapter-static';
+
+/** `app.html`'s inline scripts as CSP hashes: SvelteKit only hashes its own. */
+function appHtmlScriptHashes() {
+  const html = readFileSync(new URL('./src/app.html', import.meta.url), 'utf8');
+  return [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(
+    ([, body]) => `sha256-${createHash('sha256').update(body).digest('base64')}`
+  );
+}
+
+/**
+ * The public site's policy. klserver sends its own as a header
+ * (`crates/klserver/src/headers.rs`) and Tauri has `tauri.conf.json`'s, so
+ * this is for STATIC_BUILD only. It goes in a `<meta>`, so
+ * `frame-ancestors` is in `vercel.json` instead. `connect-src` allows any
+ * server, since the reader connects to whichever one the user types in.
+ */
+const staticCsp = {
+  mode: 'hash',
+  directives: {
+    'default-src': ['self'],
+    'script-src': ['self', 'wasm-unsafe-eval', ...appHtmlScriptHashes()],
+    'style-src': ['self', 'unsafe-inline'],
+    'img-src': ['self', 'blob:', 'data:'],
+    'connect-src': ['self', 'blob:', 'http:', 'https:'],
+    'object-src': ['none'],
+    'base-uri': ['none'],
+    'form-action': ['self']
+  }
+};
 
 /** @type {import('@sveltejs/kit').Config} */
 const config = {
@@ -29,6 +60,7 @@ const config = {
       : process.env.TAURI_BUILD || process.env.STATIC_BUILD
         ? adapterStatic({ fallback: 'index.html', strict: false })
         : adapterAuto(),
+    csp: process.env.STATIC_BUILD ? staticCsp : undefined,
     serviceWorker: {
       register: !process.env.LOCAL_BUILD && !process.env.TAURI_BUILD
     }

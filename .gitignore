@@ -75,6 +75,8 @@ AUDIT.org
 
 # appimage output
 /dist/
+
+# notes
 /TODO.org
 
 # playwright
