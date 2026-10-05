@@ -149,9 +149,12 @@
     check();
     const offComplete = reader.events.on('download:complete', check);
     const offError = reader.events.on('download:error', check);
+    // A cancelled download's files are deleted, then this: offer it again.
+    const offDeleted = reader.events.on('download:deleted', check);
     return () => {
       offComplete();
       offError();
+      offDeleted();
     };
   });
 

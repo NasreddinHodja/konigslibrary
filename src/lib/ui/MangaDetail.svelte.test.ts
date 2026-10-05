@@ -7,6 +7,7 @@ import { FakeProvider } from '$lib/testing/reader';
 import { fakeServer, json } from '$lib/testing/server';
 import { mockApp } from '$lib/testing/tauri';
 import { openServerManga, type SourceProvider } from '$lib/sources';
+import { cancelDownload, downloadProgress } from '$lib/sources/download.svelte';
 import type { Reader } from '$lib/context';
 import type { MangaMeta } from '$lib/api/meta';
 
@@ -207,6 +208,30 @@ describe('MangaDetail', () => {
           })
         )
       );
+    });
+
+    it('is offered again after the download is cancelled', async () => {
+      fakeServer((url) => {
+        if (url.pathname === '/api/library/berserk/chapters')
+          return json([{ name: 'ch1', slug: 'ch1.cbz', pageCount: 1, pages: ['1.jpg'] }]);
+        if (url.pathname === '/api/library/berserk/meta') return json({ ...meta(), cover: null });
+      });
+      // The copy runs until cancelled, then fails as the app's does.
+      let stop: (err: Error) => void = () => {};
+      mockApp((cmd) => {
+        if (cmd === 'list_offline_manga') return [];
+        if (cmd === 'download_file') return new Promise((_, reject) => (stop = reject));
+        if (cmd === 'cancel_download') stop(new Error('cancelled'));
+      });
+      const { user } = await renderDetail(openServerManga('berserk', 'berserk'));
+      await user.click(await screen.findByRole('button', { name: 'download' }));
+      await user.click(
+        within(screen.getByRole('dialog')).getByRole('button', { name: 'download' })
+      );
+      expect(screen.queryByRole('button', { name: 'download' })).not.toBeInTheDocument();
+      await vi.waitFor(() => expect(downloadProgress.has('berserk')).toBe(true));
+      cancelDownload('berserk');
+      expect(await screen.findByRole('button', { name: 'download' })).toBeInTheDocument();
     });
 
     it('is not offered for a manga already downloaded', async () => {
