@@ -11,22 +11,6 @@ pub fn random_hex(bytes: usize) -> String {
   buf.iter().map(|b| format!("{b:02x}")).collect()
 }
 
-/// Bytes of randomness in an access key; it's hex, so twice as many characters.
-const KEY_BYTES: usize = 16;
-
-/// The key stored at `path`, created on first use.
-pub fn access_key(path: &Path) -> io::Result<String> {
-  if let Ok(raw) = fs::read_to_string(path) {
-    let key = raw.trim();
-    if !key.is_empty() {
-      return Ok(key.to_string());
-    }
-  }
-  let key = random_hex(KEY_BYTES);
-  write_private(path, &format!("{key}\n"))?;
-  Ok(key)
-}
-
 /// Writes a file only its owner can read, where the OS has such a thing.
 pub fn write_private(path: &Path, contents: &str) -> io::Result<()> {
   #[cfg(unix)]

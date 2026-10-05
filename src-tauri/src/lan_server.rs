@@ -1,5 +1,6 @@
 use serde::Serialize;
 use std::net::{TcpListener, UdpSocket};
+use std::path::{Path, PathBuf};
 use std::process::Stdio;
 use std::sync::Mutex;
 use std::time::Duration;
@@ -11,18 +12,22 @@ pub struct Running {
   child: Child,
   port: u16,
   lan_ip: String,
-  key: String,
+  /// Only this app knows it, so only this app can create the admin.
+  setup_token: String,
+  setup_needed: bool,
 }
 
 #[derive(Default)]
 pub struct LanServerState(pub Mutex<Option<Running>>);
 
 #[derive(Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct LanServerStatus {
   running: bool,
   url: Option<String>,
   port: Option<u16>,
-  key: Option<String>,
+  /// No admin yet: other devices have no account to log in with.
+  setup_needed: bool,
 }
 
 impl Running {
@@ -31,7 +36,7 @@ impl Running {
       running: true,
       url: Some(format!("http://{}:{}", self.lan_ip, self.port)),
       port: Some(self.port),
-      key: Some(self.key.clone()),
+      setup_needed: self.setup_needed,
     }
   }
 }
@@ -42,6 +47,27 @@ fn stop(state: &LanServerState) -> std::io::Result<()> {
     Some(mut running) => running.child.start_kill(),
     None => Ok(()),
   }
+}
+
+/// The server's admin and sessions, in the app data directory.
+const AUTH_DB: &str = "lan-auth.db";
+
+/// The bundled server and the client it serves.
+fn assets_dir(app: &AppHandle) -> Result<PathBuf, String> {
+  app
+    .path()
+    .resolve(
+      "binaries/konigslibrary-server-assets",
+      BaseDirectory::Resource,
+    )
+    .map_err(|e| e.to_string())
+}
+
+fn server_bin(assets_dir: &Path) -> PathBuf {
+  assets_dir.join(format!(
+    "konigslibrary-server{}",
+    std::env::consts::EXE_SUFFIX
+  ))
 }
 
 fn free_port() -> Result<u16, String> {
@@ -85,21 +111,13 @@ pub async fn start_lan_server(
   let ip = lan_ip()?;
   let data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
   std::fs::create_dir_all(&data_dir).map_err(|e| e.to_string())?;
-  // Kept across restarts, so paired devices stay paired.
-  let key = klfs::access_key(&data_dir.join("lan-key")).map_err(|e| e.to_string())?;
+  // The shared key from before accounts; nothing reads it any more.
+  let _ = std::fs::remove_file(data_dir.join("lan-key"));
+  // A new one each start; it only matters until the admin exists.
+  let setup_token = klfs::random_hex(16);
 
-  let assets_dir = app
-    .path()
-    .resolve(
-      "binaries/konigslibrary-server-assets",
-      BaseDirectory::Resource,
-    )
-    .map_err(|e| e.to_string())?;
-
-  let server_bin = assets_dir.join(format!(
-    "konigslibrary-server{}",
-    std::env::consts::EXE_SUFFIX
-  ));
+  let assets_dir = assets_dir(&app)?;
+  let server_bin = server_bin(&assets_dir);
 
   // Spawned through tokio directly rather than tauri-plugin-shell's sidecar
   // API. A sidecar has to be declared in bundle.externalBin, and Tauri's
@@ -114,7 +132,9 @@ pub async fn start_lan_server(
     // Its library database: the working directory it inherits may be a
     // read-only install location.
     .env("KL_DB", data_dir.join("lan-library.db"))
-    .env("KL_KEY", &key)
+    // The admin and sessions, kept across restarts so devices stay logged in.
+    .env("KL_AUTH_DB", data_dir.join(AUTH_DB))
+    .env("KL_SETUP_TOKEN", &setup_token)
     .env("PORT", port.to_string())
     .env("HOST", "0.0.0.0")
     .env("NO_BROWSER", "1")
@@ -181,15 +201,131 @@ pub async fn start_lan_server(
     return Err(detail);
   }
 
+  let setup_needed = match setup_needed(&client, port).await {
+    Ok(needed) => needed,
+    Err(e) => {
+      let _ = child.start_kill();
+      return Err(e);
+    }
+  };
+
   let running = Running {
     child,
     port,
     lan_ip: ip,
-    key,
+    setup_token,
+    setup_needed,
   };
   let status = running.status();
   *state.0.lock().unwrap() = Some(running);
   Ok(status)
+}
+
+/// Whether the server at `port` has no admin yet.
+async fn setup_needed(client: &reqwest::Client, port: u16) -> Result<bool, String> {
+  let body = client
+    .get(format!("http://127.0.0.1:{port}/api/auth/setup"))
+    .send()
+    .await
+    .and_then(|r| r.error_for_status())
+    .map_err(|e| e.to_string())?
+    .text()
+    .await
+    .map_err(|e| e.to_string())?;
+  serde_json::from_str::<serde_json::Value>(&body)
+    .ok()
+    .and_then(|v| v["needed"].as_bool())
+    .ok_or_else(|| "the server did not say whether it needs setting up".to_string())
+}
+
+/// Creates the admin other devices log in as, on the running server.
+#[tauri::command]
+pub async fn setup_lan_server(
+  state: State<'_, LanServerState>,
+  username: String,
+  password: String,
+) -> Result<LanServerStatus, String> {
+  let (port, token) = match &*state.0.lock().unwrap() {
+    Some(running) => (running.port, running.setup_token.clone()),
+    None => return Err("The server isn't running".to_string()),
+  };
+  let base = format!("http://127.0.0.1:{port}/api/auth");
+  let client = reqwest::Client::new();
+  let res = client
+    .post(format!("{base}/setup"))
+    .header(reqwest::header::CONTENT_TYPE, "application/json")
+    .body(
+      serde_json::json!({
+        "token": token,
+        "username": username,
+        "password": password,
+        "client": "bearer",
+      })
+      .to_string(),
+    )
+    .send()
+    .await
+    .map_err(|e| e.to_string())?;
+  let ok = res.status().is_success();
+  let body: serde_json::Value =
+    serde_json::from_str(&res.text().await.map_err(|e| e.to_string())?).unwrap_or_default();
+  if !ok {
+    return Err(
+      body["error"]
+        .as_str()
+        .unwrap_or("Could not set up the server")
+        .to_string(),
+    );
+  }
+  // Setup also logs in, which this app has no use for: it reads the library
+  // from disk.
+  if let Some(session) = body["token"].as_str() {
+    let _ = client
+      .post(format!("{base}/logout"))
+      .bearer_auth(session)
+      .send()
+      .await;
+  }
+
+  let mut guard = state.0.lock().unwrap();
+  match guard.as_mut() {
+    Some(running) => {
+      running.setup_needed = false;
+      Ok(running.status())
+    }
+    // Stopped while setting up; the admin was still created.
+    None => Err("The server stopped".to_string()),
+  }
+}
+
+/// Forgets the account other devices log in with, for an admin who lost the
+/// password: stops the server, then runs its `reset-admin`. Sharing again
+/// asks for a new account; every device is logged out.
+#[tauri::command]
+pub async fn reset_lan_account(
+  app: AppHandle,
+  state: State<'_, LanServerState>,
+) -> Result<(), String> {
+  let running = state.0.lock().unwrap().take();
+  if let Some(mut running) = running {
+    // Waits for it to exit, so it can't serve the old sessions meanwhile.
+    let _ = running.child.kill().await;
+  }
+  let data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
+  let server_bin = server_bin(&assets_dir(&app)?);
+  let out = Command::new(&server_bin)
+    .arg("reset-admin")
+    .env("KL_AUTH_DB", data_dir.join(AUTH_DB))
+    .output()
+    .await
+    .map_err(|e| format!("could not start {}: {e}", server_bin.display()))?;
+  if !out.status.success() {
+    return Err(format!(
+      "Could not reset the account: {}",
+      String::from_utf8_lossy(&out.stderr).trim()
+    ));
+  }
+  Ok(())
 }
 
 #[tauri::command]
@@ -205,7 +341,7 @@ pub fn lan_server_status(state: State<'_, LanServerState>) -> LanServerStatus {
       running: false,
       url: None,
       port: None,
-      key: None,
+      setup_needed: false,
     },
   }
 }

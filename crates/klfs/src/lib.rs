@@ -16,7 +16,7 @@ use klparse::zip::ZipError;
 use klparse::{ChapterNumber, MangaMeta};
 
 pub use cache::{ZipCache, ZIP_CACHE_MAX};
-pub use key::{access_key, random_hex, write_private};
+pub use key::{random_hex, write_private};
 pub use reader::FileReader;
 
 /// The user's home directory, from `HOME` (or `USERPROFILE` on Windows).

@@ -128,7 +128,6 @@ pub fn run() {
     .manage(lan_server::LanServerState::default())
     .plugin(tauri_plugin_dialog::init())
     .plugin(tauri_plugin_opener::init())
-    .plugin(tauri_plugin_deep_link::init())
     .setup(|app| {
       // The app's own manga folders are always readable.
       for dir in [
@@ -178,6 +177,8 @@ pub fn run() {
       lan_server::start_lan_server,
       lan_server::stop_lan_server,
       lan_server::lan_server_status,
+      lan_server::setup_lan_server,
+      lan_server::reset_lan_account,
       diagnostics::read_logs,
       diagnostics::take_crash_report,
     ])

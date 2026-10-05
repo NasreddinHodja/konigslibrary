@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { connectLink, parseConnectLink, parseServerUrl, shareLink } from './server-connect';
+import { parseServerUrl, shareLink } from './server-connect';
 
 describe('parseServerUrl', () => {
   it('drops the key a link from before accounts carries', () => {
@@ -21,16 +21,6 @@ describe('parseServerUrl', () => {
 });
 
 describe('links', () => {
-  it('a connect link round-trips the server', () => {
-    const link = connectLink('http://192.168.1.5:3000');
-    expect(link).toBe('konigslibrary://connect?host=192.168.1.5&port=3000');
-    expect(parseConnectLink(link)).toBe('http://192.168.1.5:3000');
-  });
-
-  it('an old connect link with a key still parses', () => {
-    expect(parseConnectLink('konigslibrary://connect?host=h&port=1&key=abc')).toBe('http://h:1');
-  });
-
   it('a share link pastes back into the server field', () => {
     const link = shareLink('http://192.168.1.5:3000');
     expect(link).toBe('http://192.168.1.5:3000/');

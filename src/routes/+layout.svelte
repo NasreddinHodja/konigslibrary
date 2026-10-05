@@ -6,9 +6,6 @@
   import { initTheme } from '$lib/theme';
   import { createReader, setReaderContext } from '$lib/context';
   import { isAndroid, isNative } from '$lib/utils/platform';
-  import { showSuccess, showError } from '$lib/ui/toast.svelte';
-  import { errorMessage } from '$lib/utils/errors';
-  import { parseConnectLink, validateAndConnect } from '$lib/sources/server-connect';
   import { afterNavigate, goto, onNavigate, replaceState } from '$app/navigation';
   import { page } from '$app/state';
   import CrashReport from '$lib/ui/CrashReport.svelte';
@@ -62,40 +59,6 @@
   // The app's log gets the page's uncaught errors too, for "Copy logs".
   $effect(() => {
     if (isNative()) return logWebviewErrors();
-  });
-
-  async function handleDeepLink(raw: string) {
-    const url = parseConnectLink(raw);
-    if (!url) return;
-    try {
-      const { loginNeeded } = await validateAndConnect(url);
-      showSuccess('Connected via QR code');
-      goto(loginNeeded ? '/login' : '/');
-    } catch (e) {
-      showError(errorMessage(e, 'Could not connect'));
-    }
-  }
-
-  $effect(() => {
-    if (!isNative()) return;
-    let unlisten: (() => void) | undefined;
-    let disposed = false;
-    import('@tauri-apps/plugin-deep-link').then(async ({ getCurrent, onOpenUrl }) => {
-      // The layout may have gone while the plugin was loading.
-      if (disposed) return;
-      const initial = await getCurrent();
-      if (disposed) return;
-      if (initial?.[0]) handleDeepLink(initial[0]);
-      const stop = await onOpenUrl((urls) => {
-        if (urls[0]) handleDeepLink(urls[0]);
-      });
-      if (disposed) stop();
-      else unlisten = stop;
-    });
-    return () => {
-      disposed = true;
-      unlisten?.();
-    };
   });
 </script>
 

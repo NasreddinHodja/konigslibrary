@@ -2,7 +2,6 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen } from '@testing-library/svelte';
 import { createRawSnippet } from 'svelte';
 import Layout from './+layout.svelte';
-import { getToasts } from '$lib/ui/toast.svelte';
 import { fakeServer, json } from '$lib/testing/server';
 import { mockApp } from '$lib/testing/tauri';
 import { apiFetch, login } from '$lib/api/auth.svelte';
@@ -88,52 +87,6 @@ describe('the layout', () => {
     it('is left alone with a mouse', async () => {
       renderLayout();
       expect(longPress(screen.getByText('the page'))).toBe(false);
-    });
-  });
-
-  // Scanning the host's QR code opens the app with this link.
-  describe('a connect link', () => {
-    function openedWith(link: string) {
-      mockApp((cmd) => {
-        if (cmd === 'plugin:deep-link|get_current') return [link];
-      });
-    }
-
-    it('connects to the server it names, then asks to log in', async () => {
-      openedWith('konigslibrary://connect?host=192.168.1.5&port=3000');
-      fakeServer((url) =>
-        url.host === '192.168.1.5:3000' && url.pathname === '/api/auth/setup'
-          ? json({ needed: false })
-          : undefined
-      );
-      renderLayout();
-      await vi.waitFor(() => expect(nav.goto).toHaveBeenCalledWith('/login'));
-      expect(localStorage.getItem('kl:serverUrl')).toBe('http://192.168.1.5:3000');
-      expect(getToasts().map((t) => t.label)).toContain('Connected via QR code');
-    });
-
-    it('says why it could not connect', async () => {
-      openedWith('konigslibrary://connect?host=192.168.1.5&port=3000');
-      // A server from before accounts: the route falls through to its page.
-      fakeServer(
-        () => new Response('<!doctype html>', { headers: { 'Content-Type': 'text/html' } })
-      );
-      renderLayout();
-      await vi.waitFor(() =>
-        expect(getToasts().map((t) => t.label)).toContain(
-          'Not a konigslibrary server, or an outdated one'
-        )
-      );
-      expect(nav.goto).not.toHaveBeenCalled();
-      expect(localStorage.getItem('kl:serverUrl')).toBeNull();
-    });
-
-    it('ignores any other link', async () => {
-      openedWith('https://example.com/');
-      const fetch = fakeServer(() => undefined);
-      renderLayout();
-      await new Promise((r) => setTimeout(r, 20));
-      expect(fetch).not.toHaveBeenCalled();
     });
   });
 

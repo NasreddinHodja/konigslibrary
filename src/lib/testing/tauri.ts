@@ -13,7 +13,7 @@ export function mockApp(handle: (cmd: string, args?: InvokeArgs) => unknown = ()
       calls.push({ cmd, args });
       return handle(cmd, args);
     },
-    // Event listeners too (deep links, window events), so they can be undone.
+    // Event listeners too (window events), so they can be undone.
     { shouldMockEvents: true }
   );
   return calls;

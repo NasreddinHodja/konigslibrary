@@ -34,23 +34,6 @@
       }
     }
   },
-  "plugins": {
-    "deep-link": {
-      "mobile": [
-        {
-          "scheme": [
-            "konigslibrary"
-          ],
-          "appLink": false
-        }
-      ],
-      "desktop": {
-        "schemes": [
-          "konigslibrary"
-        ]
-      }
-    }
-  },
   "bundle": {
     "active": true,
     "targets": [

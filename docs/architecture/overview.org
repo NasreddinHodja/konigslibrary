@@ -92,7 +92,7 @@ See [[file:page-loading.org][Page loading]] for how each is read.
 
 * Which server
 
-=apiUrl()= (=src/lib/utils/constants.ts=) prefixes API paths with the server URL stored in =localStorage= under =kl:serverUrl=. Empty URL means same-origin, which is the case when =klserver= serves the frontend itself. The packaged apps set it when connecting to a server, including through a =konigslibrary://connect= link (=src/lib/sources/server-connect.ts=), which is what the LAN share QR code holds; a new server drops the old one's session.
+=apiUrl()= (=src/lib/utils/constants.ts=) prefixes API paths with the server URL stored in =localStorage= under =kl:serverUrl=. Empty URL means same-origin, which is the case when =klserver= serves the frontend itself. The packaged apps set it when connecting to a server (=src/lib/sources/server-connect.ts=); a new server drops the old one's session.
 
 Requests go through =apiFetch()= (=src/lib/api/auth.svelte.ts=), which carries the session:
 
