@@ -102,7 +102,7 @@
       <Button size="md" onclick={logOut}>Log out</Button>
     </div>
 
-    <form class="space-y-3" onsubmit={submitPassword}>
+    <form class="max-w-sm space-y-3" onsubmit={submitPassword}>
       <h3 class="text-sm font-bold text-dim">Change password</h3>
       <input
         class={field}

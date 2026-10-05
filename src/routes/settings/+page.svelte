@@ -307,7 +307,7 @@
         {#if loadingDir}
           <Skeleton class="h-10 w-full border-2 border-transparent" />
         {:else}
-          <div class="flex gap-2">
+          <div class="flex max-w-sm gap-2">
             <input
               type="text"
               bind:value={mangaDir}
@@ -459,7 +459,7 @@
         {#if !android}
           <div class="space-y-3">
             <h3 class="text-sm font-bold text-dim">Local directory</h3>
-            <div class="flex gap-2">
+            <div class="flex max-w-sm gap-2">
               <input
                 type="text"
                 bind:value={deviceDir}
@@ -482,7 +482,7 @@
 
         <div class="space-y-3">
           <h3 class="text-sm font-bold text-dim">Server URL</h3>
-          <div class="relative">
+          <div class="relative max-w-sm">
             <input
               type="text"
               bind:this={serverUrlInput}
