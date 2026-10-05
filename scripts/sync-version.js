@@ -1,5 +1,6 @@
 #!/usr/bin/env bun
 import { readFileSync, writeFileSync } from 'fs';
+import { spawnSync } from 'child_process';
 
 const version = process.argv[2];
 if (!version || !/^\d+\.\d+\.\d+$/.test(version)) {
@@ -20,5 +21,16 @@ writeFileSync('src-tauri/tauri.conf.json', JSON.stringify(tauriConf, null, 2) + 
 // Cargo.toml
 const cargo = readFileSync('src-tauri/Cargo.toml', 'utf8');
 writeFileSync('src-tauri/Cargo.toml', cargo.replace(/^version = ".*"/m, `version = "${version}"`));
+
+// Cargo.lock
+const lock = spawnSync(
+  'cargo',
+  ['update', '--workspace', '--offline', '--manifest-path', 'src-tauri/Cargo.toml'],
+  { stdio: 'inherit' }
+);
+if (lock.status !== 0) {
+  console.error('Could not update src-tauri/Cargo.lock');
+  process.exit(1);
+}
 
 console.log(`bumped to ${version}`);
