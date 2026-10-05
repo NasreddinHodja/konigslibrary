@@ -22,11 +22,22 @@ filter_unconventional = true
 split_commits = true
 # Run before the split, on the whole message.
 commit_preprocessors = [{ pattern = '(?m)^\* ', replace = "" }]
+# Split before parsing. Without this, git-cliff's legacy order splits only
+# commits whose whole message already parsed, and a squash merge's doesn't.
+processing_order = [
+  "commit_preprocessors",
+  "split_commits",
+  "conventional_commits",
+  "commit_parsers",
+  "link_parsers",
+]
 # Group names sort alphabetically, which is the order they're listed in.
+# The type has to end in `(`, `:` or `!`, so a branch name like `feat/auth`
+# in a squash merge's subject doesn't count.
 commit_parsers = [
-  { message = "^feat", group = "Features" },
-  { message = "^fix", group = "Fixes" },
-  { message = "^perf", group = "Performance" },
+  { message = "^feat[(:!]", group = "Features" },
+  { message = "^fix[(:!]", group = "Fixes" },
+  { message = "^perf[(:!]", group = "Performance" },
 ]
 filter_commits = true
 tag_pattern = "v[0-9].*"
