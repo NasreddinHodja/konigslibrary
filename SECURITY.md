@@ -128,8 +128,7 @@ files.
   session can change the served folder and browse the host's directories.
 - **Approving needs a logged-in device.** While someone keeps guessing, a
   device that never logged in before gets in only once another device allows
-  it. The desktop app doesn't log in to its own Share to LAN server, so with no
-  other device logged in, the way in is resetting the account
+  it. With no device logged in, the way in is resetting the account
   (`reset-admin`, or "Forgot the password?").
 - **Limits reset on restart.** Failure counts are kept in memory.
 - **Bearer tokens in `localStorage`.** A script injected into the apps or the
