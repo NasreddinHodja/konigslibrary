@@ -19,10 +19,14 @@ export default defineConfig({
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
   webServer: {
-    // A server of its own to set up: its accounts live in test-results/,
-    // which every run starts by deleting.
+    // A server of its own to set up: its index and accounts live in
+    // test-results/, which every run starts by deleting.
     command: 'mkdir -p test-results && bun run dev:sim',
-    env: { KL_AUTH_DB: 'test-results/e2e-auth.db', KL_SETUP_TOKEN: SETUP_TOKEN },
+    env: {
+      KL_DB: 'test-results/e2e.db',
+      KL_AUTH_DB: 'test-results/e2e-auth.db',
+      KL_SETUP_TOKEN: SETUP_TOKEN
+    },
     url: 'http://localhost:5173/api/ping',
     // A dev:sim already running locally is used as is.
     reuseExistingServer: !process.env.CI,
