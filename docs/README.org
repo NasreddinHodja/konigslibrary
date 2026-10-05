@@ -14,6 +14,12 @@
 - [[file:architecture/server-index.org][Server index]]: the server's SQLite database
 - [[file:architecture/performance.org][Performance]]: benchmarks, native against wasm, bundle size and Lighthouse budgets
 
+* Design
+
+- [[file:design/research.org][Redesign research]]: principles, brutalism and reading apps, with sources
+- [[file:design/audit.org][Redesign audit]]: the app against that research, screen by screen
+- [[file:design/system.org][Design system]]: type, spacing, colour, borders, controls, states, motion
+
 * API
 
 - [[file:api/http.org][HTTP server]]: =konigslibrary-server= routes

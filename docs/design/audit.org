@@ -1,0 +1,122 @@
+#+TITLE: Redesign audit
+#+OPTIONS: ^:{}
+
+The app as of v0.10.1 against [[file:research.org][the research]]. Step 2 of the redesign in =TODO.org=. Read from the code, not from screenshots; contrast figures are computed from the presets in =src/lib/theme/index.ts= and the mixes in =src/routes/layout.css=.
+
+* Across the app
+
+** Type: ten sizes where the research says three
+In use (count across components): =text-sm= 98, =text-xs= 64, =text-lg= 9, =text-2xl= 8, =text-[11px]= 6, =text-base= 5, =text-4xl= 4, =text-3xl= 3, =text-xl= 2, =text-[0.55rem]= 2. NN/g: no more than three sizes, 14–16px body. The worst outliers:
+- The rail's labels are =text-[0.55rem]=, under 9px (=AppShell.svelte=); the tab bar's are 11px.
+- =11px= and =xs= (12px) both play "small label": spec keys, chapter page counts, the server dot, upload and tab bar labels.
+- The 4xl KONIGSLIBRARY wordmark sits above the page title on Settings and Login, so the biggest thing on those pages is the brand, not the page.
+
+** Labels: one style, written three ways
+- Uppercase is mostly typed into the strings (='DOWNLOAD'=, ='CHAPTERS'=, ='BACK'=); the =uppercase= class appears 6 times.
+- Tracking is =tracking-widest= in 32 places and =tracking-wide= in 10, for the same role.
+- Some labels are bold (section headers, tabs), some not (=BackLink=, HOW TO USE, the HUD's SETTINGS).
+- Buttons switch case: DOWNLOAD and RESUME on the manga page, Save, Connect, Log in and Copy logs elsewhere; the HUD's toggles read LTR/RTL over Turn/Scroll. NN/g heuristic 4 (consistency) is the one this misses.
+- Form labels and subheads (=h3=, =text-sm font-bold text-dim=) are sentence case, so a settings page has three label looks: section header, subhead, row label.
+
+** Colour and contrast
+Computed ratios against each preset's background:
+
+| token         | Default | Cloud | One Bark | needs                    |
+|---------------+---------+-------+----------+--------------------------|
+| =soft= (82%)  |   13.77 | 10.73 |     7.57 | 4.5 (text)               |
+| =dim= (67%)   |    9.13 |  6.25 |     5.59 | 4.5                      |
+| =faint= (55%) |    6.27 |  4.14 |     4.28 | 4.5                      |
+| =muted=       |    5.32 |  7.07 |     5.65 | 4.5                      |
+| =line= (21%)  |    1.73 |  1.59 |     1.77 | 3 if it's the only boundary |
+| =line-strong= |    3.39 |  2.47 |     2.82 | 3 if it's the only boundary |
+
+- =faint= fails as text in Cloud and One Bark, and it's used as text: inactive tabs (=ListPanel.svelte=), the manga page's spec keys (=MangaDetail.svelte=, also 11px), the page picker's chapter name, the directory browser's path, empty-value dashes.
+- =line= and =line-strong= are fine where the control also has text or an icon (WCAG 1.4.11 exempts those). Where the border is all there is, they fail: the library search box is =border-line= with only a 12px icon and placeholder; the upload drop zone is =border-line-strong=.
+- Hover backgrounds (=bg-fg/10=, about 1.2–1.3:1) don't have to meet 3:1, and don't lower the text's contrast below 4.29 in any preset.
+- Six tokens plus five mixes is enough of a ramp; the problem is which step is used for what, not the number of steps.
+
+** Borders: the same border on things you press and things you don't
+- =border-2= is on buttons, inputs, cover and chapter cards, modals, the toggle, settings jump links, and also on the manga page's spec table, which isn't interactive. The research's case for thick borders (brutalist-web.design: "buttons look like buttons") only holds if containers look different.
+- On the manga page, tags are =border-line-strong= and the "more"/"less" buttons next to them are =border-line=: the inert chips have the stronger border than the buttons.
+- One-pixel =border= is used for tags, the status chip, the reader HUD's island and the tutorial (the only dashed borders). The island is the one place a panel you interact with has a thin border.
+- Soft shadows and frosted glass (=shadow-lg backdrop-blur-2xl= on toasts, =shadow-xl= on keyboard help) are the only soft depth in the app. NN/g's neobrutalism piece pairs this style with hard shadows or none. The reader HUD's frost (=bg-surface/85 backdrop-blur-2xl=) is a different case: it's there for legibility over a page image.
+- =rounded-full= on the server status dot and the tutorial's HUD dot are the only rounding.
+
+** Buttons and states
+- =Button.svelte= has default/primary/ghost, but many buttons are hand-rolled with their own padding and hover: =ConfirmDialog=, Allow/Deny/Log out in =AccountSettings=, Browse in Settings (no =hit=, no pointer cursor), the hosted page's download links, back-to-top.
+- Hover is spelled 19 ways: =bg-fg/5=, =/10=, =/20=, =/80=, =/90=; text from =dim= to =fg=, =faint= to =soft=, =dim= to =soft=; borders to =fg=, =fg/50=, =fg/70=, =fg/80=, =border/50=. Primary hovers to =fg/90= in =Button= and =fg/80= in =ConfirmDialog=; the upload zone adds =bg-fg/[0.03]=.
+- Disabled is =opacity-60= on =Button= and =opacity-40= on covers.
+- Focus: one global =:focus-visible= outline in =fg=, high contrast in every preset. Inputs drop the outline and switch their border to =fg= instead (=layout.css=), but a plain =border-2= is already =fg=: Tailwind's preflight sets =border: 0 solid=, so the colour is =currentColor=, and these fields are =text-fg=. The settings and login fields therefore show no change at all on focus (WCAG 2.4.7). The library search shows focus by going from =line= to =fg/50= on its wrapper.
+- For the same reason, the theme's Border colour only reaches the four classes that name it (=border-border=, two of them hover states) and the =line= mixes; every other =border-2= follows the text colour, so customising Border mostly does nothing.
+- Pressed on touch is one global rule (=brightness(0.6)=); fits heuristic 1.
+- Allow and Deny for a waiting login are identical buttons side by side; for the one security decision in the app, nothing marks Allow as the consequential one (heuristic 5, error prevention).
+
+** Spacing
+- In use: 2, 4, 6, 8, 10, 12, 14, 16, 20, 24, 32, 48px (Tailwind's 4px steps plus halves). The research's rule is ~25% apart; 10/12/14 and 20/24 aren't.
+- Grouping is done with borders and dividers more than space: section headers are a =border-b=, rows are =divide-y=, the spec table is a box.
+
+** Motion
+- Tokens exist (=--duration-anim= 120ms, =ANIM_DURATION=, =ANIM_EXIT_DURATION=, one easing), but there are literals beside them: =duration-200= (toggle, HUD bars), =duration-150= (HUD swap), =duration-300= (HUD progress), and =fade({ duration: 150 })= on back-to-top.
+- Reduced motion: CSS transitions and animations are cut by the rule in =layout.css=, and Svelte transitions that use =ANIM_*= go to 0. Back-to-top's literal 150 is a Svelte transition, which Svelte runs with =element.animate()= (=node_modules/svelte/src/internal/client/dom/elements/transitions.js=), so the CSS rule doesn't reach it.
+
+** Touch targets
+Fits. =hit= gives 48px on coarse pointers, and the rail's 28–32px icons clear WCAG's 24px for a mouse. Search's clear button and the toggle rely on =hit= or =pointer-coarse:= padding; both present.
+
+* Screens
+
+** Library (=MangaLibrary.svelte=, =MangaCard.svelte=, =CoverThumbnail.svelte=, =ListPanel.svelte=)
+Fits:
+- One large element (=Library=, 2xl), then tabs, search and the grid: the hierarchy passes the squint test on paper.
+- Covers carry the screen, with the caption on a translucent band; empty states have an icon, a bold line and a next step.
+- Select mode swaps the header in place at the same height, so nothing jumps.
+
+Clashes:
+- Inactive tabs and the Select and Refresh icons are =text-faint=; the tabs fail 4.5:1 in two presets.
+- The search box is the faintest bordered thing on screen while being the main input.
+- The card's download button and downloaded badge are frosted squares (=bg-bg/85 backdrop-blur-md=), while the selection box beside them is =border-2=; three treatments for the corner badges of one card.
+- Cover captions are =font-medium=, the only medium weight in the app.
+
+** Hosted landing (=src/routes/+page.svelte=, browser without a server)
+Fits: wordmark, one upload target, then a ruled-off secondary section. Clear primary action.
+Clashes: the Windows/Linux/Android links are =border-2 border-line-strong= buttons, a third button style next to =Button='s default and primary.
+
+** Manga page (=MangaDetail.svelte=, =ChapterTile.svelte=)
+Fits:
+- Back link, title, cover and facts, then chapters with search and sort: the order follows what you look for.
+- The resume chapter is outlined in =fg= in the grid, so where you left off shows twice.
+
+Clashes:
+- RESUME, the action most visits are for, is a default button the same weight as DOWNLOAD, right-aligned under the table. Nothing on the page is =primary=.
+- The spec table is a =border-2= box with 11px =faint= keys: looks like a control, and the keys fail contrast in two presets.
+- Tags are bordered like buttons and stronger than the real buttons next to them (see Borders).
+- Sort is a =faint= icon with only a tooltip to say which order is on.
+
+** Reader and HUD (=ReaderScreen.svelte=, =ReaderHud.svelte=, =ReaderTutorial.svelte=, =PagePicker.svelte=, =EndOfChapter.svelte=)
+Fits the reading-app research:
+- Chrome is hidden until a tap, slides away again, and goes =inert= while hidden; the page counter opens a thumbnail grid of the chapter (the Panels review's "scrollable menu of thumbnails").
+- Turn and scroll modes, RTL, zoom in scroll mode, a wake lock while reading, a reader background colour (as a theme token), a first-run tutorial showing the tap zones.
+- End of chapter has one primary button to the next one.
+
+Clashes:
+- The page counter (=x / y=) opens the picker but is drawn as plain text; nothing says it's a button (NN/g, clickable elements).
+- The bottom island is a 1px =line-strong= border (2.47:1 in Cloud) on frost, unlike every other panel.
+- The island mixes a bordered zoom row, two sliding toggles and an uppercase link; the toggles read LTR/RTL and Turn/Scroll in two cases.
+- SETTINGS in the island leaves the reader for the full settings page, where what's about reading is the reader background colour (under Theme) and the reader's keyboard shortcuts.
+- The tutorial is all =dim= 12px uppercase text on =surface/80=, with dashed boxes used nowhere else.
+
+** Settings (=src/routes/settings/+page.svelte=, =AccountSettings.svelte=, =ShareLan.svelte=)
+Fits:
+- Sections with jump links, each under one header style; theme presets are previewed as tiny library pages in their own colours.
+- Connect keeps its width while its label changes, and its result is said in words, not only the field's border colour.
+
+Clashes:
+- The wordmark (4xl, =py-12=) outranks the page's title.
+- Subheads (=text-sm font-bold text-dim=) are dimmer than the rows under them (=text-soft=): the heading reads as less important than its content.
+- Jump links are =border-2= chips that look like the buttons further down.
+- Two "reset" buttons read "Reset to default" and "Reset to defaults".
+- Browse is a bare =border-2= icon box with no =hit= or pointer cursor; Save sits on its own line below the field.
+- Allow/Deny (see Buttons and states).
+
+** Login (=src/routes/login/+page.svelte=)
+Fits: one form, one =primary= button, errors in =role="alert"= under it, the approval code at 3xl as the one big element while waiting.
+Clashes: the wordmark again outranks the =h1=; field labels are sentence-case bold =dim=, while the link next to the submit button is uppercase (CHANGE SERVER).

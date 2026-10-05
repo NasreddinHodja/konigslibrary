@@ -1,0 +1,101 @@
+#+TITLE: Design system
+#+OPTIONS: ^:{}
+
+The rules the UI follows: meth.cat's small-web look (a bitmap font, one ink on a dark background, raised panels, dither), kept usable by the research in [[file:research.org][research.org]] and fixing what [[file:audit.org][the audit]] found. Settled in the showcase, =/showcase= under =bun run dev= (=src/routes/showcase/=), which builds every rule below and 404s in builds. Step 3 of the redesign in =TODO.org=; step 5 applies it to the app.
+
+* Font
+
+- WebPlus IBM VGA 9x16 everywhere (=static/fonts/WebPlus_IBM_VGA_9x16.woff=), from VileR's Ultimate Oldschool PC Font Pack, CC BY-SA 4.0. Shipping it needs credit to VileR with a link to int10h.org, on the About page.
+- Two sizes, the font's own height and twice it, since a bitmap font is only crisp at those ([[https://int10h.org/oldschool-pc-fonts/readme/][readme]]): 16px for everything, 32px for titles. Nothing is bold; the font has no bold. Font smoothing off (=-webkit-font-smoothing: none=).
+- WebPlus covers extended Latin (Æther, Ōkami); Japanese titles fall back to the system's font.
+- Lowercase words for everything the app says in its own voice: nav, buttons, labels, headings ("library", "resume ch. 12 p. 4"). Titles of manga and chapters keep their own case.
+- Icons are bitmaps from [[https://github.com/the-moonwitch/Cozette][Cozette]] (MIT), its 13px-tall icon glyphs read out of =cozette.bdf= into =src/lib/ui/icons.ts= and drawn pixel for pixel in the current colour by =Icon.svelte=. Trimmed to their lit pixels so they centre in their button, and scaled by the whole number that brings each nearest 24px (16px in the cover badges), so icons drawn on different grids come out about as big. Search is drawn for the app on Cozette's cell; its own magnifier is 5px. Picked over GNU Unifont and Siji in the showcase. Other marks are glyphs from the font: =►= current or an error, =›= a list item, =█░= progress.
+
+* Colour
+
+A palette is three colours, picked in Settings: background, text, ink. Everything else is mixed from them:
+
+| token  | made of                                                       | for                                                                    |
+|--------+---------------------------------------------------------------+------------------------------------------------------------------------|
+| =bg=   | background                                                    | panels, and text on ink                                                |
+| =fg=   | text                                                          | text only: body, values, what's typed in a field                       |
+| =dim=  | text at 67% over =bg=                                         | secondary text: hints, labels, counts                                  |
+| =ink=  | ink                                                           | borders, links, buttons, and every state: current, selected, progress |
+| =hi=   | ink 60%, toward white (black on a light =bg=); toward =bg= when that barely moves it | hover, the focus ring                           |
+| =ink2= | ink at 60% over =bg=                                          | the first shadow step, the texture's light pixels; never text          |
+| =ink3= | ink at 30% over =bg=                                          | the second shadow step, hover backgrounds, tracks, dotted leaders      |
+
+- =fg= is for text and nothing else. A state drawn in =fg= jumps hue (a pale cyan text colour against a pink ink), so states stay in the ink.
+- Hover moves ink to =hi=, a lighter shade of the same hue, never to =fg=.
+- No success or error colour: an error is the ink with =►= in front, and a broken field gets a dashed border.
+
+Presets, one bark the default; =custom= takes any three. Contrast against =bg=, computed from these values (text on ink or =hi=, as on a primary button, is the same ratio):
+
+| preset    | bg        | text      | ink       |   fg | dim |  ink |   hi |
+|-----------+-----------+-----------+-----------+------+-----+------+------|
+| bubblegum | =#000000= | =#ffe0f0= | =#ff8fc8= | 17.2 | 7.6 | 10.0 | 13.5 |
+| paper     | =#f4f0e8= | =#141414= | =#141414= | 16.2 | 5.8 | 16.2 |  7.7 |
+| one bark  | =#282c34= | =#dcdfe4= | =#c678dd= | 10.5 | 5.6 |  4.8 |  7.5 |
+| white     | =#000000= | =#ffffff= | =#ffffff= | 21.0 | 9.1 | 21.0 | 11.5 |
+
+Every text token clears 4.5:1 in every preset. =ink2= is under 4.5 in all but white and paper, which is why it's never text. A =custom= palette can fail; the showcase's colour panel shows its ratios.
+
+The theme today has six colours (bg, fg, surface, border, muted, reader background); it becomes these three, and a saved theme carries over as bg, fg and border-as-ink.
+
+* Panels and texture
+
+- Content sits in panels: =bg= fill, 1px =ink= border, and meth.cat's stepped hard shadow, =2px 2px 0 ink2, 4px 4px 0 ink3=. The same shadow raises the primary button, dialogs, toasts and the reader HUD's panel. No soft shadows, no blur, no rounding.
+- Behind the panels, a dither texture: soft clouds, ordered-dithered (Bayer 8×8) into =bg= and =ink2=, generated in the browser in the palette's colours, tiled, fixed, drawn pixelated.
+- A dialog's backdrop is a 50% checkerboard of =bg= over the screen.
+- Titles are 32px with a 1px ink rule under them; a heading inside a panel is 16px and underlined.
+
+* Controls
+
+** Buttons
+All from one component. Primary and default are one height, 32px with a mouse and 40px on touch; text buttons are as tall as their line, so a heading with one beside it keeps its height. All get 48px to tap, via =hit=.
+
+| kind    | rest                          | hover                          | pressed                                  |
+|---------+-------------------------------+--------------------------------+------------------------------------------|
+| primary | =ink= fill, =bg= text, raised | fill goes to =hi=              | moves 2px into its shadow, one step left |
+| default | 1px =ink= outline, =ink= text | inverts: =ink= fill, =bg= text | as hover                                 |
+| text    | =ink= word, no box            | =hi=, underlined               |                                          |
+
+- The primary is the one thing a screen is for, and the only raised button: resume on the manga page, log in, a dialog's confirm (delete, download), allow on a waiting login.
+- A waiting login's button reads "allow 4821", the code in the label.
+- Disabled is =opacity-40=; busy changes the label in place ("connecting…").
+
+** Links
+Standing alone ("← back", "how to use", "change server"): =ink=, no underline at rest; hover =hi= and underlined. Inside running text: underlined at rest too, since colour alone doesn't set a link apart from the words around it (axe's =link-in-text-block=).
+
+** Fields
+1px =ink= border, =bg= fill, =fg= text, =dim= placeholder, label above in =dim=. A field in error gets a dashed border and "► the message" in ink under it.
+
+** Choices and navigation
+- A choice of a few (device/server, ltr/rtl, turn/scroll): boxed cells side by side, the current one filled with ink; hover is an =ink3= background with =hi= text.
+- A list of places (Settings' sections): boxed rows, =›= before each, the current one inverted with =►=.
+- The bottom tab bar: three boxed words (library, upload, settings), the current inverted.
+
+** Focus
+A 1px dotted =hi= outline, offset 2px, on everything, fields included.
+
+* Covers and chapters
+
+- A cover has a 3px double =ink= frame; hover turns it =hi=. Current or selected: a solid 3px ink frame and an inverted caption.
+- The caption is a band on the cover's foot: =bg=, an ink rule above, up to two lines.
+- Badges are 24px squares in the corner with a glyph: =√= downloaded, =↓= download (a button, inverts on hover), an empty ink box unselected, =√= on ink selected. Downloading is a 4px ink bar across the top.
+- A chapter tile has a 1px ink frame and a bar with the number and page count; the resume chapter's is a solid 3px ink frame with the bar inverted.
+- A manga's facts are rows of name, dotted leader (=ink3=) and value; tags are a plain comma list.
+
+* Progress and motion
+
+- Download progress is text: =█= and =░= in ink, then "5/12".
+- Waiting is a =|/-\= spinner, still under reduced motion.
+- The reader's chapter progress is the HUD top bar's bottom edge: a 2px =ink3= track filled with =ink=.
+- Nothing else moves except a pressed button sinking, and what already slides (the HUD, the tab pages); those keep =ANIM_DURATION= and go to zero under reduced motion.
+
+* Layout
+
+- Spacing from 4, 8, 12, 16, 24, 32, 48, 64px.
+- The library, manga page, settings and login are stacks of panels over the texture, 12px from the screen's edge on a phone.
+- Settings ends with a footer: KONIGSLIBRARY at 32px in a box drawn with box-drawing characters (=╔═╗ ║ ╚═╝=), "by nas" under it in =dim=. Login has no wordmark.
+- Touch targets as now: =hit= gives 48px on touch; nothing under 24px with a mouse.
