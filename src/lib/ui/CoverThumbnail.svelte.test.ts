@@ -27,9 +27,7 @@ describe('a cover', () => {
   it('from a server set in the app is fetched with the token', async () => {
     localStorage.setItem('kl:serverUrl', SERVER);
     localStorage.setItem('kl:serverToken', 'tok');
-    const fetch = fakeServer((url) =>
-      url.href === COVER ? new Response('png') : undefined
-    );
+    const fetch = fakeServer((url) => (url.href === COVER ? new Response('png') : undefined));
     renderCover(COVER);
     await vi.waitFor(() => expect(image()).toHaveAttribute('src', expect.stringMatching(/^blob:/)));
     expect(new Headers(fetch.mock.calls[0][1]?.headers).get('Authorization')).toBe('Bearer tok');
@@ -38,9 +36,7 @@ describe('a cover', () => {
   it('never shows the last cover while the next one comes', async () => {
     localStorage.setItem('kl:serverUrl', SERVER);
     localStorage.setItem('kl:serverToken', 'tok');
-    fakeServer((url) =>
-      url.href === COVER ? new Response('png') : new Promise(() => {})
-    );
+    fakeServer((url) => (url.href === COVER ? new Response('png') : new Promise(() => {})));
     const { rerender } = renderCover(COVER);
     await vi.waitFor(() => expect(image()).toBeInTheDocument());
     await rerender({ src: `${SERVER}/api/library/vagabond/cover.png` });
