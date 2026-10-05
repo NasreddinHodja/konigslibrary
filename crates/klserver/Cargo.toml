@@ -25,7 +25,6 @@ tower-http = { version = "0.7", features = ["fs", "cors"] }
 rusqlite = { version = "0.37", features = ["bundled", "collation"] }
 argon2 = "0.6.0"
 sha2 = "0.11.0"
-getrandom = "0.4"
 axum-server = { version = "0.8.0", features = ["tls-rustls"] }
 
 [dev-dependencies]

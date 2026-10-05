@@ -25,6 +25,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
   let static_dir = static_dir();
 
   let config = Config::from_env();
+  if std::env::args().nth(1).as_deref() == Some("reset-admin") {
+    return reset_admin(&config);
+  }
   let proxies = TrustedProxies::parse(&std::env::var("KL_TRUSTED_PROXIES").unwrap_or_default())?;
   // Unlike the library database, no fallback: sessions in a temp directory
   // would vanish, and the admin with them.
@@ -34,8 +37,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     proxies,
     tls.is_some(),
   );
-  if let Ok(token) = std::env::var("KL_SETUP_TOKEN") {
-    auth = auth.with_setup_token(&token)?;
+  let preset = std::env::var("KL_SETUP_TOKEN").ok();
+  if let Some(token) = &preset {
+    auth = auth.with_setup_token(token)?;
   }
   let db = match db::Db::open(&config.db_path()) {
     Ok(db) => db,
@@ -70,7 +74,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
   let bound = listener.local_addr()?;
   let scheme = if tls.is_some() { "https" } else { "http" };
 
-  print_banner(scheme, bound.port(), state.auth.setup_token().as_deref());
+  // A preset token is already known to whoever set it, and the desktop app
+  // keeps its sidecar's output in a log users paste into bug reports.
+  let setup_token = state.auth.setup_token().filter(|_| preset.is_none());
+  print_banner(scheme, bound.port(), setup_token.as_deref());
   if std::env::var("NO_BROWSER").is_err() {
     open_browser(scheme, bound.port());
   }
@@ -89,6 +96,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     None => axum::serve(tokio::net::TcpListener::from_std(listener)?, app).await?,
   }
 
+  Ok(())
+}
+
+/// `konigslibrary-server reset-admin`: for an admin who lost the password.
+/// Being able to run it on the server's host is the proof of ownership.
+fn reset_admin(config: &Config) -> Result<(), Box<dyn std::error::Error>> {
+  let path = config.auth_db_path();
+  auth::store::Store::open(&path)?.reset()?;
+  println!(
+    "Removed the admin, every session and known device from {}.",
+    path.display()
+  );
+  println!("Restart the server: it prints a new setup token.");
   Ok(())
 }
 

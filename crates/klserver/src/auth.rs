@@ -63,7 +63,7 @@ pub struct Auth {
 
 impl Auth {
   pub fn new(store: Store, proxies: TrustedProxies, tls: bool) -> Self {
-    let setup_token = (!store.has_admin()).then(|| store::random_hex(16));
+    let setup_token = (!store.has_admin()).then(|| klfs::random_hex(16));
     Self {
       store,
       setup_token: Mutex::new(setup_token),

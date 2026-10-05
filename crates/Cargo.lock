@@ -777,7 +777,6 @@ dependencies = [
  "axum",
  "axum-server",
  "criterion",
- "getrandom 0.4.3",
  "http-body-util",
  "klfs",
  "klparse",

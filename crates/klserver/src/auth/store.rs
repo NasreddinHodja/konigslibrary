@@ -95,13 +95,6 @@ pub struct Store {
   conn: Mutex<Connection>,
 }
 
-/// `bytes` random bytes, hex-encoded.
-pub fn random_hex(bytes: usize) -> String {
-  let mut buf = vec![0u8; bytes];
-  getrandom::fill(&mut buf).expect("the OS has no random source");
-  buf.iter().map(|b| format!("{b:02x}")).collect()
-}
-
 fn token_hash(token: &str) -> Vec<u8> {
   Sha256::digest(token.as_bytes()).to_vec()
 }
@@ -176,7 +169,7 @@ impl Store {
 
   /// Starts a session and returns its token, which only the caller ever sees.
   pub fn create_session(&self, kind: Kind, device: &str, now: i64) -> rusqlite::Result<String> {
-    let token = random_hex(32);
+    let token = klfs::random_hex(32);
     let conn = self.conn();
     // Expired sessions are cleared here rather than on a timer: logging in is
     // rare and already slow.
@@ -188,7 +181,7 @@ impl Store {
       "INSERT INTO sessions (id, token_hash, kind, device, created, last_seen)
        VALUES (?1, ?2, ?3, ?4, ?5, ?5)",
       params![
-        random_hex(16),
+        klfs::random_hex(16),
         token_hash(&token),
         kind.as_str(),
         device,
@@ -224,7 +217,7 @@ impl Store {
 
   /// A token for a client that just logged in, which only it ever sees.
   pub fn create_device(&self, now: i64) -> rusqlite::Result<String> {
-    let token = random_hex(32);
+    let token = klfs::random_hex(32);
     let conn = self.conn();
     conn.execute(
       "DELETE FROM devices WHERE ?1 - last_used >= ?2",
@@ -282,6 +275,18 @@ impl Store {
       .execute("DELETE FROM sessions WHERE id != ?1", params![keep])?;
     Ok(())
   }
+
+  /// Back to the first run: no admin, no sessions, no known devices. For an
+  /// admin who lost the password; whoever can run this owns the server.
+  pub fn reset(&self) -> rusqlite::Result<()> {
+    self.conn().execute_batch(
+      "BEGIN;
+       DELETE FROM admin;
+       DELETE FROM sessions;
+       DELETE FROM devices;
+       COMMIT;",
+    )
+  }
 }
 
 #[cfg(test)]
@@ -317,6 +322,20 @@ mod tests {
       (admin.username.as_str(), admin.password_hash.as_str()),
       ("alice", "h1")
     );
+  }
+
+  #[test]
+  fn a_reset_leaves_no_admin_session_or_device() {
+    let (_tmp, store) = store();
+    store.create_admin("alice", "h").unwrap();
+    let token = store.create_session(Kind::Bearer, "phone", 1000).unwrap();
+    let device = store.create_device(1000).unwrap();
+    store.reset().unwrap();
+    assert!(!store.has_admin());
+    assert!(store.session(&token, Kind::Bearer, 1000).is_none());
+    assert!(!store.known_device(&device, 1000));
+    // Setup can run again.
+    assert!(store.create_admin("bob", "h2").unwrap());
   }
 
   #[test]
