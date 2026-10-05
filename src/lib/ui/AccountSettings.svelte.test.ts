@@ -1,10 +1,10 @@
-import { describe, it, expect, vi } from 'vitest';
+import { afterEach, describe, it, expect, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import AccountSettings from './AccountSettings.svelte';
 import { fakeServer, json } from '$lib/testing/server';
 import { getToasts } from '$lib/ui/toast.svelte';
-import type { Session } from '$lib/api/auth.svelte';
+import type { Session, WaitingLogin } from '$lib/api/auth.svelte';
 
 const nav = vi.hoisted(() => ({ goto: vi.fn() }));
 vi.mock('$app/navigation', () => ({ goto: nav.goto }));
@@ -36,6 +36,33 @@ function server(sessions: Session[], extra: Handler = () => undefined) {
 }
 
 const devices = () => screen.findByRole('list', { name: 'Logged-in devices' });
+
+const tablet: WaitingLogin = {
+  id: 'w1',
+  code: 'AB12CD',
+  device: 'Tablet',
+  address: '203.0.113.7',
+  created: 1_700_000_000
+};
+
+/// The server with `waiting` logins, answering decisions on them; returns
+/// each decision's path and body.
+function serverWithWaiting(waiting: () => WaitingLogin[]) {
+  const decisions: { path: string; body: unknown }[] = [];
+  server([session('a', 'This phone', true)], (url, init) => {
+    if (url.pathname === '/api/auth/approvals') return json(waiting());
+    if (!url.pathname.startsWith('/api/auth/approvals/')) return;
+    decisions.push({ path: url.pathname, body: JSON.parse(String(init?.body)) });
+    return new Response(null, { status: 204 });
+  });
+  return decisions;
+}
+
+const waitingList = () => screen.findByRole('list', { name: 'Waiting to log in' });
+
+afterEach(() => {
+  vi.useRealTimers();
+});
 
 describe('account settings', () => {
   it('say who is logged in', async () => {
@@ -143,5 +170,52 @@ describe('account settings', () => {
     await user.type(screen.getByLabelText('New password'), 'correct horse{Enter}');
     expect(await screen.findByRole('alert')).toHaveTextContent('Wrong current password');
     expect(screen.getByLabelText('New password')).toHaveValue('correct horse');
+  });
+
+  it('list logins waiting for approval, with the code to match', async () => {
+    serverWithWaiting(() => [tablet]);
+    render(AccountSettings);
+    const [item] = await within(await waitingList()).findAllByRole('listitem');
+    expect(item).toHaveTextContent('Tablet');
+    expect(item).toHaveTextContent('AB12CD');
+    expect(item).toHaveTextContent('203.0.113.7');
+  });
+
+  it('allow a waiting login', async () => {
+    const user = userEvent.setup();
+    const decisions = serverWithWaiting(() => [tablet]);
+    render(AccountSettings);
+    await user.click(await screen.findByRole('button', { name: 'Allow Tablet, code AB12CD' }));
+    await vi.waitFor(() =>
+      expect(screen.queryByRole('list', { name: 'Waiting to log in' })).not.toBeInTheDocument()
+    );
+    expect(decisions).toEqual([{ path: '/api/auth/approvals/w1', body: { allow: true } }]);
+    expect(getToasts().map((t) => t.label)).toContain('Tablet is logged in');
+  });
+
+  it('deny a waiting login', async () => {
+    const user = userEvent.setup();
+    const decisions = serverWithWaiting(() => [tablet]);
+    render(AccountSettings);
+    const deny = await screen.findByRole('button', { name: 'Deny Tablet, code AB12CD' });
+    const before = getToasts().length;
+    await user.click(deny);
+    await vi.waitFor(() =>
+      expect(screen.queryByRole('list', { name: 'Waiting to log in' })).not.toBeInTheDocument()
+    );
+    expect(decisions).toEqual([{ path: '/api/auth/approvals/w1', body: { allow: false } }]);
+    expect(getToasts().slice(before)).toEqual([]);
+  });
+
+  it('show a login that starts waiting while open', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    let waiting: WaitingLogin[] = [];
+    serverWithWaiting(() => waiting);
+    render(AccountSettings);
+    await devices();
+    expect(screen.queryByRole('list', { name: 'Waiting to log in' })).not.toBeInTheDocument();
+    waiting = [tablet];
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(await waitingList()).toHaveTextContent('Tablet');
   });
 });

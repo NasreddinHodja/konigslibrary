@@ -108,14 +108,37 @@ function postJson(path: string, body: unknown): Promise<Response> {
   });
 }
 
-export async function login(username: string, password: string): Promise<void> {
+/// A login the server holds until a logged-in device allows it: what a new
+/// device gets while someone guessing the password has the account locked.
+export type Approval = {
+  /// What `checkApproval` asks with.
+  secret: string;
+  /// Shown here and to whoever allows it, to tell it's this request.
+  code: string;
+  /// Seconds until the server forgets it.
+  expiresIn: number;
+};
+
+/// Logs in, or returns the approval to wait for.
+export async function login(username: string, password: string): Promise<Approval | null> {
   const res = await postJson('/api/auth/login', {
     username,
     password,
     client: client(),
     deviceToken: usesBearer() ? deviceToken() : undefined
   });
+  if (res.status === 202) return (await res.json()).approval;
   await startSession(res, `Could not log in (${res.status})`);
+  return null;
+}
+
+/// Where a waiting login stands; `'allowed'` means it's logged in now.
+export async function checkApproval(secret: string): Promise<'pending' | 'denied' | 'allowed'> {
+  const res = await postJson('/api/auth/login/wait', { secret });
+  if (res.status === 202) return 'pending';
+  if (res.status === 403) return 'denied';
+  await startSession(res, `Could not log in (${res.status})`);
+  return 'allowed';
 }
 
 /// Creates the admin with the setup token from the server's log, and logs in.
@@ -166,6 +189,32 @@ export async function fetchSessions(): Promise<Session[]> {
   const res = await apiFetch('/api/auth/sessions');
   if (!res.ok) throw new Error(await reason(res, `Could not load the sessions (${res.status})`));
   return res.json();
+}
+
+/// A login waiting for this device, or another logged-in one, to allow it.
+export type WaitingLogin = {
+  id: string;
+  code: string;
+  device: string;
+  address: string;
+  /// Unix seconds.
+  created: number;
+};
+
+export async function fetchWaitingLogins(): Promise<WaitingLogin[]> {
+  const res = await apiFetch('/api/auth/approvals');
+  if (!res.ok)
+    throw new Error(await reason(res, `Could not load the waiting logins (${res.status})`));
+  return res.json();
+}
+
+export async function decideLogin(id: string, allow: boolean): Promise<void> {
+  const res = await apiFetch(`/api/auth/approvals/${encodeURIComponent(id)}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ allow })
+  });
+  if (!res.ok) throw new Error(await reason(res, `Could not answer the login (${res.status})`));
 }
 
 export async function revokeSession(id: string): Promise<void> {

@@ -69,6 +69,8 @@ pub fn router(state: SharedState) -> Router {
     .route("/api/auth/password", post(auth::post_password))
     .route("/api/auth/sessions", get(auth::get_sessions))
     .route("/api/auth/sessions/{id}", delete(auth::delete_session))
+    .route("/api/auth/approvals", get(auth::get_approvals))
+    .route("/api/auth/approvals/{id}", post(auth::post_approval))
     .route_layer(require_session.clone())
     .route("/api/ping", get(get_ping))
     .route(
@@ -76,6 +78,7 @@ pub fn router(state: SharedState) -> Router {
       get(auth::get_setup).post(auth::post_setup),
     )
     .route("/api/auth/login", post(auth::post_login))
+    .route("/api/auth/login/wait", post(auth::post_login_wait))
     .layer(cors());
   // Settings are only for the SPA this server serves, which calls them
   // same-origin, so they get no CORS headers: another site's page can't read
@@ -1154,8 +1157,10 @@ mod tests {
       let peer = format!("10.0.0.{i}:1000");
       login(&h, &peer, "guess").await;
     }
-    let (status, _) = login(&h, "10.0.1.1:1000", PASSWORD).await;
-    assert_eq!(status, StatusCode::TOO_MANY_REQUESTS);
+    // No session, from anywhere: only a request for approval.
+    let (status, body) = login(&h, "10.0.1.1:1000", PASSWORD).await;
+    assert_eq!(status, StatusCode::ACCEPTED);
+    assert!(body.get("token").is_none());
   }
 
   #[tokio::test]
@@ -1206,7 +1211,7 @@ mod tests {
     lock_the_account(&h).await;
     assert_eq!(
       login(&h, "10.9.1.1:1000", PASSWORD).await.0,
-      StatusCode::TOO_MANY_REQUESTS
+      StatusCode::ACCEPTED
     );
 
     let (status, body) = login_with_device(&h, "10.9.1.1:1000", PASSWORD, &device).await;
@@ -1234,7 +1239,162 @@ mod tests {
     let h = harness();
     lock_the_account(&h).await;
     let (status, _) = login_with_device(&h, "10.9.1.1:1000", PASSWORD, "forged").await;
+    assert_eq!(status, StatusCode::ACCEPTED);
+  }
+
+  /// A login from a new device while the account is locked: its approval's
+  /// secret and code.
+  async fn ask(h: &Harness, peer: &str, password: &str) -> (String, String) {
+    let (status, body) = login(h, peer, password).await;
+    assert_eq!(status, StatusCode::ACCEPTED, "{body}");
+    let approval = &body["approval"];
+    (
+      approval["secret"].as_str().unwrap().to_string(),
+      approval["code"].as_str().unwrap().to_string(),
+    )
+  }
+
+  async fn waiting_logins(h: &Harness) -> serde_json::Value {
+    let (status, body, _) = send(h, authed(h, get_from("/api/auth/approvals", LAN))).await;
+    assert_eq!(status, StatusCode::OK);
+    json(&body)
+  }
+
+  async fn decide(h: &Harness, id: &str, allow: bool) -> StatusCode {
+    let req = post_from(
+      &format!("/api/auth/approvals/{id}"),
+      LAN,
+      &format!(r#"{{"allow":{allow}}}"#),
+    );
+    send(h, authed(h, req)).await.0
+  }
+
+  async fn wait(h: &Harness, secret: &str) -> (StatusCode, serde_json::Value) {
+    let body = format!(r#"{{"secret":"{secret}"}}"#);
+    let (status, body, _) =
+      send(h, post_from("/api/auth/login/wait", "10.9.1.1:1000", &body)).await;
+    (status, json(&body))
+  }
+
+  #[tokio::test]
+  async fn a_new_device_gets_in_once_a_logged_in_one_allows_it() {
+    let h = harness();
+    lock_the_account(&h).await;
+    let (secret, code) = ask(&h, "10.9.1.1:1000", PASSWORD).await;
+    assert_eq!(wait(&h, &secret).await.0, StatusCode::ACCEPTED);
+
+    let listed = waiting_logins(&h).await;
+    assert_eq!(listed.as_array().unwrap().len(), 1);
+    assert_eq!(listed[0]["code"], code.as_str());
+    assert_eq!(listed[0]["address"], "10.9.1.1");
+    let id = listed[0]["id"].as_str().unwrap();
+    assert_eq!(decide(&h, id, true).await, StatusCode::NO_CONTENT);
+
+    let (status, body) = wait(&h, &secret).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(body["username"], USERNAME);
+    let token = body["token"].as_str().unwrap();
+    let (status, _, _) = send(&h, with_bearer(get_from("/api/auth/me", LAN), token)).await;
+    assert_eq!(status, StatusCode::OK);
+    // A known device from now on.
+    let device = body["deviceToken"].as_str().unwrap();
+    let (status, _) = login_with_device(&h, "10.9.1.1:1000", PASSWORD, device).await;
+    assert_eq!(status, StatusCode::OK);
+    // The approval is used up.
+    assert_eq!(wait(&h, &secret).await.0, StatusCode::ACCEPTED);
+  }
+
+  #[tokio::test]
+  async fn a_denied_device_is_told_so() {
+    let h = harness();
+    lock_the_account(&h).await;
+    let (secret, _) = ask(&h, "10.9.1.1:1000", PASSWORD).await;
+    let listed = waiting_logins(&h).await;
+    let id = listed[0]["id"].as_str().unwrap();
+    assert_eq!(decide(&h, id, false).await, StatusCode::NO_CONTENT);
+    let (status, body) = wait(&h, &secret).await;
+    assert_eq!(status, StatusCode::FORBIDDEN);
+    assert!(body.get("token").is_none());
+    assert_eq!(decide(&h, id, true).await, StatusCode::NOT_FOUND);
+  }
+
+  #[tokio::test]
+  async fn a_wrong_password_while_locked_looks_the_same_but_is_never_shown() {
+    let h = harness();
+    lock_the_account(&h).await;
+    let (_, right) = login(&h, "10.9.1.1:1000", PASSWORD).await;
+    let (status, wrong) = login(&h, "10.9.1.2:1000", "guess").await;
+    assert_eq!(status, StatusCode::ACCEPTED);
+    let keys = |v: &serde_json::Value| {
+      let mut k: Vec<_> = v["approval"].as_object().unwrap().keys().cloned().collect();
+      k.sort();
+      k
+    };
+    assert_eq!(keys(&wrong), keys(&right));
+    assert_eq!(waiting_logins(&h).await.as_array().unwrap().len(), 1);
+    let secret = wrong["approval"]["secret"].as_str().unwrap();
+    assert_eq!(wait(&h, secret).await.0, StatusCode::ACCEPTED);
+  }
+
+  #[tokio::test]
+  async fn asking_while_locked_still_counts_against_the_address() {
+    let h = harness();
+    lock_the_account(&h).await;
+    for _ in 0..5 {
+      ask(&h, "10.9.1.1:1000", PASSWORD).await;
+    }
+    let (status, _) = login(&h, "10.9.1.1:1000", PASSWORD).await;
     assert_eq!(status, StatusCode::TOO_MANY_REQUESTS);
+  }
+
+  #[tokio::test]
+  async fn only_a_session_sees_and_decides_waiting_logins() {
+    let h = harness();
+    let (status, _, _) = send(&h, get_from("/api/auth/approvals", LAN)).await;
+    assert_eq!(status, StatusCode::UNAUTHORIZED);
+    let req = post_from("/api/auth/approvals/x", LAN, r#"{"allow":true}"#);
+    assert_eq!(send(&h, req).await.0, StatusCode::UNAUTHORIZED);
+  }
+
+  #[tokio::test]
+  async fn our_page_gets_its_cookie_once_allowed() {
+    let h = harness();
+    lock_the_account(&h).await;
+    let body = login_body(USERNAME, PASSWORD, "cookie");
+    let (status, body, _) = send(
+      &h,
+      same_origin(post_from("/api/auth/login", "10.9.1.1:1000", &body)),
+    )
+    .await;
+    assert_eq!(status, StatusCode::ACCEPTED);
+    let secret = json(&body)["approval"]["secret"]
+      .as_str()
+      .unwrap()
+      .to_string();
+    let listed = waiting_logins(&h).await;
+    decide(&h, listed[0]["id"].as_str().unwrap(), true).await;
+
+    let wait_body = format!(r#"{{"secret":"{secret}"}}"#);
+    let (status, _, res) = send(
+      &h,
+      same_origin(post_from(
+        "/api/auth/login/wait",
+        "10.9.1.1:1000",
+        &wait_body,
+      )),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    let cookies: Vec<_> = res
+      .headers()
+      .get_all(header::SET_COOKIE)
+      .iter()
+      .map(|v| v.to_str().unwrap().to_string())
+      .collect();
+    assert!(
+      cookies.iter().any(|c| c.starts_with("kl_session=")),
+      "{cookies:?}"
+    );
   }
 
   #[tokio::test]

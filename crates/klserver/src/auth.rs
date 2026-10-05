@@ -35,7 +35,7 @@ use serde_json::json;
 use crate::routes::{error, unauthorized, SharedState};
 use limit::Limiter;
 use proxy::TrustedProxies;
-use store::{Kind, Store};
+use store::{approval_code, Approval, Kind, Store, APPROVAL_TTL};
 
 const COOKIE: &str = "kl_session";
 /// The device token, for our own page; see `post_login`.
@@ -510,13 +510,34 @@ pub async fn post_login(
       account: account.clone(),
     },
   };
-  if let Some(wait) = counted.wait(auth) {
-    return too_many(wait);
-  }
   let hash = account
     .as_ref()
     .and(admin.as_ref())
     .map(|a| a.password_hash.clone());
+  // Locked out with everyone else, from an address that isn't: the right
+  // password asks a logged-in device instead, so the admin can still get in.
+  if let Counted::Unknown {
+    ip_key,
+    account: Some(account),
+  } = &counted
+  {
+    let now = Instant::now();
+    if auth.ip_limit.wait(ip_key, now).is_none() && auth.account_limit.wait(account, now).is_some()
+    {
+      let device = device_name(body.device.as_deref(), &headers);
+      let pending = Pending {
+        client: body.client,
+        device,
+        address: caller.ip.to_string(),
+        ip_key,
+        account,
+      };
+      return ask_for_approval(auth, pending, body.password, hash).await;
+    }
+  }
+  if let Some(wait) = counted.wait(auth) {
+    return too_many(wait);
+  }
   if !verify_blocking(body.password, hash).await {
     counted.fail(auth);
     return error(StatusCode::UNAUTHORIZED, "Wrong username or password");
@@ -527,6 +548,120 @@ pub async fn post_login(
   let device = device_name(body.device.as_deref(), &headers);
   let known = matches!(counted, Counted::Known(_));
   issue(&state, body.client, device, &username, caller.https, known)
+}
+
+/// A login waiting for approval, before it's known whether it gets one.
+struct Pending<'a> {
+  client: Client,
+  device: String,
+  address: String,
+  ip_key: &'a str,
+  account: &'a str,
+}
+
+/// Answers a login made while the account is locked. Right password or
+/// wrong, the answer looks the same, so this is no way around the lockout to
+/// test guesses: only the right one is kept for a logged-in device to allow.
+async fn ask_for_approval(
+  auth: &Auth,
+  pending: Pending<'_>,
+  password: String,
+  hash: Option<String>,
+) -> Response {
+  let right = verify_blocking(password, hash).await;
+  let now_instant = Instant::now();
+  // Counted either way, so the address's lockout comes at the same point.
+  auth.ip_limit.fail(pending.ip_key, now_instant);
+  if !right {
+    auth.account_limit.fail(pending.account, now_instant);
+  }
+  let kind = match pending.client {
+    Client::Cookie => Kind::Cookie,
+    Client::Bearer => Kind::Bearer,
+  };
+  let kept = if right {
+    match auth
+      .store
+      .create_approval(kind, &pending.device, &pending.address, now())
+    {
+      Ok(kept) => kept,
+      Err(e) => return error(StatusCode::INTERNAL_SERVER_ERROR, e),
+    }
+  } else {
+    None
+  };
+  // Not kept: one that will never be allowed.
+  let (id, secret) = kept.unwrap_or_else(|| (klfs::random_hex(16), klfs::random_hex(32)));
+  (
+    StatusCode::ACCEPTED,
+    Json(json!({
+      "approval": {
+        "secret": secret,
+        "code": approval_code(&id),
+        "expiresIn": APPROVAL_TTL,
+      }
+    })),
+  )
+    .into_response()
+}
+
+#[derive(Deserialize)]
+pub struct WaitBody {
+  secret: String,
+}
+
+/// Asked by a login waiting for approval: still waiting, denied, or allowed,
+/// which starts the session it asked for.
+pub async fn post_login_wait(
+  State(state): State<SharedState>,
+  ConnectInfo(peer): ConnectInfo<SocketAddr>,
+  headers: HeaderMap,
+  Json(body): Json<WaitBody>,
+) -> Response {
+  let auth = &state.auth;
+  match auth.store.take_approval(body.secret.trim(), now()) {
+    Ok(Approval::Pending) => {
+      (StatusCode::ACCEPTED, Json(json!({ "status": "pending" }))).into_response()
+    }
+    Ok(Approval::Denied) => error(StatusCode::FORBIDDEN, "The login was denied"),
+    Ok(Approval::Allowed { kind, device }) => {
+      if kind == Kind::Cookie && !same_origin(&headers) {
+        return forbidden_cross_site();
+      }
+      let client = match kind {
+        Kind::Cookie => Client::Cookie,
+        Kind::Bearer => Client::Bearer,
+      };
+      let username = auth.store.admin().map(|a| a.username).unwrap_or_default();
+      let https = caller(auth, peer, &headers).https;
+      issue(&state, client, device, &username, https, false)
+    }
+    Err(e) => error(StatusCode::INTERNAL_SERVER_ERROR, e),
+  }
+}
+
+pub async fn get_approvals(State(state): State<SharedState>) -> Response {
+  match state.auth.store.approvals(now()) {
+    Ok(list) => Json(list).into_response(),
+    Err(e) => error(StatusCode::INTERNAL_SERVER_ERROR, e),
+  }
+}
+
+#[derive(Deserialize)]
+pub struct DecisionBody {
+  allow: bool,
+}
+
+pub async fn post_approval(
+  State(state): State<SharedState>,
+  Path(id): Path<String>,
+  Json(body): Json<DecisionBody>,
+) -> Response {
+  match state.auth.store.decide(&id, body.allow, now()) {
+    Ok(true) => StatusCode::NO_CONTENT.into_response(),
+    Ok(false) => error(StatusCode::NOT_FOUND, "No such login waiting"),
+    Err(e) => error(StatusCode::INTERNAL_SERVER_ERROR, e),
+  }
 }
 
 pub async fn post_logout(

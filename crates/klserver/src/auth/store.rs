@@ -19,6 +19,11 @@ const DAY: i64 = 24 * 60 * 60;
 /// A device token unused for this long stops counting as a known device.
 pub const DEVICE_TTL: i64 = 365 * DAY;
 
+/// How long a login waiting for approval waits.
+pub const APPROVAL_TTL: i64 = 10 * 60;
+/// Waiting logins kept at most; past it, new ones aren't kept.
+const MAX_APPROVALS: i64 = 20;
+
 /// How stale `last_seen` may get before a request rewrites it, so reading a
 /// chapter isn't a database write per page.
 const TOUCH_EVERY: i64 = 60 * 60;
@@ -51,6 +56,22 @@ const SCHEMA: &str = "
     token_hash BLOB PRIMARY KEY,
     last_used INTEGER NOT NULL
   );
+
+  -- Logins with the right password from a new client while the account is
+  -- locked, waiting for a logged-in device to allow them.
+  CREATE TABLE IF NOT EXISTS approvals (
+    -- What the admin allows or denies by; not a credential.
+    id TEXT PRIMARY KEY,
+    -- SHA-256 of what the waiting client asks with.
+    secret_hash BLOB NOT NULL UNIQUE,
+    -- The session to start once allowed: 'cookie' or 'bearer'.
+    kind TEXT NOT NULL,
+    device TEXT NOT NULL,
+    address TEXT NOT NULL,
+    created INTEGER NOT NULL,
+    -- 'pending', 'allowed' or 'denied'.
+    state TEXT NOT NULL
+  );
 ";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -66,6 +87,14 @@ impl Kind {
     match self {
       Kind::Cookie => "cookie",
       Kind::Bearer => "bearer",
+    }
+  }
+
+  fn parse(s: &str) -> Option<Self> {
+    match s {
+      "cookie" => Some(Kind::Cookie),
+      "bearer" => Some(Kind::Bearer),
+      _ => None,
     }
   }
 }
@@ -89,6 +118,37 @@ pub struct SessionInfo {
   pub device: String,
   pub created: i64,
   pub last_seen: i64,
+}
+
+/// A login waiting for approval, as the admin is shown it.
+#[derive(Debug, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct ApprovalInfo {
+  pub id: String,
+  pub code: String,
+  pub device: String,
+  pub address: String,
+  pub created: i64,
+}
+
+/// Where a waiting login stands, as its client is told.
+#[derive(Debug, PartialEq, Eq)]
+pub enum Approval {
+  /// Not decided yet; also what an unknown or expired secret gets, so a
+  /// guessed one learns nothing.
+  Pending,
+  Denied,
+  /// Allowed, and used up by this answer: start this session.
+  Allowed {
+    kind: Kind,
+    device: String,
+  },
+}
+
+/// What the waiting client and the admin both see, to tell that a request
+/// is the one they made.
+pub fn approval_code(id: &str) -> String {
+  id[..6].to_ascii_uppercase()
 }
 
 pub struct Store {
@@ -239,6 +299,102 @@ impl Store {
     updated == Ok(1)
   }
 
+  /// Records a login waiting for approval and returns the secret its client
+  /// asks with, or `None` when too many are already waiting.
+  pub fn create_approval(
+    &self,
+    kind: Kind,
+    device: &str,
+    address: &str,
+    now: i64,
+  ) -> rusqlite::Result<Option<(String, String)>> {
+    let conn = self.conn();
+    conn.execute(
+      "DELETE FROM approvals WHERE ?1 - created >= ?2",
+      params![now, APPROVAL_TTL],
+    )?;
+    let waiting: i64 = conn.query_row("SELECT COUNT(*) FROM approvals", [], |row| row.get(0))?;
+    if waiting >= MAX_APPROVALS {
+      return Ok(None);
+    }
+    let id = klfs::random_hex(16);
+    let secret = klfs::random_hex(32);
+    conn.execute(
+      "INSERT INTO approvals (id, secret_hash, kind, device, address, created, state)
+       VALUES (?1, ?2, ?3, ?4, ?5, ?6, 'pending')",
+      params![id, token_hash(&secret), kind.as_str(), device, address, now],
+    )?;
+    Ok(Some((id, secret)))
+  }
+
+  /// Logins still waiting, oldest first.
+  pub fn approvals(&self, now: i64) -> rusqlite::Result<Vec<ApprovalInfo>> {
+    let conn = self.conn();
+    let mut stmt = conn.prepare(
+      "SELECT id, device, address, created FROM approvals
+       WHERE state = 'pending' AND ?1 - created < ?2
+       ORDER BY created, id",
+    )?;
+    let rows = stmt.query_map(params![now, APPROVAL_TTL], |row| {
+      let id: String = row.get(0)?;
+      Ok(ApprovalInfo {
+        code: approval_code(&id),
+        id,
+        device: row.get(1)?,
+        address: row.get(2)?,
+        created: row.get(3)?,
+      })
+    })?;
+    rows.collect()
+  }
+
+  /// Allows or denies a waiting login. `false` if it isn't waiting any more.
+  pub fn decide(&self, id: &str, allow: bool, now: i64) -> rusqlite::Result<bool> {
+    let state = if allow { "allowed" } else { "denied" };
+    let updated = self.conn().execute(
+      "UPDATE approvals SET state = ?1
+       WHERE id = ?2 AND state = 'pending' AND ?3 - created < ?4",
+      params![state, id, now, APPROVAL_TTL],
+    )?;
+    Ok(updated == 1)
+  }
+
+  /// Where the login waiting with `secret` stands. An allowed one is used up.
+  pub fn take_approval(&self, secret: &str, now: i64) -> rusqlite::Result<Approval> {
+    let conn = self.conn();
+    let found: Option<(String, String, String, String, i64)> = conn
+      .query_row(
+        "SELECT id, kind, device, state, created FROM approvals WHERE secret_hash = ?1",
+        params![token_hash(secret)],
+        |row| {
+          Ok((
+            row.get(0)?,
+            row.get(1)?,
+            row.get(2)?,
+            row.get(3)?,
+            row.get(4)?,
+          ))
+        },
+      )
+      .optional()?;
+    let Some((id, kind, device, state, created)) = found else {
+      return Ok(Approval::Pending);
+    };
+    if now - created >= APPROVAL_TTL {
+      return Ok(Approval::Pending);
+    }
+    match (state.as_str(), Kind::parse(&kind)) {
+      ("denied", _) => Ok(Approval::Denied),
+      ("allowed", Some(kind)) => {
+        // Only one answer gets the session; `conn` stays locked since the
+        // read, so no other one can be between them.
+        conn.execute("DELETE FROM approvals WHERE id = ?1", params![id])?;
+        Ok(Approval::Allowed { kind, device })
+      }
+      _ => Ok(Approval::Pending),
+    }
+  }
+
   /// Live sessions, most recently used first.
   pub fn sessions(&self, now: i64) -> rusqlite::Result<Vec<SessionInfo>> {
     let conn = self.conn();
@@ -276,14 +432,16 @@ impl Store {
     Ok(())
   }
 
-  /// Back to the first run: no admin, no sessions, no known devices. For an
-  /// admin who lost the password; whoever can run this owns the server.
+  /// Back to the first run: no admin, no sessions, no known devices, no
+  /// waiting logins. For an admin who lost the password; whoever can run
+  /// this owns the server.
   pub fn reset(&self) -> rusqlite::Result<()> {
     self.conn().execute_batch(
       "BEGIN;
        DELETE FROM admin;
        DELETE FROM sessions;
        DELETE FROM devices;
+       DELETE FROM approvals;
        COMMIT;",
     )
   }
@@ -330,10 +488,14 @@ mod tests {
     store.create_admin("alice", "h").unwrap();
     let token = store.create_session(Kind::Bearer, "phone", 1000).unwrap();
     let device = store.create_device(1000).unwrap();
+    store
+      .create_approval(Kind::Bearer, "tablet", "10.0.0.2", 1000)
+      .unwrap();
     store.reset().unwrap();
     assert!(!store.has_admin());
     assert!(store.session(&token, Kind::Bearer, 1000).is_none());
     assert!(!store.known_device(&device, 1000));
+    assert!(store.approvals(1000).unwrap().is_empty());
     // Setup can run again.
     assert!(store.create_admin("bob", "h2").unwrap());
   }
@@ -458,5 +620,93 @@ mod tests {
     store.revoke_others(&id).unwrap();
     assert!(store.session(&mine, Kind::Cookie, 0).is_some());
     assert!(store.session(&theirs, Kind::Bearer, 0).is_none());
+  }
+
+  fn waiting(store: &Store, device: &str, now: i64) -> (String, String) {
+    store
+      .create_approval(Kind::Bearer, device, "10.0.0.2", now)
+      .unwrap()
+      .unwrap()
+  }
+
+  #[test]
+  fn an_allowed_login_gets_its_session_once() {
+    let (_tmp, store) = store();
+    let (id, secret) = waiting(&store, "tablet", 0);
+    assert_eq!(store.take_approval(&secret, 1).unwrap(), Approval::Pending);
+    assert!(store.decide(&id, true, 2).unwrap());
+    assert_eq!(
+      store.take_approval(&secret, 3).unwrap(),
+      Approval::Allowed {
+        kind: Kind::Bearer,
+        device: "tablet".into()
+      }
+    );
+    assert_eq!(store.take_approval(&secret, 4).unwrap(), Approval::Pending);
+  }
+
+  #[test]
+  fn a_denied_login_stays_denied() {
+    let (_tmp, store) = store();
+    let (id, secret) = waiting(&store, "tablet", 0);
+    assert!(store.decide(&id, false, 1).unwrap());
+    assert_eq!(store.take_approval(&secret, 2).unwrap(), Approval::Denied);
+    // Decided once.
+    assert!(!store.decide(&id, true, 3).unwrap());
+    assert_eq!(store.take_approval(&secret, 4).unwrap(), Approval::Denied);
+  }
+
+  #[test]
+  fn only_waiting_logins_are_listed_with_their_code() {
+    let (_tmp, store) = store();
+    let (first, _) = waiting(&store, "tablet", 0);
+    let (second, _) = waiting(&store, "phone", 1);
+    let (decided, _) = waiting(&store, "laptop", 2);
+    store.decide(&decided, false, 3).unwrap();
+    let listed = store.approvals(3).unwrap();
+    let ids: Vec<_> = listed.iter().map(|a| a.id.as_str()).collect();
+    assert_eq!(ids, [first.as_str(), second.as_str()]);
+    assert_eq!(listed[0].code, first[..6].to_ascii_uppercase());
+    assert_eq!(listed[0].address, "10.0.0.2");
+  }
+
+  #[test]
+  fn a_waiting_login_expires() {
+    let (_tmp, store) = store();
+    let (id, secret) = waiting(&store, "tablet", 0);
+    assert_eq!(store.approvals(APPROVAL_TTL - 1).unwrap().len(), 1);
+    assert!(store.approvals(APPROVAL_TTL).unwrap().is_empty());
+    assert!(!store.decide(&id, true, APPROVAL_TTL).unwrap());
+    store
+      .conn()
+      .execute("UPDATE approvals SET state = 'allowed'", [])
+      .unwrap();
+    assert_eq!(
+      store.take_approval(&secret, APPROVAL_TTL).unwrap(),
+      Approval::Pending
+    );
+  }
+
+  #[test]
+  fn an_unknown_secret_looks_pending() {
+    let (_tmp, store) = store();
+    assert_eq!(store.take_approval("guess", 0).unwrap(), Approval::Pending);
+  }
+
+  #[test]
+  fn waiting_logins_are_capped() {
+    let (_tmp, store) = store();
+    for i in 0..MAX_APPROVALS {
+      waiting(&store, "tablet", i);
+    }
+    let extra = store
+      .create_approval(Kind::Bearer, "phone", "10.0.0.3", MAX_APPROVALS)
+      .unwrap();
+    assert_eq!(extra, None);
+    // Expired ones make room again.
+    assert!(store
+      .create_approval(Kind::Bearer, "phone", "10.0.0.3", APPROVAL_TTL)
+      .unwrap()
+      .is_some());
   }
 }

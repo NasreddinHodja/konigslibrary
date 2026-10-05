@@ -78,6 +78,12 @@ someone guessing locks out new devices, not the admin's. Wrong current
 passwords on a password change count per session, so a stolen session can't
 lock the account either.
 
+While the account is locked, a new device with the right password is held
+for approval: it shows a code, and a logged-in device allows or denies it from
+Settings, where the same code is shown. A wrong password gets the same answer,
+so the lockout can't be used to test guesses, and only right ones are ever
+shown for approval. Each attempt still counts against its address.
+
 ## TLS and headers
 
 With `KL_TLS_CERT` and `KL_TLS_KEY` the server speaks HTTPS itself (rustls),
@@ -120,9 +126,11 @@ files.
   self-signed one won't do. Put a server on the internet only with HTTPS.
 - **One account.** Everyone you share with uses the admin's login, and every
   session can change the served folder and browse the host's directories.
-- **A new device can be locked out.** While someone keeps guessing, a device
-  that never logged in before can't log in, for up to 15 minutes after they
-  stop. Devices that have logged in before aren't affected.
+- **Approving needs a logged-in device.** While someone keeps guessing, a
+  device that never logged in before gets in only once another device allows
+  it. The desktop app doesn't log in to its own Share to LAN server, so with no
+  other device logged in, the way in is resetting the account
+  (`reset-admin`, or "Forgot the password?").
 - **Limits reset on restart.** Failure counts are kept in memory.
 - **Bearer tokens in `localStorage`.** A script injected into the apps or the
   hosted web reader could read them. Their CSPs (`src-tauri/tauri.conf.json`;

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { afterEach, describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import Login from './+page.svelte';
@@ -9,21 +9,42 @@ vi.mock('$app/navigation', () => ({ goto: nav.goto }));
 
 const SERVER = 'http://192.168.1.5:3000';
 
-/// The server: set up or not, and answering logins with `login`. Returns
-/// each request's path and body.
+/// The server: set up or not, answering logins with `login` and a login
+/// waiting for approval with `wait`. Returns each request's path and body.
 function server({
   needed = false,
-  login = () => json({ username: 'admin', token: 'tok', deviceToken: 'dev' })
-}: { needed?: boolean; login?: () => Response } = {}) {
+  login = () => json({ username: 'admin', token: 'tok', deviceToken: 'dev' }),
+  wait = () => json({ status: 'pending' }, 202)
+}: { needed?: boolean; login?: () => Response; wait?: () => Response } = {}) {
   localStorage.setItem('kl:serverUrl', SERVER);
   const posted: { path: string; body: Record<string, unknown> }[] = [];
   fakeServer((url, init) => {
     if (url.pathname === '/api/auth/setup' && init?.method !== 'POST') return json({ needed });
     if (init?.method !== 'POST') return;
     posted.push({ path: url.pathname, body: JSON.parse(String(init.body)) });
-    return login();
+    return url.pathname === '/api/auth/login/wait' ? wait() : login();
   });
   return posted;
+}
+
+/// What a login gets while the account is locked against new devices.
+const approval = (expiresIn = 600) =>
+  json({ approval: { secret: 'sec', code: 'AB12CD', expiresIn } }, 202);
+
+afterEach(() => {
+  vi.useRealTimers();
+});
+
+/// Logs in while the account is locked, with timers under the test's control.
+async function loginWhileLocked(options: Parameters<typeof server>[0]) {
+  vi.useFakeTimers({ shouldAdvanceTime: true });
+  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+  const posted = server(options);
+  render(Login);
+  await user.type(await screen.findByLabelText('Username'), 'admin');
+  await user.type(field('Password'), 'hunter22{Enter}');
+  await screen.findByRole('heading', { name: 'Waiting for approval' });
+  return { user, posted };
 }
 
 const field = (name: string) => screen.getByLabelText(name);
@@ -111,6 +132,52 @@ describe('the login screen', () => {
     server();
     await user.click(screen.getByRole('button', { name: 'Try again' }));
     expect(await screen.findByRole('heading', { name: 'Log in' })).toBeInTheDocument();
+  });
+
+  it('waits for a logged-in device to allow it, showing the code to match', async () => {
+    const answers = [
+      json({ status: 'pending' }, 202),
+      json({ username: 'admin', token: 'tok2', deviceToken: 'dev2' })
+    ];
+    const { posted } = await loginWhileLocked({ login: approval, wait: () => answers.shift()! });
+    expect(screen.getByLabelText('Code')).toHaveTextContent('AB12CD');
+    await vi.advanceTimersByTimeAsync(3000);
+    expect(nav.goto).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(3000);
+    await vi.waitFor(() => expect(nav.goto).toHaveBeenCalledWith('/', { replaceState: true }));
+    expect(localStorage.getItem('kl:serverToken')).toBe('tok2');
+    expect(posted.filter((p) => p.path === '/api/auth/login/wait')).toEqual([
+      { path: '/api/auth/login/wait', body: { secret: 'sec' } },
+      { path: '/api/auth/login/wait', body: { secret: 'sec' } }
+    ]);
+  });
+
+  it('says when the login was denied, and goes back to the form', async () => {
+    await loginWhileLocked({
+      login: approval,
+      wait: () => json({ error: 'The login was denied' }, 403)
+    });
+    await vi.advanceTimersByTimeAsync(3000);
+    expect(await screen.findByRole('alert')).toHaveTextContent('The login was denied.');
+    expect(screen.getByRole('heading', { name: 'Log in' })).toBeInTheDocument();
+    expect(nav.goto).not.toHaveBeenCalled();
+  });
+
+  it('gives up once the approval has expired', async () => {
+    const { posted } = await loginWhileLocked({ login: () => approval(5) });
+    await vi.advanceTimersByTimeAsync(6000);
+    expect(await screen.findByRole('alert')).toHaveTextContent('No one allowed it in time');
+    const asked = posted.length;
+    await vi.advanceTimersByTimeAsync(9000);
+    expect(posted).toHaveLength(asked);
+  });
+
+  it('stops waiting on cancel', async () => {
+    const { user, posted } = await loginWhileLocked({ login: approval });
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(screen.getByRole('heading', { name: 'Log in' })).toBeInTheDocument();
+    await vi.advanceTimersByTimeAsync(9000);
+    expect(posted.filter((p) => p.path === '/api/auth/login/wait')).toHaveLength(0);
   });
 
   it('sends the app to Settings without a server', async () => {
