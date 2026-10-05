@@ -81,9 +81,11 @@ beforeEach(() => {
 });
 
 // State that would otherwise leak from one test into the next.
-afterEach(() => {
-  // Unmounted first: components let go of Tauri listeners as they go.
+afterEach(async () => {
+  // Unmounted first: components let go of Tauri listeners as they go, some
+  // only once a command still in flight has answered.
   cleanup();
+  await new Promise((r) => setTimeout(r));
   localStorage.clear();
   clearMocks();
   // clearMocks leaves the object, which is how the app tells it runs in Tauri.

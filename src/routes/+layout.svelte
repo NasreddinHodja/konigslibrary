@@ -85,14 +85,23 @@
   $effect(() => {
     if (!isNative()) return;
     let unlisten: (() => void) | undefined;
+    let disposed = false;
     import('@tauri-apps/plugin-deep-link').then(async ({ getCurrent, onOpenUrl }) => {
+      // The layout may have gone while the plugin was loading.
+      if (disposed) return;
       const initial = await getCurrent();
+      if (disposed) return;
       if (initial?.[0]) handleDeepLink(initial[0]);
-      unlisten = await onOpenUrl((urls) => {
+      const stop = await onOpenUrl((urls) => {
         if (urls[0]) handleDeepLink(urls[0]);
       });
+      if (disposed) stop();
+      else unlisten = stop;
     });
-    return () => unlisten?.();
+    return () => {
+      disposed = true;
+      unlisten?.();
+    };
   });
 </script>
 
