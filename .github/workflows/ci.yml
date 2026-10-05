@@ -139,13 +139,16 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
         with:
-          workspaces: crates
+          workspaces: |
+            crates
+            base/crates
 
-      # Both checkouts build into crates/target, which is where criterion keeps
-      # the saved baseline.
+      # Each checkout builds into its own target directory: in a shared one,
+      # cargo took main's build of an unchanged-looking crate for the PR's.
+      # The baseline goes where the PR's run looks for it.
       - name: Bench main
         env:
-          CARGO_TARGET_DIR: ${{ github.workspace }}/crates/target
+          CRITERION_HOME: ${{ github.workspace }}/crates/target/criterion
         run: |
           rm -rf crates/target/criterion
           # Before main had benches there is nothing to compare against.
