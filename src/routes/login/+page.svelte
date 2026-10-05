@@ -115,8 +115,8 @@
       <h1 class="text-2xl font-bold">Waiting for approval</h1>
       <p class="text-sm text-soft">
         Someone has been guessing the password, so a new device has to be let in by one that's
-        already logged in. On that device, open Settings → Account and allow the login showing this
-        code:
+        already logged in. On that device, open Settings, go to Account, and allow the login showing
+        this code:
       </p>
       <p class="text-center font-mono text-3xl font-bold tracking-widest" aria-label="Code">
         {approval.code}
