@@ -9,23 +9,17 @@
   import { showSuccess, showError } from '$lib/ui/toast.svelte';
   import { errorMessage } from '$lib/utils/errors';
   import { parseConnectLink, validateAndConnect } from '$lib/sources/server-connect';
-  import { isLocalServer, setServerKey } from '$lib/utils/constants';
   import { afterNavigate, goto, onNavigate, replaceState } from '$app/navigation';
   import { page } from '$app/state';
   import CrashReport from '$lib/ui/CrashReport.svelte';
   import { logWebviewErrors } from '$lib/utils/diagnostics';
+  import { sessionLost } from '$lib/api/auth.svelte';
 
   let { children } = $props();
 
-  // A device opening the server's `/?key=…` link stores the key before any
-  // page asks the server for anything, then drops it from the address bar.
-  const linkKey = isLocalServer ? new URL(location.href).searchParams.get('key') : null;
-  if (linkKey) setServerKey(linkKey);
+  // The server turned a request away for want of a session.
   $effect(() => {
-    if (!linkKey) return;
-    const url = new URL(location.href);
-    url.searchParams.delete('key');
-    replaceState(url, page.state);
+    if (sessionLost() && page.url.pathname !== '/login') goto('/login');
   });
 
   const reader = createReader();
@@ -71,12 +65,12 @@
   });
 
   async function handleDeepLink(raw: string) {
-    const link = parseConnectLink(raw);
-    if (!link) return;
+    const url = parseConnectLink(raw);
+    if (!url) return;
     try {
-      await validateAndConnect(link.url, link.key);
+      const { loginNeeded } = await validateAndConnect(url);
       showSuccess('Connected via QR code');
-      goto('/');
+      goto(loginNeeded ? '/login' : '/');
     } catch (e) {
       showError(errorMessage(e, 'Could not connect'));
     }

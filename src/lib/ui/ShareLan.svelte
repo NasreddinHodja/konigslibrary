@@ -10,11 +10,10 @@
 
   let status = $state<'idle' | 'starting' | 'running' | 'stopping' | 'error'>('idle');
   let url = $state<string | null>(null);
-  let key = $state('');
   let error: string | null = $state(null);
   let copied = $state(false);
 
-  const deepLink = $derived(url ? connectLink(url, key) : '');
+  const deepLink = $derived(url ? connectLink(url) : '');
 
   onMount(() => {
     getLanServerStatus()
@@ -22,7 +21,6 @@
         if (s.running && s.url) {
           status = 'running';
           url = s.url;
-          key = s.key ?? '';
         }
       })
       .catch(() => {});
@@ -38,7 +36,6 @@
       }
       status = 'idle';
       url = null;
-      key = '';
       return;
     }
 
@@ -54,7 +51,6 @@
     try {
       const result = await startLanServer(mangaDir);
       url = result.url;
-      key = result.key ?? '';
       status = 'running';
     } catch (e) {
       error = errorMessage(e, 'Could not start server');
@@ -64,7 +60,7 @@
 
   async function copyUrl() {
     if (!url) return;
-    await navigator.clipboard.writeText(shareLink(url, key));
+    await navigator.clipboard.writeText(shareLink(url));
     copied = true;
     setTimeout(() => (copied = false), 2000);
   }

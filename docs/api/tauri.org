@@ -99,9 +99,10 @@ Returns the same metadata shape as [[file:http.org::*GET /api/library/{manga}/me
 | =slug=     | =string=                    | Folder name under =offline/=            |
 | =fileName= | =string=                    | File name to save as                    |
 | =url=      | =string=                    | URL to fetch                            |
+| =token=    | =string= or =null=          | Session token, sent as =Bearer=         |
 | =channel=  | =Channel<DownloadProgress>= | Byte progress                           |
 
-Downloads =url= to =offline/<slug>/<fileName>=. Does nothing if the file already exists. Writes to =<fileName>.part= and renames when done, so an interrupted download never looks finished.
+Downloads =url= to =offline/<slug>/<fileName>=, with =Authorization: Bearer <token>= when there's a token. Does nothing if the file already exists. Writes to =<fileName>.part= and renames when done, so an interrupted download never looks finished.
 
 ** cancel_download
 

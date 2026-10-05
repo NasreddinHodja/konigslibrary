@@ -41,6 +41,7 @@ fn client() -> &'static reqwest::Client {
 /// Downloads one file of a manga (a chapter archive or the cover) into
 /// `offline/<slug>/<file_name>`, so the downloads folder is laid out like the
 /// library it came from. A file that is already there is not fetched again.
+/// `token` is the server session's, sent as `Authorization: Bearer`.
 #[allow(clippy::too_many_arguments)]
 #[tauri::command]
 pub async fn download_file(
@@ -50,6 +51,7 @@ pub async fn download_file(
   slug: String,
   file_name: String,
   url: String,
+  token: Option<String>,
   channel: Channel<DownloadProgress>,
 ) -> Result<(), String> {
   let cancelled = Arc::new(AtomicBool::new(false));
@@ -59,7 +61,16 @@ pub async fn download_file(
     .unwrap_or_else(|e| e.into_inner())
     .insert(id.clone(), cancelled.clone());
 
-  let result = run(&app, &slug, &file_name, &url, &channel, &cancelled).await;
+  let result = run(
+    &app,
+    &slug,
+    &file_name,
+    &url,
+    token.as_deref(),
+    &channel,
+    &cancelled,
+  )
+  .await;
 
   state
     .0
@@ -74,6 +85,7 @@ async fn run(
   slug: &str,
   file_name: &str,
   url: &str,
+  token: Option<&str>,
   channel: &Channel<DownloadProgress>,
   cancelled: &AtomicBool,
 ) -> Result<(), String> {
@@ -90,7 +102,7 @@ async fn run(
   // download never looks like a finished chapter.
   let part = dir.join(format!("{file_name}.part"));
 
-  let result = fetch(url, &part, channel, cancelled).await;
+  let result = fetch(url, token, &part, channel, cancelled).await;
   match result {
     Ok(()) => std::fs::rename(&part, &dest).map_err(|e| e.to_string()),
     Err(e) => {
@@ -102,13 +114,18 @@ async fn run(
 
 async fn fetch(
   url: &str,
+  token: Option<&str>,
   part: &std::path::Path,
   channel: &Channel<DownloadProgress>,
   cancelled: &AtomicBool,
 ) -> Result<(), String> {
   use std::io::Write;
 
-  let mut resp = client().get(url).send().await.map_err(|e| e.to_string())?;
+  let mut request = client().get(url);
+  if let Some(token) = token {
+    request = request.bearer_auth(token);
+  }
+  let mut resp = request.send().await.map_err(|e| e.to_string())?;
   if !resp.status().is_success() {
     return Err(format!("HTTP {} for {}", resp.status(), url));
   }

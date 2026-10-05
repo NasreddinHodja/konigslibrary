@@ -4,6 +4,7 @@
   import Button from './Button.svelte';
   import Skeleton from './Skeleton.svelte';
   import { errorMessage } from '$lib/utils/errors';
+  import { apiFetch } from '$lib/api/auth.svelte';
 
   let {
     initialPath,
@@ -43,7 +44,7 @@
     error = null;
     try {
       const qs = target ? `?path=${encodeURIComponent(target)}` : '';
-      const res = await fetch(`/api/settings/browse${qs}`);
+      const res = await apiFetch(`/api/settings/browse${qs}`);
       const data = await res.json();
       if (req !== latestLoad) return;
       if (!res.ok) throw new Error(data.error || `${res.status}`);

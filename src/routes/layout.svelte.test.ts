@@ -1,10 +1,11 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen } from '@testing-library/svelte';
 import { createRawSnippet } from 'svelte';
 import Layout from './+layout.svelte';
 import { getToasts } from '$lib/ui/toast.svelte';
 import { fakeServer, json } from '$lib/testing/server';
 import { mockApp } from '$lib/testing/tauri';
+import { apiFetch, login } from '$lib/api/auth.svelte';
 
 // SvelteKit's router isn't running: navigation is recorded.
 const nav = vi.hoisted(() => ({ goto: vi.fn(), replaceState: vi.fn() }));
@@ -14,14 +15,8 @@ vi.mock('$app/navigation', () => ({
   afterNavigate: () => {},
   onNavigate: () => {}
 }));
-vi.mock('$app/state', () => ({ page: { state: {} } }));
-
-// The local build (LOCAL_BUILD) reads the key from its own address. A build
-// flag: on for every test here, which the other tests don't mind.
-vi.mock('$lib/utils/constants', async (original) => ({
-  ...(await original<typeof import('$lib/utils/constants')>()),
-  isLocalServer: true
-}));
+const appPage = vi.hoisted(() => ({ state: {}, url: new URL('http://localhost/') }));
+vi.mock('$app/state', () => ({ page: appPage }));
 
 const page = createRawSnippet(() => ({ render: () => '<p>the page</p>' }));
 
@@ -35,19 +30,32 @@ describe('the layout', () => {
     expect(screen.getByText('the page')).toBeInTheDocument();
   });
 
-  it("takes the key from the server's link, then drops it from the address", async () => {
-    history.replaceState(null, '', '/?key=abc&x=1');
-    renderLayout();
-    expect(localStorage.getItem('kl:serverKey')).toBe('abc');
-    expect(nav.replaceState).toHaveBeenCalledOnce();
-    expect(String(nav.replaceState.mock.calls[0][0])).toBe('http://localhost:3000/?x=1');
-    history.replaceState(null, '', '/');
-  });
+  describe('a request the server turns away for want of a session', () => {
+    async function sessionRefused() {
+      fakeServer(() => json({ error: 'Unauthorized' }, 401));
+      await apiFetch('/api/library');
+    }
 
-  it('leaves the address alone without a key', async () => {
-    renderLayout();
-    expect(localStorage.getItem('kl:serverKey')).toBeNull();
-    expect(nav.replaceState).not.toHaveBeenCalled();
+    // The session state outlives the test; logging in again clears it.
+    afterEach(async () => {
+      fakeServer(() => json({ username: 'admin' }));
+      await login('admin', 'password');
+    });
+
+    it('sends the app to the login screen', async () => {
+      renderLayout();
+      await sessionRefused();
+      await vi.waitFor(() => expect(nav.goto).toHaveBeenCalledWith('/login'));
+    });
+
+    it('leaves the login screen where it is', async () => {
+      appPage.url = new URL('http://localhost/login');
+      renderLayout();
+      await sessionRefused();
+      await new Promise((r) => setTimeout(r, 20));
+      expect(nav.goto).not.toHaveBeenCalled();
+      appPage.url = new URL('http://localhost/');
+    });
   });
 
   describe('a long press on a touch screen', () => {
@@ -91,25 +99,31 @@ describe('the layout', () => {
       });
     }
 
-    it('connects to the server it names', async () => {
-      openedWith('konigslibrary://connect?host=192.168.1.5&port=3000&key=abc');
+    it('connects to the server it names, then asks to log in', async () => {
+      openedWith('konigslibrary://connect?host=192.168.1.5&port=3000');
       fakeServer((url) =>
-        url.host === '192.168.1.5:3000' && url.searchParams.get('key') === 'abc'
-          ? json({ entries: [], next: null })
+        url.host === '192.168.1.5:3000' && url.pathname === '/api/auth/setup'
+          ? json({ needed: false })
           : undefined
       );
       renderLayout();
-      await vi.waitFor(() => expect(nav.goto).toHaveBeenCalledWith('/'));
+      await vi.waitFor(() => expect(nav.goto).toHaveBeenCalledWith('/login'));
       expect(localStorage.getItem('kl:serverUrl')).toBe('http://192.168.1.5:3000');
-      expect(localStorage.getItem('kl:serverKey')).toBe('abc');
       expect(getToasts().map((t) => t.label)).toContain('Connected via QR code');
     });
 
     it('says why it could not connect', async () => {
-      openedWith('konigslibrary://connect?host=192.168.1.5&port=3000&key=old');
-      fakeServer(() => new Response('', { status: 401 }));
+      openedWith('konigslibrary://connect?host=192.168.1.5&port=3000');
+      // A server from before accounts: the route falls through to its page.
+      fakeServer(
+        () => new Response('<!doctype html>', { headers: { 'Content-Type': 'text/html' } })
+      );
       renderLayout();
-      await vi.waitFor(() => expect(getToasts().map((t) => t.label)).toContain('Wrong key'));
+      await vi.waitFor(() =>
+        expect(getToasts().map((t) => t.label)).toContain(
+          'Not a konigslibrary server, or an outdated one'
+        )
+      );
       expect(nav.goto).not.toHaveBeenCalled();
       expect(localStorage.getItem('kl:serverUrl')).toBeNull();
     });

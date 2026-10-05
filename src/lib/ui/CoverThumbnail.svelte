@@ -2,6 +2,7 @@
   import type { Snippet } from 'svelte';
   import { BookOpen } from 'lucide-svelte';
   import Skeleton from './Skeleton.svelte';
+  import { authedSrc } from '$lib/api/authed-src.svelte';
 
   let {
     src,
@@ -28,14 +29,16 @@
     placeholder?: Snippet;
   } = $props();
 
+  const image = authedSrc(() => src);
+
   // A broken image falls back like a missing one; a new `src` gets a new try.
   let failed = $derived.by(() => {
-    void src;
+    void image.current;
     return false;
   });
   // Until the image's bytes arrive, the skeleton shows through it.
   let loaded = $derived.by(() => {
-    void src;
+    void image.current;
     return false;
   });
 </script>
@@ -54,12 +57,12 @@
     aria-label={alt}
     aria-current={active ? 'true' : undefined}
   >
-    {#if src && !failed}
+    {#if image.current && !failed}
       {#if !loaded}
         <Skeleton class="absolute inset-0" />
       {/if}
       <img
-        {src}
+        src={image.current}
         alt=""
         class="absolute inset-0 h-full w-full object-cover {objectPosition === 'top'
           ? 'object-top'
@@ -68,7 +71,7 @@
         onload={() => (loaded = true)}
         onerror={() => (failed = true)}
       />
-    {:else if loading}
+    {:else if loading || image.pending}
       <Skeleton class="absolute inset-0" />
     {:else if placeholder}
       {@render placeholder()}

@@ -23,12 +23,12 @@
   import { getMangaDir, setMangaDir, expandHome } from '$lib/sources/native-library';
   import {
     validateAndConnect,
-    parseServerInput,
-    knownKey,
+    parseServerUrl,
     probeServer,
     isProbeable
   } from '$lib/sources/server-connect';
   import ShareLan from '$lib/ui/ShareLan.svelte';
+  import AccountSettings from '$lib/ui/AccountSettings.svelte';
   import { FolderOpen, X } from 'lucide-svelte';
   import Skeleton from '$lib/ui/Skeleton.svelte';
   import DirectoryBrowser from '$lib/ui/DirectoryBrowser.svelte';
@@ -115,9 +115,13 @@
   const native = isNative();
   const android = isAndroid();
 
+  // A server to log in to: this page's own, or the one set below.
+  const hasServer = isLocalServer || !!getServerUrl();
+
   // The page's sections, for the jump links; some only exist on some builds.
   const sections = [
     { id: 'sources', label: 'Sources', show: isLocalServer },
+    { id: 'account', label: 'Account', show: hasServer },
     { id: 'theme', label: 'Theme', show: true },
     { id: 'shortcuts', label: 'Shortcuts', show: !isMobile },
     { id: 'providers', label: 'Providers', show: native },
@@ -146,7 +150,7 @@
   let serverUrlInput: HTMLInputElement | undefined = $state();
 
   $effect(() => {
-    const { url, key } = parseServerInput(serverUrl);
+    const url = parseServerUrl(serverUrl);
     connectError = null;
     if (!url) {
       probeStatus = 'idle';
@@ -159,7 +163,7 @@
         probeStatus = 'error';
         return;
       }
-      probeServer(url, key || knownKey(url), ctrl.signal).then(
+      probeServer(url, ctrl.signal).then(
         () => (probeStatus = 'ok'),
         (e) => {
           if (ctrl.signal.aborted) return;
@@ -186,10 +190,10 @@
     // least a moment, so a fast answer doesn't blink the button and error.
     const floor = new Promise((r) => setTimeout(r, 600));
     try {
-      await Promise.all([validateAndConnect(serverUrl), floor]);
+      const [{ loginNeeded }] = await Promise.all([validateAndConnect(serverUrl), floor]);
       connectError = null;
       showSuccess('Connected to server');
-      goto('/');
+      goto(loginNeeded ? '/login' : '/');
     } catch (e) {
       await floor;
       connectError = errorMessage(e, 'Could not reach server');
@@ -329,6 +333,13 @@
           </div>
         {/if}
       </div>
+    </section>
+  {/if}
+
+  {#if hasServer}
+    <section id="settings-account" class="scroll-mt-[calc(1rem+var(--safe-top))]">
+      {@render sectionHeader('ACCOUNT')}
+      <AccountSettings />
     </section>
   {/if}
 

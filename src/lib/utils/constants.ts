@@ -33,42 +33,54 @@ export const DEFAULT_PAGE_RATIO = 1.5; // height / width, typical manga page
 export const PAGE_TURN_ZOOM = 2;
 
 const LS_SERVER_URL = 'kl:serverUrl';
-const LS_SERVER_KEY = 'kl:serverKey';
+const LS_SERVER_TOKEN = 'kl:serverToken';
 
 const browser = typeof localStorage !== 'undefined';
 
+/// The server the app reads from; empty for the server's own page, which
+/// talks to its own origin.
 export function getServerUrl(): string {
   if (!browser) return '';
   return localStorage.getItem(LS_SERVER_URL) || '';
 }
 
-/// The server's access key; empty when there's none, as on the host itself.
-export function getServerKey(): string {
+/// The session token for `Authorization: Bearer`; empty when logged out, and
+/// always on the server's own page, whose session is a cookie.
+export function getServerToken(): string {
   if (!browser) return '';
-  return localStorage.getItem(LS_SERVER_KEY) || '';
+  return localStorage.getItem(LS_SERVER_TOKEN) || '';
 }
 
-export function setServer(url: string, key: string) {
+/// Points the app at `url`. Another server's session doesn't carry over.
+export function setServer(url: string) {
   if (!browser) return;
+  if (url !== getServerUrl()) localStorage.removeItem(LS_SERVER_TOKEN);
   localStorage.setItem(LS_SERVER_URL, url);
-  localStorage.setItem(LS_SERVER_KEY, key);
 }
 
-/// Just the key, for a page the server served itself, whose URL is its own.
-export function setServerKey(key: string) {
-  if (browser) localStorage.setItem(LS_SERVER_KEY, key);
+export function setServerToken(token: string) {
+  if (!browser) return;
+  if (token) localStorage.setItem(LS_SERVER_TOKEN, token);
+  else localStorage.removeItem(LS_SERVER_TOKEN);
 }
 
-/// `path` on the server, with the access key: in the URL, because page images
-/// are plain `<img src>`s.
+/// Whether requests carry a bearer token rather than the page's cookie: for a
+/// server at another origin. Its images can't be plain `<img src>`s, which
+/// can't send the header.
+export function usesBearer(): boolean {
+  return !!getServerUrl();
+}
+
+/// `path` on the server.
 export function apiUrl(path: string): string {
   const base = getServerUrl().replace(/\/+$/, '');
-  return withKey(base ? `${base}${path}` : path, getServerKey());
+  return base ? `${base}${path}` : path;
 }
 
-export function withKey(url: string, key: string): string {
-  if (!key) return url;
-  return `${url}${url.includes('?') ? '&' : '?'}key=${encodeURIComponent(key)}`;
+/// The `Authorization` header, when there's a token to send.
+export function authHeaders(): Record<string, string> {
+  const token = usesBearer() ? getServerToken() : '';
+  return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
 declare const __LOCAL_BUILD__: boolean;

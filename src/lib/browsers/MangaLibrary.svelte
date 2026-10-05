@@ -4,7 +4,7 @@
   import { fade, type TransitionConfig } from 'svelte/transition';
   import { SvelteMap, SvelteSet } from 'svelte/reactivity';
   import { getReaderContext } from '$lib/context';
-  import { openNativeManga, ServerLibraryProvider } from '$lib/sources';
+  import { openNativeManga, openServerManga } from '$lib/sources';
   import { fetchLibraryPage } from '$lib/sources/library';
   import {
     listDeviceManga,
@@ -392,7 +392,7 @@
       if (path) {
         await openNativeManga({ setSource }, path, row.name);
       } else if (row.slug) {
-        await setSource(new ServerLibraryProvider(row.slug, row.name));
+        await setSource(openServerManga(row.slug, row.name));
       }
     } catch (err) {
       showError(describeOpenFileError(err));

@@ -1,4 +1,5 @@
 import { apiUrl } from '$lib/utils/constants';
+import { apiFetch } from './auth.svelte';
 import type { ServerChapter } from '$lib/utils/types';
 import type { RawMangaMeta } from '$lib/zip';
 
@@ -8,7 +9,7 @@ export function serverFileUrl(slug: string, file: string, query = ''): string {
 }
 
 export async function fetchServerChapters(slug: string): Promise<ServerChapter[]> {
-  const res = await fetch(apiUrl(`/api/library/${slug}/chapters`));
+  const res = await apiFetch(`/api/library/${slug}/chapters`);
   // 422 carries why the manga can't be listed, such as too many chapters.
   if (!res.ok)
     throw new Error(
@@ -21,7 +22,7 @@ export async function fetchServerChapters(slug: string): Promise<ServerChapter[]
 /// or `null` if it can't be fetched.
 export async function fetchServerRawMeta(slug: string): Promise<RawMangaMeta | null> {
   try {
-    const res = await fetch(apiUrl(`/api/library/${slug}/meta`));
+    const res = await apiFetch(`/api/library/${slug}/meta`);
     if (!res.ok) return null;
     return await res.json();
   } catch {
@@ -31,13 +32,13 @@ export async function fetchServerRawMeta(slug: string): Promise<RawMangaMeta | n
 
 /// The local server's settings (only a server on this machine has them).
 export async function fetchServerSettings(): Promise<{ mangaDir?: string }> {
-  const res = await fetch(apiUrl('/api/settings'));
+  const res = await apiFetch('/api/settings');
   if (!res.ok) throw new Error(`Failed to load settings (${res.status})`);
   return res.json();
 }
 
 export async function saveServerSettings(mangaDir: string): Promise<void> {
-  const res = await fetch(apiUrl('/api/settings'), {
+  const res = await apiFetch('/api/settings', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ mangaDir })
