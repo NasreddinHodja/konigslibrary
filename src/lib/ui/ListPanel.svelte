@@ -1,9 +1,10 @@
 <script lang="ts">
+  import Icon from './Icon.svelte';
   import { untrack, type Snippet } from 'svelte';
   import EmblaCarousel, { type EmblaCarouselType } from 'embla-carousel';
   import { inSystemGesture } from '$lib/utils/system-gestures';
   import { fade } from 'svelte/transition';
-  import { ArrowUp, Search, X } from 'lucide-svelte';
+  import { ANIM_DURATION } from '$lib/utils/constants';
 
   // A searchable list: optional tabs and a label/search bar, then the list.
   //
@@ -22,8 +23,8 @@
     search = $bindable(''),
     placeholder,
     fill = false,
-    pageClass = '',
     actions,
+    header,
     children
   }: {
     /// `badge` is shown after the label, inside the tab.
@@ -35,10 +36,10 @@
     search?: string;
     placeholder: string;
     fill?: boolean;
-    /// Added to each page's content in `fill` mode, for room under page chrome.
-    pageClass?: string;
     /// Buttons at the end of the label's row.
     actions?: Snippet;
+    /// Above the label, inside the bar's panel: the page's own title row.
+    header?: Snippet;
     /// The list for one tab; given null when there are no tabs.
     children: Snippet<[string | null]>;
   } = $props();
@@ -120,6 +121,9 @@
   let farInFlow = $state(false);
   /// In page flow: the list's right edge, from the right of the screen.
   let flowRight = $state(0);
+  /// In page flow: the bar is pinned below the status bar.
+  let docked = $state(false);
+  let bar: HTMLDivElement | undefined = $state();
 
   function trackScroll(node: HTMLElement, key: string | null) {
     const onScroll = () => {
@@ -136,6 +140,8 @@
       const rect = el.getBoundingClientRect();
       farInFlow = -rect.top > window.innerHeight * FAR;
       flowRight = window.innerWidth - rect.right;
+      if (bar)
+        docked = bar.getBoundingClientRect().top <= parseFloat(getComputedStyle(bar).top) + 0.5;
     };
     window.addEventListener('scroll', onScroll, { passive: true });
     window.addEventListener('resize', onScroll, { passive: true });
@@ -157,80 +163,88 @@
   });
 </script>
 
-<!-- In page flow, back to top lands with the bar where it starts pinning. -->
+<!-- In page flow, back to top lands with the bar where it starts pinning.
+     Pinned, the bar sits 12px below the status bar like the library's
+     header, and that gap is filled with the background texture, lined up
+     with the fixed one behind the page, so the list doesn't show through.
+     4px wider on the right than the bar, to cover the list's raised shadow
+     as it scrolls under. -->
 <div
   bind:this={root}
-  class="flex w-full min-w-0 flex-1 flex-col {fill ? 'min-h-0' : ''}"
+  class="flex w-full min-w-0 flex-1 flex-col gap-3 {fill ? 'min-h-0' : ''}"
   style:scroll-margin-top={fill ? undefined : 'var(--safe-top)'}
 >
   <div
-    class="z-10 bg-bg {fill ? 'shrink-0' : 'sticky'}"
+    bind:this={bar}
+    class="z-10 {fill ? 'shrink-0' : 'sticky -mt-3 -mr-1 pt-3 pr-1'}"
     style={fill ? undefined : 'top: var(--safe-top)'}
+    style:background={docked ? 'var(--color-bg) var(--texture) fixed' : undefined}
+    style:image-rendering={docked ? 'pixelated' : undefined}
   >
-    <div
-      class="flex flex-col gap-3 border-b border-line px-4 pt-3 pb-4 sm:flex-row sm:items-center sm:gap-4"
-    >
+    <div class="flex flex-col gap-3 panel p-3">
+      {@render header?.()}
+
       {#if label}
-        <div class="flex min-h-7 shrink-0 items-center justify-between gap-3">
-          <span class="flex items-center gap-2">
-            <span class="text-xs font-bold tracking-widest text-dim">{label}</span>
-          </span>
+        <div class="flex items-center justify-between gap-3 border-b border-ink pb-1">
+          <h2>{label}</h2>
           {@render actions?.()}
         </div>
       {/if}
 
-      <div
-        class="flex min-w-0 flex-1 items-center gap-2 border-2 border-line px-3 py-1.5 focus-within:border-fg/50 pointer-coarse:py-3"
+      <!-- The box shows the focus: the field fills it. -->
+      <label
+        class="flex h-8 items-center gap-2 border border-ink px-2 focus-within:outline-1 focus-within:outline-offset-2 focus-within:outline-hi focus-within:outline-dotted pointer-coarse:h-10"
       >
-        <Search size={12} class="shrink-0 text-dim" />
+        <span class="text-ink"><Icon name="search" /></span>
         <input
           type="text"
           {placeholder}
           aria-label={placeholder}
           bind:value={search}
-          class="w-full min-w-0 bg-transparent text-sm outline-none placeholder:text-dim"
+          class="w-full min-w-0 bg-transparent placeholder:text-dim focus-visible:outline-none!"
         />
         {#if search}
           <button
-            class="hit relative cursor-pointer text-dim hover:text-soft"
+            class="hit relative flex cursor-pointer items-center justify-center text-ink hover:text-hi"
             onclick={() => (search = '')}
             aria-label="Clear search"
           >
-            <X size={12} />
+            <Icon name="close" size={12} />
           </button>
         {/if}
-      </div>
+      </label>
+
+      {#if tabs.length > 1}
+        <div class="relative flex border border-ink" role="tablist">
+          <!-- The current tab's fill, following the pages as they're dragged. -->
+          <div
+            bind:this={indicator}
+            class="pointer-events-none absolute inset-y-0 left-0 bg-ink will-change-transform"
+            style:width="{100 / tabs.length}%"
+          ></div>
+          {#each tabs as t, i (t.key)}
+            <button
+              role="tab"
+              aria-selected={activeTab === t.key}
+              class="relative h-8 flex-1 cursor-pointer pointer-coarse:h-10 {i > 0
+                ? 'border-l border-ink'
+                : ''} {activeTab === t.key ? 'text-bg' : 'text-ink hover:text-hi'}"
+              onclick={() => ontab?.(t.key)}
+            >
+              <span class="inline-flex items-center gap-2">
+                {t.label}
+                {@render t.badge?.()}
+              </span>
+            </button>
+          {/each}
+        </div>
+      {/if}
     </div>
-    {#if tabs.length > 1}
-      <div class="relative flex border-b border-line" role="tablist">
-        {#each tabs as t (t.key)}
-          <button
-            role="tab"
-            aria-selected={activeTab === t.key}
-            class="flex-1 cursor-pointer px-4 pt-3.5 pb-2.5 text-xs font-bold tracking-widest transition-colors pointer-coarse:pt-4.5 pointer-coarse:pb-3.5 {activeTab ===
-            t.key
-              ? ''
-              : 'text-faint hover:text-soft'}"
-            onclick={() => ontab?.(t.key)}
-          >
-            <span class="inline-flex items-center gap-2">
-              {t.label}
-              {@render t.badge?.()}
-            </span>
-          </button>
-        {/each}
-        <div
-          bind:this={indicator}
-          class="pointer-events-none absolute -bottom-px left-0 h-0.5 bg-fg will-change-transform"
-          style:width="{100 / tabs.length}%"
-        ></div>
-      </div>
-    {/if}
   </div>
 
   {#if fill}
     <!-- Embla's viewport, container and slides. -->
-    <div class="min-h-0 flex-1 overflow-hidden" bind:this={viewport}>
+    <div class="min-h-0 flex-1 overflow-hidden panel" bind:this={viewport}>
       <div class="flex h-full touch-pan-y">
         {#each pages as key (key)}
           <!-- Each page scrolls on its own, and is what the cards in it watch
@@ -243,7 +257,7 @@
             inert={key !== (activeTab ?? null)}
             use:trackScroll={key}
           >
-            <div class="flex min-h-full flex-col p-4 {pageClass}">
+            <div class="flex min-h-full flex-col p-3">
               {@render children(key)}
             </div>
             {@render toTop(!!farPages[String(key)], (e) =>
@@ -256,7 +270,7 @@
       </div>
     </div>
   {:else}
-    <div class="flex flex-1 flex-col p-4">
+    <div class="flex flex-1 flex-col panel p-3">
       {@render children(activeTab ?? null)}
     </div>
     {@render toTop(farInFlow, () => root?.scrollIntoView({ behavior: 'smooth' }))}
@@ -264,23 +278,25 @@
 </div>
 
 {#snippet toTop(show: boolean, onclick: (e: MouseEvent) => void)}
-  <!-- Takes no room, and sits clear of the mobile tab bar. A `fill` page's
-       list runs to the bottom of its scroll, so sticky holds there; in page
-       flow the page goes on under the list, so it's fixed to the screen,
-       lined up with the list's edge. -->
+  <!-- Takes no room. A `fill` page's list runs to the bottom of its scroll,
+       so sticky holds there; in page flow the page goes on under the list,
+       so it's fixed to the screen, lined up with the list's edge and clear
+       of the mobile tab bar. -->
   <div
     class="pointer-events-none bottom-0 z-10 h-0 {fill ? 'sticky' : 'fixed'}"
     style:right={fill ? undefined : `${flowRight}px`}
   >
     {#if show}
       <button
-        transition:fade={{ duration: 150 }}
-        class="pointer-events-auto absolute right-4 bottom-[calc(4.75rem_+_var(--safe-bottom))] flex size-14 cursor-pointer items-center justify-center border-2 border-line bg-bg text-soft hover:text-fg md:bottom-4"
+        transition:fade={{ duration: ANIM_DURATION }}
+        class="pointer-events-auto absolute right-4 flex size-12 cursor-pointer items-center justify-center panel text-ink hover:text-hi {fill
+          ? 'bottom-4'
+          : 'bottom-[calc(5.5rem_+_var(--safe-bottom))] md:bottom-4'}"
         aria-label="Back to top"
         title="Back to top"
         {onclick}
       >
-        <ArrowUp size={24} />
+        <Icon name="up" />
       </button>
     {/if}
   </div>

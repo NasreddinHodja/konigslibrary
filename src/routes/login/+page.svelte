@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onDestroy, onMount } from 'svelte';
-  import PageContainer from '$lib/ui/PageContainer.svelte';
+  import Spinner from '$lib/ui/Spinner.svelte';
   import Button from '$lib/ui/Button.svelte';
   import { goto } from '$app/navigation';
   import { errorMessage } from '$lib/utils/errors';
@@ -90,62 +90,57 @@
 
   onDestroy(() => clearTimeout(waitTimer));
 
-  const field =
-    'w-full border-2 bg-bg px-3 py-2 text-sm text-fg placeholder:text-dim pointer-coarse:py-3';
+  const field = 'h-8 w-full border border-ink bg-bg px-2 placeholder:text-dim pointer-coarse:h-10';
 </script>
 
 <svelte:head>
   <title>{mode === 'setup' ? 'Set up' : 'Log in'} · konigslibrary</title>
 </svelte:head>
 
-<PageContainer>
-  <div
-    class="mx-auto max-w-sm space-y-6 pb-8"
-    style="padding-top: calc(2rem + var(--safe-top, 0px))"
-  >
-    <p class="py-12 text-center text-4xl font-bold tracking-widest">KONIGSLIBRARY</p>
-
+<div
+  class="mx-auto flex min-h-dvh max-w-sm flex-col justify-center gap-3 px-3 py-8"
+  style="padding-top: calc(2rem + var(--safe-top, 0px)); padding-bottom: calc(2rem + var(--safe-bottom, 0px))"
+>
+  <div class="flex flex-col gap-3 panel p-3">
     {#if !hasServer}
-      <h1 class="text-2xl font-bold">No server</h1>
-      <p class="text-sm text-soft">Set the server's address in Settings first.</p>
-      <Button size="md" onclick={() => goto('/settings')}>Settings</Button>
+      <h1 class="border-b border-ink text-2xl">no server</h1>
+      <p>Set the server's address in Settings first.</p>
+      <div><Button onclick={() => goto('/settings')}>settings</Button></div>
     {:else if mode === 'checking'}
-      <p role="status" class="text-sm text-dim">Checking the server…</p>
+      <p role="status" class="text-dim"><Spinner /> Checking the server…</p>
     {:else if mode === 'waiting' && approval}
-      <h1 class="text-2xl font-bold">Waiting for approval</h1>
-      <p class="text-sm text-soft">
+      <h1 class="border-b border-ink text-2xl">waiting for approval</h1>
+      <p>
         Someone has been guessing the password, so a new device has to be let in by one that's
         already logged in. On that device, open Settings, go to Account, and allow the login showing
         this code:
       </p>
-      <p class="text-center font-mono text-3xl font-bold tracking-widest" aria-label="Code">
-        {approval.code}
+      <p class="text-center text-2xl text-ink" aria-label="Code">{approval.code}</p>
+      <p role="status" class="text-dim">
+        <Spinner /> Waiting… If no login shows up there, the password was wrong.
       </p>
-      <p role="status" class="text-sm text-dim">
-        Waiting… If no login shows up there, the password was wrong.
-      </p>
-      <Button size="md" onclick={() => stopWaiting(null)}>Cancel</Button>
+      <div><Button onclick={() => stopWaiting(null)}>cancel</Button></div>
     {:else if mode === 'unreachable'}
-      <h1 class="text-2xl font-bold">Can't reach the server</h1>
-      <p role="alert" class="text-sm text-error">{error}</p>
-      <Button size="md" onclick={check}>Try again</Button>
+      <h1 class="border-b border-ink text-2xl">can't reach the server</h1>
+      <p role="alert" class="text-ink">► <span>{error}</span></p>
+      <div><Button onclick={check}>try again</Button></div>
     {:else}
-      <div class="space-y-2">
-        <h1 class="text-2xl font-bold">{mode === 'setup' ? 'Set up the server' : 'Log in'}</h1>
+      <div class="flex flex-col gap-1">
+        <h1 class="border-b border-ink text-2xl">
+          {mode === 'setup' ? 'set up the server' : 'log in'}
+        </h1>
         {#if server}
-          <p class="text-sm break-all text-dim">{server}</p>
+          <p class="break-all text-dim">{server}</p>
         {/if}
         {#if mode === 'setup'}
-          <p class="text-sm text-soft">
-            Create the admin account. The setup token is in the server's log.
-          </p>
+          <p>Create the admin account. The setup token is in the server's log.</p>
         {/if}
       </div>
 
-      <form class="space-y-4" onsubmit={submit}>
+      <form class="flex flex-col gap-3" onsubmit={submit}>
         {#if mode === 'setup'}
-          <label class="block space-y-1.5">
-            <span class="text-sm font-bold text-dim">Setup token</span>
+          <label class="flex flex-col gap-1">
+            <span class="text-dim">setup token</span>
             <input
               class={field}
               bind:value={setupToken}
@@ -156,8 +151,8 @@
             />
           </label>
         {/if}
-        <label class="block space-y-1.5">
-          <span class="text-sm font-bold text-dim">Username</span>
+        <label class="flex flex-col gap-1">
+          <span class="text-dim">username</span>
           <input
             class={field}
             bind:value={username}
@@ -167,9 +162,9 @@
             required
           />
         </label>
-        <div class="space-y-1.5">
-          <label class="block space-y-1.5">
-            <span class="text-sm font-bold text-dim">Password</span>
+        <div class="flex flex-col gap-1">
+          <label class="flex flex-col gap-1">
+            <span class="text-dim">password</span>
             <input
               class={field}
               type="password"
@@ -180,23 +175,21 @@
             />
           </label>
           {#if mode === 'setup'}
-            <p id="password-hint" class="text-xs text-dim">At least 8 characters.</p>
+            <p id="password-hint" class="text-dim">At least 8 characters.</p>
           {/if}
         </div>
-        <div class="flex items-center gap-3">
-          <Button size="md" variant="primary" disabled={busy}>
-            {mode === 'setup' ? 'Create account' : 'Log in'}
+        <div class="flex items-center gap-4 pt-1">
+          <Button variant="primary" disabled={busy}>
+            {mode === 'setup' ? 'create account' : 'log in'}
           </Button>
           {#if !isLocalServer}
-            <a href="/settings" class="text-xs tracking-widest text-dim hover:text-soft"
-              >CHANGE SERVER</a
-            >
+            <a href="/settings" class="text-ink hover:text-hi hover:underline">change server</a>
           {/if}
         </div>
         {#if error}
-          <p role="alert" class="text-sm text-error">{error}</p>
+          <p role="alert" class="text-ink">► <span>{error}</span></p>
         {/if}
       </form>
     {/if}
   </div>
-</PageContainer>
+</div>

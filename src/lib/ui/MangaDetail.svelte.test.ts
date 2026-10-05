@@ -7,6 +7,7 @@ import { FakeProvider } from '$lib/testing/reader';
 import { fakeServer, json } from '$lib/testing/server';
 import { mockApp } from '$lib/testing/tauri';
 import { openServerManga, type SourceProvider } from '$lib/sources';
+import { cancelDownload, downloadProgress } from '$lib/sources/download.svelte';
 import type { Reader } from '$lib/context';
 import type { MangaMeta } from '$lib/api/meta';
 
@@ -106,7 +107,7 @@ describe('MangaDetail', () => {
   describe('chapters', () => {
     it('lists them oldest first, with how many there are', async () => {
       await renderDetail();
-      expect(screen.getByText('CHAPTERS (3)')).toBeInTheDocument();
+      expect(screen.getByText('chapters (3)')).toBeInTheDocument();
       expect(tileNumbers()).toEqual(['Ch. 1', 'Ch. 2', 'Ch. 12.5']);
     });
 
@@ -157,7 +158,7 @@ describe('MangaDetail', () => {
     it('picks up where the manga was left', async () => {
       saveProgress('chapter_0012-05', 9);
       const { reader, user } = await renderDetail();
-      await user.click(screen.getByRole('button', { name: 'RESUME: Ch. 12.5, p.10' }));
+      await user.click(screen.getByRole('button', { name: 'resume ch. 12.5 p. 10' }));
       expect(reader.state.selectedChapter).toBe('chapter_0012-05');
       expect(reader.state.currentPage).toBe(9);
     });
@@ -165,12 +166,12 @@ describe('MangaDetail', () => {
     it('is offered without metadata too', async () => {
       saveProgress('chapter_0001-00', 0);
       await renderDetail(new FakeProvider(chapters, 'berserk'));
-      expect(screen.getByRole('button', { name: 'RESUME: Ch. 1, p.1' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'resume ch. 1 p. 1' })).toBeInTheDocument();
     });
 
     it('is not offered for a manga not started', async () => {
       await renderDetail();
-      expect(screen.queryByRole('button', { name: /^RESUME/ })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /^resume/ })).not.toBeInTheDocument();
     });
   });
 
@@ -193,12 +194,12 @@ describe('MangaDetail', () => {
 
     it('downloads a server manga after asking', async () => {
       const { user, calls } = await serverManga(false);
-      await user.click(await screen.findByRole('button', { name: 'DOWNLOAD' }));
+      await user.click(await screen.findByRole('button', { name: 'download' }));
       const dialog = screen.getByRole('dialog');
       expect(dialog).toHaveTextContent('Download "Berserk"?');
-      await user.click(within(dialog).getByRole('button', { name: 'Download' }));
+      await user.click(within(dialog).getByRole('button', { name: 'download' }));
       // Gone while it runs: the toast shows its progress.
-      expect(screen.queryByRole('button', { name: 'DOWNLOAD' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'download' })).not.toBeInTheDocument();
       await vi.waitFor(() =>
         expect(calls).toContainEqual(
           expect.objectContaining({
@@ -209,10 +210,34 @@ describe('MangaDetail', () => {
       );
     });
 
+    it('is offered again after the download is cancelled', async () => {
+      fakeServer((url) => {
+        if (url.pathname === '/api/library/berserk/chapters')
+          return json([{ name: 'ch1', slug: 'ch1.cbz', pageCount: 1, pages: ['1.jpg'] }]);
+        if (url.pathname === '/api/library/berserk/meta') return json({ ...meta(), cover: null });
+      });
+      // The copy runs until cancelled, then fails as the app's does.
+      let stop: (err: Error) => void = () => {};
+      mockApp((cmd) => {
+        if (cmd === 'list_offline_manga') return [];
+        if (cmd === 'download_file') return new Promise((_, reject) => (stop = reject));
+        if (cmd === 'cancel_download') stop(new Error('cancelled'));
+      });
+      const { user } = await renderDetail(openServerManga('berserk', 'berserk'));
+      await user.click(await screen.findByRole('button', { name: 'download' }));
+      await user.click(
+        within(screen.getByRole('dialog')).getByRole('button', { name: 'download' })
+      );
+      expect(screen.queryByRole('button', { name: 'download' })).not.toBeInTheDocument();
+      await vi.waitFor(() => expect(downloadProgress.has('berserk')).toBe(true));
+      cancelDownload('berserk');
+      expect(await screen.findByRole('button', { name: 'download' })).toBeInTheDocument();
+    });
+
     it('is not offered for a manga already downloaded', async () => {
       const { calls } = await serverManga(true);
       await vi.waitFor(() => expect(calls.map((c) => c.cmd)).toContain('list_offline_manga'));
-      expect(screen.queryByRole('button', { name: 'DOWNLOAD' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'download' })).not.toBeInTheDocument();
     });
 
     it('is not offered on the web', async () => {
@@ -220,7 +245,7 @@ describe('MangaDetail', () => {
         if (url.pathname === '/api/library/berserk/chapters') return json([]);
       });
       await renderDetail(openServerManga('berserk', 'berserk'));
-      expect(screen.queryByRole('button', { name: 'DOWNLOAD' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'download' })).not.toBeInTheDocument();
     });
   });
 });

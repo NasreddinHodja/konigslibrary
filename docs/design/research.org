@@ -1,0 +1,92 @@
+#+TITLE: Redesign research
+#+OPTIONS: ^:{}
+
+What the sources say, and what of it applies to this app: Source Code Pro everywhere, =border-2=, no rounding, uppercase spaced-out labels, flat colours from three theme presets (=src/lib/theme/index.ts=). Step 1 of the redesign in =TODO.org=; the rules themselves come later, in the design system doc.
+
+* General principles
+
+** Hierarchy
+- NN/g, visual hierarchy: "Use no more than 3 sizes — small, medium, and large", "Make the most important element biggest", at most two large elements per screen. Suggested ranges: 14–16px body, 18–22px subheads, up to 32px headers. Colour: no more than two primary and two secondary colours in a simple design, no more than three contrast variations in a complex one, and never colour alone. Check with the squint test (blur the screen and see what still stands out). [[https://www.nngroup.com/articles/visual-hierarchy-ux-definition/][source]]
+- Applies: with one typeface, one weight family and uppercase labels everywhere, size and position are left to carry the hierarchy. Three sizes is a usable cap for a monospace UI, and the uppercase label style should be one of them, not a fourth.
+
+** Spacing and rhythm
+- Refactoring UI (via a reader's notes; the book itself isn't free): pick spacing from a fixed set, not a linear scale ("multiples of 4px" doesn't help choose between 120 and 125); keep neighbouring values at least ~25% apart, tight at the small end and wider further up. Their example from a 16px base: 16, 20, 25, 32, 40, 50, 64, 80. [[https://github.com/simonstadlinger/zettelkasten/blob/master/books/refactoring-ui/spacing-sizing-system.md][source]]
+- NN/g: "An element that has more space around it will be perceived as one group"; use containers (borders, backgrounds) only when whitespace alone doesn't group things. [[https://www.nngroup.com/articles/visual-hierarchy-ux-definition/][source]]
+- Applies: borders are this style's main tool, so the risk is boxing every group. Spacing should do the grouping first, with =border-2= kept for things you act on or real containers.
+
+** Typography scale
+- Covered above (NN/g's three sizes and ranges). Material's type-scale page didn't load (JavaScript-only), so it's not used here.
+- Applies: a monospace face is wider than a proportional one at the same size, so a label row fits fewer characters. That matters for uppercase tracked labels on phones.
+
+** Contrast and colour
+- WCAG 1.4.3: 4.5:1 for normal text, 3:1 for large text (18pt, or 14pt bold). [[https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html][source]]
+- WCAG 1.4.11: 3:1 for the visual boundary of a control when the boundary is the only thing that shows it's there, and for focus indicators against what's next to them. Hover styles don't have to meet it, but must not drop a control below it. Disabled controls are exempt. [[https://www.w3.org/WAI/WCAG22/Understanding/non-text-contrast.html][source]]
+- Refactoring UI, palettes: 8–10 greys, and 5–10 shades of each colour; "don't be afraid to make little tweaks". [[https://www.refactoringui.com/previews/building-your-color-palette][source]]
+- Applies: the presets define six colours each; =layout.css= already derives =soft=, =dim=, =faint=, =line= and =line-strong= from them with =color-mix=, which is this app's version of a grey ramp. =faint= (55% of =fg=) and =line= (21% of =border=) need checking against 4.5:1 and 3:1 in each preset before they're used for text or for a control's only boundary.
+
+** Affordance and feedback
+- NN/g, clickable elements: signal clickability with "borders, color, size, consistency, placement, and adherence to web standards"; text links by colour and underline; "Make clickable elements obvious to users so they don't need to ponder". [[https://www.nngroup.com/articles/clickable-elements/][source]]
+- NN/g heuristic 1: "keep users informed about what is going on, through appropriate feedback within a reasonable amount of time." [[https://www.nngroup.com/articles/ten-usability-heuristics/][source]]
+- Applies: thick borders already read as "button" here. That only works if non-interactive things (panels, groups) don't get the same border.
+
+** Consistency
+- NN/g heuristic 4: "Users should not have to wonder whether different words, situations, or actions mean the same thing. Follow platform and industry conventions." Heuristic 8: leave out information that is "irrelevant or rarely needed". [[https://www.nngroup.com/articles/ten-usability-heuristics/][source]]
+
+** Touch targets
+- WCAG 2.5.8 (AA): at least 24×24 CSS px, or smaller with enough clearance that a 24px circle centred on each target doesn't hit another. [[https://www.w3.org/WAI/WCAG22/Understanding/target-size-minimum.html][source]]
+- Android: at least 48×48dp; can be smaller for mice and trackpads. [[https://developer.android.com/guide/topics/ui/accessibility/apps][source]]
+- Apple HIG: default/minimum control size 44/28pt on iOS, 28/20pt on macOS; about 12pt of padding around bezelled controls, 24pt around bezel-less ones. [[https://developer.apple.com/tutorials/data/design/human-interface-guidelines/accessibility.json][source]]
+- NN/g: at least 1cm × 1cm physical, about 2mm between targets. [[https://www.nngroup.com/articles/touch-target-size/][source]]
+- Applies: the =hit= utility in =layout.css= already gives coarse pointers a 48px tap area. With a mouse (desktop), 24px is the floor and the macOS 28pt default is a reasonable size for small controls.
+
+** Motion
+- WCAG 2.3.3 (AAA): motion triggered by interaction can be turned off unless essential; honouring =prefers-reduced-motion= is the suggested way. [[https://www.w3.org/WAI/WCAG22/Understanding/animation-from-interactions.html][source]]
+- Applies: there's one duration (=--duration-anim=, 120ms) and one easing. Whether reduced motion is honoured everywhere is for the audit.
+
+* Brutalism in interfaces
+
+- NN/g: brutalism is "a style that intentionally attempts to look raw, haphazard, or unadorned", echoing early-90s sites (bare HTML, blue links, monospace). Their line between usable and not: "keep it limited to visual design. Don't break your visual hierarchy, navigation, or interaction design just for the sake of novelty." Antidesign (no hierarchy, harsh colours, odd cursors, distracting animation) is where it fails. [[https://www.nngroup.com/articles/brutalism-antidesign/][source]]
+- NN/g, neobrutalism: "high contrast, blocky layouts, bold colors, thick borders"; hard shadows instead of soft ones. Their advice: clear buttons, readable type, ample whitespace; 2–3 bold colours; "generous padding (e.g., 24–32px margins)"; test that interactive elements give clear feedback and state changes. [[https://www.nngroup.com/articles/neobrutalism/][source]]
+- brutalist-web.design (David Copeland's guidelines): only links and buttons respond to clicks; "Hyperlinks are underlined and buttons look like buttons"; the back button works; "Design must serve the content's purpose"; fast. [[https://brutalist-web.design/][source]]
+- Applies: this app is closer to the neobrutalist end, but monochrome. What keeps it usable by both sources is the same list: hierarchy intact, obvious buttons, visible states, generous space. Thick borders and no rounding are surface style and can stay; cramped spacing and everything-at-the-same-weight are not part of the style and can go. The Android back button and browser back are already wired (=src/lib/ui/back.ts=); keep it that way.
+
+* Reading apps
+
+- Mihon (Android manga reader) reader settings: reading modes (paged right-to-left, left-to-right, vertical; long strip, with or without gaps), background black, grey, white or automatic, fullscreen, page number shown at the bottom, configurable tap zones (several layouts, invertible), volume keys to turn pages, crop borders, split wide pages, side padding in long strip, and how readily scrolling hides the menu. [[https://mihon.app/docs/guides/reader-settings][source]]
+- A review of the Panels comic reader: "all the controls get out of the way for a totally clean reading screen normally", and a tap brings up a scrollable strip of page thumbnails "at a size that balances visibility and breadth". [[https://comicssyllabus.substack.com/p/panels-app-pros-and-cons][source]]
+- Applies: in the reader the content is the page and the chrome should be absent until asked for; the HUD (=ReaderHud.svelte=) is where the style matters least and legibility over an arbitrary page image matters most. Mihon's options that this app lacks are out of scope: the redesign doesn't add reader features.
+
+* Looked at: brutalist sites and component kits
+
+Screenshots taken 2026-10-05 with headless Chromium at 1440×900 and 390×844; cookie overlays removed from the page, not accepted. What each shows that bears on this app (monochrome, monospace, a grid of covers, a reader):
+
+- [[https://www.nts.live/explore][NTS]] (/, /explore, /infinite-mixtapes): the closest relative: black, white, a grid of images, bold uppercase labels.
+  - Selected is inverted: the current nav item and the live channel numbers are white boxes with black text.
+  - The top bar's icon buttons sit in cells split by 1px rules, a toolbar made of borders rather than of boxed buttons.
+  - Image cards have a 1px hairline frame and the title set straight on the image, large and bold; no caption band.
+  - Tags are 1px boxed chips in small bold uppercase. Section titles are big bold uppercase with a small VIEW ALL link beside them.
+  - The filter field on Explore is a flat dark fill with no border; the header search is a single underline.
+  - The phone layout keeps the same parts, just stacked.
+- [[https://www.neobrutalism.dev/docs/tabs][neobrutalism.dev]] and [[https://www.retroui.dev/docs/components/button][NeoBrutalism (retroui.dev)]], component kits:
+  - Hard offset shadows with no blur under buttons, cards and dialogs; retroui's button page describes "a shadow it presses into on click".
+  - Segmented tabs: equal cells split by the border, the active one filled (Preview/Code, pnpm/npm/yarn/bun).
+  - retroui's sidebar: tiny tracked uppercase group labels with a square bullet; the current item gets a filled box and a bar.
+  - Both lean on accent colours and some rounding, which this app doesn't have; the structure carries over, the colour doesn't.
+- [[https://nothing.tech][Nothing]] (its store's region dialog): a small uppercase monospace label over a larger value ("LOOKS LIKE YOU'RE IN:" over INTERNATIONAL); one solid button with an underlined text link under it as the alternative.
+- [[https://www.are.na/explore][Are.na]] (/explore): quiet; 1px grey frames on cards, and View and Sort as small labelled groups under a rule, the current option marked with a short bar.
+- Not useful here: Gumroad (now rounded and illustrated), Teenage Engineering (display type and product photos), MSCHF and most of the brutalistwebsites.com gallery (closer to NN/g's antidesign). sourcehut returned 502 and Berkeley Graphics a bot check, so neither was seen.
+
+* Direction: small web, pixel and dither
+
+Picked 2026-10-05 from five personal sites: [[https://meth.cat/][meth.cat]] (the model), [[https://353cloud.neocities.org/][353cloud]] (the same in white), [[https://dalem.foo/][dalem.foo]], [[https://www.deletia.digital/][deletia.digital]], [[https://sftn.github.io/][sftn.github.io]]. Read from screenshots and, for meth.cat and 353cloud, their stylesheets:
+
+- meth.cat: five colours as variables: =#000= background, =#dcf= text, =#c4e= ink for borders and links, =#82b= and =#408= as darker steps. Panels are a 1px ink border with a stepped hard shadow, =2px 2px 0 #82b, 4px 4px 0 #408=. A bitmap font it loads as =vga=, 16px everywhere and 32px for =h1=, nothing bold. Images get a =3px double= ink frame; links are ink, visited ones the middle step; =h1= has a 1px ink rule under it, =h2= is underlined. A dithered GIF is fixed behind everything, with the panels' black on top. Its file input and Upload button are the browser's own.
+- 353cloud: black panels with 2px white borders over a tiled dither pattern; its font is IBM Plex Mono, not bitmap.
+- All five: lowercase plain words for navigation, boxed link lists, one ink on a dark background, 1px frames, no soft shadows or blur.
+- Font: WebPlus IBM VGA 9x16 (picked in the showcase over its 8x16, the Toshiba, EGA, XGA and CGA fonts) from VileR's Ultimate Oldschool PC Font Pack (CC BY-SA 4.0; credit VileR with a link to int10h.org), in =static/fonts/=. Bitmap outlines are only crisp at their own height or a whole multiple ([[https://int10h.org/oldschool-pc-fonts/readme/][readme]]), so the sizes are 16 and 32px.
+- Decided in the showcase: the dither texture stays on; cover captions are a band on the cover, not under it; Settings' footer is KONIGSLIBRARY in a box drawn with box-drawing characters, "by nas" under it; the default palette was vapor (=#000= background, =#d8f6ff= text, =#ff71ce= ink); after trying the app, the presets became sakura (the default), rose, dusk, white, paper and one bark, then one bark (the default) and paper, then one bark, bubblegum, paper and white.
+
+* Not reached
+- Refactoring UI's own chapters (403 on Medium, no free chapter links on the site): only the palette preview and someone's notes on spacing are used.
+- Material 3 and Apple's HIG web pages render with JavaScript; Apple's guidance came from its JSON feed, Material's type scale not at all.
+- Kavita's reader docs (404).

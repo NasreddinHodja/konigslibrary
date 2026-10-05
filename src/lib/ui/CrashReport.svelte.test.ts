@@ -28,7 +28,7 @@ describe('the crash report', () => {
     const user = userEvent.setup();
     const calls = app('boom');
     render(CrashReport);
-    await user.click(await screen.findByRole('button', { name: 'Report' }));
+    await user.click(await screen.findByRole('button', { name: 'report' }));
 
     const open = calls.find((c) => c.cmd === 'plugin:opener|open_url');
     const url = new URL((open?.args as { url: string }).url);
@@ -45,7 +45,7 @@ describe('the crash report', () => {
       if (cmd === 'read_logs') return new Promise(() => {});
     });
     render(CrashReport);
-    await user.click(await screen.findByRole('button', { name: 'Report' }));
+    await user.click(await screen.findByRole('button', { name: 'report' }));
     await vi.waitFor(() => expect(calls.map((c) => c.cmd)).toContain('plugin:opener|open_url'), {
       timeout: 2000
     });
@@ -56,7 +56,7 @@ describe('the crash report', () => {
     const user = userEvent.setup();
     app('boom');
     render(CrashReport);
-    await user.click(await screen.findByRole('button', { name: 'Copy' }));
+    await user.click(await screen.findByRole('button', { name: 'copy' }));
     expect(await navigator.clipboard.readText()).toBe('boom\n\nlog line 42');
     expect(getToasts().map((t) => t.label)).toContain('Crash report copied');
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
@@ -70,7 +70,7 @@ describe('the crash report', () => {
     await navigator.clipboard.writeText('before');
     app('boom');
     render(CrashReport);
-    await user.click(await screen.findByRole('button', { name: 'Copy' }));
+    await user.click(await screen.findByRole('button', { name: 'copy' }));
     await vi.waitFor(() => expect(copyText).toHaveBeenCalledWith('boom\n\nlog line 42'));
     delete (window as { __kl?: unknown }).__kl;
     expect(await navigator.clipboard.readText()).toBe('before');
@@ -81,7 +81,7 @@ describe('the crash report', () => {
     const calls = app('boom');
     render(CrashReport);
     expect(await dialog()).toHaveTextContent('konigslibrary crashed last time');
-    await user.click(screen.getByRole('button', { name: 'Dismiss' }));
+    await user.click(screen.getByRole('button', { name: 'dismiss' }));
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(calls.map((c) => c.cmd)).not.toContain('plugin:opener|open_url');
   });

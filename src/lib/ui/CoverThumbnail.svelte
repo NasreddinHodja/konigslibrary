@@ -1,6 +1,5 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
-  import { BookOpen } from 'lucide-svelte';
   import Skeleton from './Skeleton.svelte';
   import { authedSrc } from '$lib/api/authed-src.svelte';
 
@@ -43,15 +42,16 @@
   });
 </script>
 
+<!-- A 3px double ink frame; current, a solid one and an inverted caption. -->
 <div
-  class="relative aspect-[2/3] w-full overflow-hidden border-2 transition-colors {active
-    ? 'border-fg'
+  class="relative aspect-[2/3] w-full overflow-hidden border-3 border-ink {active
+    ? 'border-solid'
     : disabled
-      ? 'border-line'
-      : 'border-line hover:border-line-strong'}"
+      ? 'border-double'
+      : 'border-double hover:border-hi'}"
 >
   <button
-    class="absolute inset-0 h-full w-full cursor-pointer transition-opacity disabled:cursor-default disabled:opacity-40"
+    class="absolute inset-0 h-full w-full cursor-pointer disabled:cursor-default disabled:opacity-40"
     {onclick}
     {disabled}
     aria-label={alt}
@@ -76,9 +76,7 @@
     {:else if placeholder}
       {@render placeholder()}
     {:else}
-      <div class="flex h-full w-full items-center justify-center bg-fg/[0.03]">
-        <BookOpen size={22} class="opacity-20" />
-      </div>
+      <div class="flex h-full w-full items-center justify-center text-dim">no cover</div>
     {/if}
   </button>
 
@@ -87,8 +85,10 @@
   {/if}
 
   <div
-    class="pointer-events-none absolute inset-x-0 bottom-0 bg-bg/75 px-1.5 py-1 backdrop-blur-sm"
+    class="pointer-events-none absolute inset-x-0 bottom-0 border-t border-ink px-1 {active
+      ? 'bg-ink text-bg'
+      : 'bg-bg'}"
   >
-    <p class="line-clamp-2 text-xs leading-snug font-medium text-fg">{caption}</p>
+    <p class="line-clamp-2">{caption}</p>
   </div>
 </div>

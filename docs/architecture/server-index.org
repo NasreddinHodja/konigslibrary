@@ -3,7 +3,7 @@
 
 =klserver= keeps a SQLite database of the manga directory (=crates/klserver/src/db.rs=). It holds what the library list shows, sorts and searches by, so a large directory is neither listed from disk on every request nor read two archives per card.
 
-It's a cache: deleting the file only costs a rescan. The path is =KL_DB=, default =./konigslibrary.db=.
+It's a cache: deleting the file only costs a rescan. The path is =KL_DB=, default =./konigslibrary.db=. It holds one directory at a time: a server started on a different one empties it and starts over, so two servers on different directories must not share the file. =dev:sim=, =dev:mobile= and the e2e run keep theirs (and their accounts) apart from the repo root's: in =dev-library/= and =test-results/=.
 
 * Tables
 

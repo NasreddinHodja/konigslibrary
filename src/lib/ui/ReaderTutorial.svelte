@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Icon from './Icon.svelte';
   import { fadeOut } from '$lib/ui/transitions';
   import { fade } from 'svelte/transition';
   import { ANIM_DURATION, ANIM_EASE } from '$lib/utils/constants';
@@ -9,14 +10,17 @@
   const reader = getReaderContext();
   const { state: manga } = reader;
 
-  const leftLabel = $derived(manga.rtl ? 'NEXT PAGE' : 'PREV PAGE');
-  const rightLabel = $derived(manga.rtl ? 'PREV PAGE' : 'NEXT PAGE');
-  const leftArrow = $derived(manga.rtl ? '→' : '←');
-  const rightArrow = $derived(manga.rtl ? '←' : '→');
+  const leftLabel = $derived(manga.rtl ? 'next page' : 'previous page');
+  const rightLabel = $derived(manga.rtl ? 'previous page' : 'next page');
+  const leftArrow = $derived(manga.rtl ? 'next' : 'back');
+  const rightArrow = $derived(manga.rtl ? 'back' : 'next');
 </script>
 
+<!-- An overlay on the page: a tint it shows through, and the tap zones as
+     dashed outlines, edge to edge as the reader splits the screen. -->
 <div
-  class="fixed inset-0 z-50 flex flex-col bg-surface/80"
+  class="fixed inset-0 z-50 flex flex-col"
+  style:background="color-mix(in srgb, var(--color-bg) 70%, transparent)"
   role="button"
   tabindex="0"
   aria-label="Dismiss tutorial"
@@ -27,62 +31,41 @@
   out:fadeOut
 >
   {#if !manga.scrollMode}
-    <div class="flex flex-1">
-      <div class="flex w-[40%] items-center justify-center border border-dashed border-line">
-        <div class="pointer-events-none text-center">
-          <div class="text-3xl text-dim">{leftArrow}</div>
-          <div class="mt-3 text-xs font-bold tracking-widest text-dim">{leftLabel}</div>
-        </div>
+    <div class="pointer-events-none flex flex-1">
+      <div
+        class="flex w-[40%] flex-col items-center justify-center gap-2 border border-dashed border-ink text-center"
+      >
+        <span class="text-ink"><Icon name={leftArrow} size={48} /></span>
+        <span>{leftLabel}</span>
       </div>
 
-      <div class="flex w-[20%] flex-col items-center justify-between py-12">
-        <div class="pointer-events-none text-center">
-          <div
-            class="mx-auto mb-3 flex h-8 w-8 items-center justify-center border border-line-strong"
-          >
-            <div class="h-1.5 w-1.5 rounded-full bg-fg/60"></div>
-          </div>
-          <div class="text-xs font-bold tracking-widest text-dim">HUD</div>
-        </div>
-
-        <div class="pointer-events-none space-y-4 text-center">
-          <div class="border border-dashed border-line px-3 py-1.5">
-            <div class="text-xs font-bold tracking-widest text-dim">CENTER ZONE</div>
-          </div>
-
-          <div class="text-dim">
-            <div class="flex items-center justify-center gap-3 text-sm">
-              <span>←</span>
-              <span class="text-xs font-bold tracking-widest">SWIPE</span>
-              <span>→</span>
-            </div>
-            <div class="mt-1 text-xs tracking-widest text-soft">TO TURN PAGES</div>
-          </div>
-        </div>
-
-        <div class="invisible h-8"></div>
+      <div
+        class="flex w-[20%] flex-col items-center justify-center gap-2 border-y border-dashed border-ink text-center"
+      >
+        <span>menu</span>
+        <span class="text-dim">or swipe to turn</span>
       </div>
 
-      <div class="flex w-[40%] items-center justify-center border border-dashed border-line">
-        <div class="pointer-events-none text-center">
-          <div class="text-3xl text-dim">{rightArrow}</div>
-          <div class="mt-3 text-xs font-bold tracking-widest text-dim">{rightLabel}</div>
-        </div>
+      <div
+        class="flex w-[40%] flex-col items-center justify-center gap-2 border border-dashed border-ink text-center"
+      >
+        <span class="text-ink"><Icon name={rightArrow} size={48} /></span>
+        <span>{rightLabel}</span>
       </div>
     </div>
   {:else}
-    <div class="flex flex-1 items-center justify-center">
-      <div class="pointer-events-none space-y-6 text-center">
-        <div class="border border-dashed border-line px-8 py-6">
-          <div class="mb-2 text-xs font-bold tracking-widest text-dim">ANYWHERE</div>
-          <div class="text-xs tracking-widest text-dim">TAP TO TOGGLE HUD</div>
-        </div>
-        <div class="text-xs tracking-widest text-dim">SCROLL TO NAVIGATE</div>
-      </div>
+    <div
+      class="pointer-events-none flex flex-1 flex-col items-center justify-center gap-2 border border-dashed border-ink text-center"
+    >
+      <span>tap anywhere for the menu</span>
+      <span class="text-dim">scroll to read on</span>
     </div>
   {/if}
 
-  <div class="pointer-events-none py-10 text-center">
-    <div class="text-xs font-bold tracking-widest text-dim">TAP ANYWHERE TO DISMISS</div>
-  </div>
+  <p
+    class="pointer-events-none absolute bottom-6 left-1/2 -translate-x-1/2 bg-ink px-2 text-bg"
+    style="margin-bottom: var(--safe-bottom)"
+  >
+    tap anywhere to dismiss
+  </p>
 </div>

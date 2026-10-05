@@ -35,7 +35,7 @@ describe('settings of the local server', () => {
     const jumps = screen
       .getAllByRole('link')
       .filter((a) => a.getAttribute('href')?.startsWith('#'));
-    expect(jumps.map((a) => a.textContent?.trim())).toEqual(['Library', 'Server', 'Theme']);
+    expect(jumps.map((a) => a.textContent?.trim())).toEqual(['› library', '› server', '› theme']);
   });
 
   it('has the account but no address to connect to', async () => {
@@ -58,7 +58,7 @@ describe('settings of the local server', () => {
     await vi.waitFor(() => expect(dirBox()).toHaveValue('/srv/manga'));
     await user.clear(dirBox());
     await user.type(dirBox(), '/mnt/comics');
-    await user.click(screen.getByRole('button', { name: 'Save' }));
+    await user.click(screen.getByRole('button', { name: 'save' }));
     expect(await screen.findByText('Saved - reload to see library')).toBeInTheDocument();
     expect(saved).toEqual([{ mangaDir: '/mnt/comics' }]);
   });
@@ -68,7 +68,7 @@ describe('settings of the local server', () => {
     settingsServer('/srv/manga', { saveFails: true });
     render(Settings);
     await vi.waitFor(() => expect(dirBox()).toHaveValue('/srv/manga'));
-    await user.click(screen.getByRole('button', { name: 'Save' }));
+    await user.click(screen.getByRole('button', { name: 'save' }));
     expect(await screen.findByText('Failed to save settings')).toBeInTheDocument();
     expect(screen.queryByText('Saved - reload to see library')).not.toBeInTheDocument();
   });

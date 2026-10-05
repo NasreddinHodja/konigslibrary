@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { FolderOpen, Folder, ChevronRight, X, Loader2 } from 'lucide-svelte';
+  import Icon from './Icon.svelte';
   import Modal from './Modal.svelte';
   import Button from './Button.svelte';
   import Skeleton from './Skeleton.svelte';
@@ -73,32 +73,27 @@
 <Modal
   label="Browse for manga directory"
   onclose={oncancel}
-  class="my-8 flex h-[60vh] max-w-lg flex-col bg-bg"
+  class="my-8 flex h-[60vh] max-w-lg flex-col"
 >
-  <div class="flex shrink-0 items-center justify-between border-b border-line px-5 py-4">
-    <div class="flex items-center gap-2 text-sm font-bold tracking-wide">
-      <FolderOpen size={16} class="text-dim" />
-      Choose manga folder
-    </div>
+  <div class="flex shrink-0 items-center justify-between border-b border-ink px-3 py-2">
+    <span>choose manga folder</span>
     <button
-      class="hit relative cursor-pointer text-dim hover:text-soft"
+      class="hit relative flex cursor-pointer items-center justify-center text-ink hover:text-hi"
       onclick={oncancel}
       aria-label="Close"
     >
-      <X size={16} />
+      <Icon name="close" />
     </button>
   </div>
 
-  <div
-    class="flex shrink-0 items-center gap-1 overflow-x-auto px-5 py-3 text-xs whitespace-nowrap pointer-coarse:py-0"
-  >
+  <div class="flex shrink-0 items-center gap-1 overflow-x-auto px-3 py-2 whitespace-nowrap">
     {#each segments as seg, i (seg.path)}
-      {#if i > 0}<ChevronRight size={11} class="shrink-0 opacity-30" />{/if}
+      {#if i > 0}<span class="shrink-0 text-dim">/</span>{/if}
       {#if i === segments.length - 1}
-        <span class="shrink-0 font-bold text-soft">{seg.name}</span>
+        <span class="shrink-0">{seg.name}</span>
       {:else}
         <button
-          class="shrink-0 cursor-pointer text-dim hover:text-fg pointer-coarse:py-4"
+          class="shrink-0 cursor-pointer text-ink hover:text-hi hover:underline pointer-coarse:py-3"
           onclick={() => load(seg.path)}
         >
           {seg.name}
@@ -107,51 +102,36 @@
     {/each}
   </div>
 
-  <div class="min-h-0 flex-1 overflow-y-auto overscroll-contain border-y border-line px-2">
+  <div class="min-h-0 flex-1 overflow-y-auto overscroll-contain border-y border-ink">
     {#if loading}
-      <div class="space-y-1 py-3">
+      <div class="flex flex-col gap-2 p-3">
         {#each [180, 140, 210] as w (w)}
-          <div class="flex items-center px-3 py-2">
-            <Skeleton class="h-4" style="width: {w}px" />
-          </div>
+          <Skeleton class="h-4" style="width: {w}px" />
         {/each}
       </div>
     {:else if error}
-      <p class="px-3 py-3 text-sm text-error">{error}</p>
+      <p class="p-3 text-ink">► <span>{error}</span></p>
     {:else if entries.length > 0}
-      <div class="py-1">
-        {#each entries as entry (entry.path)}
-          <button
-            class="flex w-full cursor-pointer items-center gap-2.5 px-3 py-2.5 text-left text-sm hover:bg-fg/5 pointer-coarse:py-3.5"
-            onclick={() => load(entry.path)}
-          >
-            <Folder size={15} class="shrink-0 text-faint" />
-            <span class="truncate">{entry.name}</span>
-          </button>
-        {/each}
-      </div>
+      {#each entries as entry (entry.path)}
+        <button
+          class="flex w-full cursor-pointer items-center gap-2 border-b border-ink3 px-3 py-1 text-left text-ink hover:bg-ink3 hover:text-hi pointer-coarse:py-3"
+          onclick={() => load(entry.path)}
+        >
+          <Icon name="folder" />
+          <span class="truncate">{entry.name}/</span>
+        </button>
+      {/each}
     {:else}
-      <p class="px-3 py-3 text-sm text-dim">No subdirectories</p>
+      <p class="p-3 text-dim">No subdirectories</p>
     {/if}
   </div>
 
-  <div class="flex shrink-0 items-center justify-between gap-3 px-5 py-4">
-    <p class="min-w-0 truncate text-xs text-faint" title={path}>{path}</p>
+  <div class="flex shrink-0 items-center justify-between gap-3 px-3 py-3">
+    <p class="min-w-0 truncate text-dim" title={path}>{path}</p>
     <div class="flex shrink-0 gap-3">
-      <button
-        class="hit relative cursor-pointer border-2 px-4 py-2 text-sm text-dim hover:text-fg"
-        onclick={oncancel}
-      >
-        Cancel
-      </button>
-      <Button
-        size="md"
-        variant="primary"
-        disabled={loading || !!error}
-        onclick={() => onselect(path)}
-      >
-        {#if loading}<Loader2 size={14} class="animate-spin" />{/if}
-        Use this folder
+      <Button onclick={oncancel}>cancel</Button>
+      <Button variant="primary" disabled={loading || !!error} onclick={() => onselect(path)}>
+        use this folder
       </Button>
     </div>
   </div>

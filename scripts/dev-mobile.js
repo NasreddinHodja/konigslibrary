@@ -76,7 +76,15 @@ if (share) {
       PORT: port,
       HOST: '0.0.0.0',
       NO_BROWSER: '1',
-      MANGA_DIR: process.env.MANGA_DIR || 'dev-library'
+      MANGA_DIR: process.env.MANGA_DIR || 'dev-library',
+      // Its own index and accounts, apart from the real server's in the repo
+      // root (see dev-local.js).
+      ...(process.env.MANGA_DIR
+        ? {}
+        : {
+            KL_DB: process.env.KL_DB || 'dev-library/.konigslibrary.db',
+            KL_AUTH_DB: process.env.KL_AUTH_DB || 'dev-library/.konigslibrary-auth.db'
+          })
     }
   );
 }

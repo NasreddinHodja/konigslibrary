@@ -29,7 +29,7 @@ async function openManga(page: Page) {
   await page.goto('/');
   await page.getByRole('textbox', { name: 'Search library' }).fill('unpadded');
   await page.getByRole('button', { name: 'Open Order - Unpadded numbers' }).click();
-  await expect(page.getByText('CHAPTERS (4)')).toBeVisible();
+  await expect(page.getByText('chapters (4)')).toBeVisible();
 }
 
 async function openChapter(page: Page) {
@@ -57,7 +57,7 @@ test('reader, scrolling', async ({ page }) => {
 
 test('reader, turning pages', async ({ page }) => {
   await openChapter(page);
-  await page.getByRole('button', { name: 'Turn / Scroll: Scroll' }).click();
+  await page.getByRole('button', { name: 'turn / scroll: scroll' }).click();
   await page.getByRole('button', { name: 'Dismiss tutorial' }).click();
   await expect(page.getByRole('region', { name: 'Page 1 of 4' })).toBeVisible();
   await expectNoViolations(page);
@@ -84,7 +84,7 @@ test.describe('logged out', () => {
 
   test('login', async ({ page }) => {
     await page.goto('/login');
-    await expect(page.getByRole('heading', { level: 1, name: 'Log in' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: 'log in' })).toBeVisible();
     await expectNoViolations(page);
   });
 });

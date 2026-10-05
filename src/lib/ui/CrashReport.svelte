@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { openUrl } from '@tauri-apps/plugin-opener';
+  import Button from './Button.svelte';
   import Modal from './Modal.svelte';
   import { showError, showSuccess } from './toast.svelte';
   import { isNative } from '$lib/utils/platform';
@@ -46,31 +47,16 @@
 </script>
 
 {#if crash}
-  <Modal label="Crash report" onclose={() => (crash = null)} class="max-w-sm bg-bg px-6 py-5">
-    <p class="mb-2 text-sm font-bold">konigslibrary crashed last time</p>
-    <p class="mb-5 text-sm leading-relaxed text-soft">
+  <Modal label="Crash report" onclose={() => (crash = null)} class="max-w-sm p-4">
+    <p class="mb-2 text-ink">konigslibrary crashed last time</p>
+    <p class="mb-4">
       Report it to help fix it. This opens a GitHub issue with the crash and the end of the logs;
       you see all of it before anything is sent.
     </p>
-    <div class="flex justify-end gap-3">
-      <button
-        class="hit relative cursor-pointer border-2 px-4 py-2 text-sm text-dim hover:text-fg"
-        onclick={() => (crash = null)}
-      >
-        Dismiss
-      </button>
-      <button
-        class="hit relative cursor-pointer border-2 px-4 py-2 text-sm text-dim hover:text-fg"
-        onclick={copy}
-      >
-        Copy
-      </button>
-      <button
-        class="hit relative cursor-pointer border-2 bg-fg px-4 py-2 text-sm text-bg hover:bg-fg/80"
-        onclick={report}
-      >
-        Report
-      </button>
+    <div class="flex flex-wrap justify-end gap-3">
+      <Button variant="text" onclick={() => (crash = null)}>dismiss</Button>
+      <Button onclick={copy}>copy</Button>
+      <Button variant="primary" onclick={report}>report</Button>
     </div>
   </Modal>
 {/if}

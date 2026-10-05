@@ -12,14 +12,14 @@ export default async function globalSetup(config: FullConfig) {
   const browser = await chromium.launch();
   const page = await browser.newPage({ baseURL });
   await page.goto('/login');
-  const heading = page.getByRole('heading', { level: 1, name: /^(Set up the server|Log in)$/ });
+  const heading = page.getByRole('heading', { level: 1, name: /^(set up the server|log in)$/ });
   await expect(heading).toBeVisible({ timeout: 120_000 });
-  if ((await heading.textContent()) === 'Set up the server') {
-    await page.getByLabel('Setup token').fill(SETUP_TOKEN);
+  if ((await heading.textContent()) === 'set up the server') {
+    await page.getByLabel('setup token').fill(SETUP_TOKEN);
   }
-  await page.getByLabel('Username').fill(ADMIN.username);
-  await page.getByLabel('Password').fill(ADMIN.password);
-  await page.getByLabel('Password').press('Enter');
+  await page.getByLabel('username').fill(ADMIN.username);
+  await page.getByLabel('password').fill(ADMIN.password);
+  await page.getByLabel('password').press('Enter');
   await expect(page.getByRole('button', { name: /^Open / }).first()).toBeVisible({
     timeout: 120_000
   });

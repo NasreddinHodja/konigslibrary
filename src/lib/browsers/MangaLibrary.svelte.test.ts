@@ -150,7 +150,7 @@ describe('MangaLibrary on the web', () => {
     serverDown();
     const { screen } = await renderLibrary();
     expect(await screen.findByText('Server unreachable')).toBeInTheDocument();
-    expect(screen.getByText('OFFLINE')).toBeInTheDocument();
+    expect(screen.getByText('offline')).toBeInTheDocument();
   });
 
   it('opens a manga', async () => {
@@ -249,9 +249,9 @@ describe('MangaLibrary in the app', () => {
     app({ device: [{ name: 'Monster', path: '/manga/Monster', origin: 'folder', slug: null }] });
     const { screen, shown, user } = await renderLibrary();
     expect(await shown().findByRole('button', { name: 'Open Monster' })).toBeInTheDocument();
-    expect(tab(screen, 'DEVICE')).toHaveAttribute('aria-selected', 'true');
-    await user.click(tab(screen, 'SERVER'));
-    expect(tab(screen, 'SERVER')).toHaveAttribute('aria-selected', 'true');
+    expect(tab(screen, 'device')).toHaveAttribute('aria-selected', 'true');
+    await user.click(tab(screen, 'server'));
+    expect(tab(screen, 'server')).toHaveAttribute('aria-selected', 'true');
     expect(await shown().findByRole('button', { name: 'Open Vagabond' })).toBeInTheDocument();
   });
 
@@ -260,10 +260,10 @@ describe('MangaLibrary in the app', () => {
     library([[]]);
     app();
     const first = await renderLibrary();
-    await first.user.click(tab(first.screen, 'SERVER'));
+    await first.user.click(tab(first.screen, 'server'));
     first.unmount();
     const { screen } = await renderLibrary();
-    expect(tab(screen, 'SERVER')).toHaveAttribute('aria-selected', 'true');
+    expect(tab(screen, 'server')).toHaveAttribute('aria-selected', 'true');
   });
 
   it('says when the manga directory cannot be read', async () => {
@@ -281,7 +281,7 @@ describe('MangaLibrary in the app', () => {
     await user.click(await shown().findByRole('button', { name: 'Download Berserk' }));
     const dialog = screen.getByRole('dialog');
     expect(dialog).toHaveTextContent('Download "Berserk"?');
-    await user.click(screen.getByRole('button', { name: 'Download' }));
+    await user.click(screen.getByRole('button', { name: 'download' }));
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     // While it copies, the card's button cancels it.
     expect(
@@ -301,7 +301,7 @@ describe('MangaLibrary in the app', () => {
     localStorage.setItem('kl:libraryTab', 'server');
     const { screen, shown, user } = await renderLibrary();
     await user.click(await shown().findByRole('button', { name: 'Download Berserk' }));
-    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+    await user.click(screen.getByRole('button', { name: 'cancel' }));
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(calls.some((c) => c.cmd === 'download_file')).toBe(false);
   });
@@ -320,7 +320,7 @@ describe('MangaLibrary in the app', () => {
     await user.click(await shown().findByRole('button', { name: 'Delete Berserk' }));
     expect(shown().getByTitle('Downloaded')).toBeInTheDocument();
     expect(screen.getByRole('dialog')).toHaveTextContent('Delete "Berserk"?');
-    await user.click(screen.getByRole('button', { name: 'Delete' }));
+    await user.click(screen.getByRole('button', { name: 'delete' }));
     await vi.waitFor(() =>
       expect(calls).toContainEqual(
         expect.objectContaining({
@@ -337,7 +337,7 @@ describe('MangaLibrary in the app', () => {
     });
     const { screen, shown, user } = await renderLibrary();
     await user.click(await shown().findByRole('button', { name: 'Delete Pluto' }));
-    await user.click(screen.getByRole('button', { name: 'Delete' }));
+    await user.click(screen.getByRole('button', { name: 'delete' }));
     await vi.waitFor(() =>
       expect(calls).toContainEqual(
         expect.objectContaining({
@@ -384,11 +384,11 @@ describe('MangaLibrary in the app', () => {
     it('picks manga by tapping them, and downloads them together', async () => {
       const { screen, shown, user } = await selectingOnServer();
       expect(screen.getByText('0 selected')).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'Download' })).toBeDisabled();
+      expect(screen.getByRole('button', { name: 'download' })).toBeDisabled();
       await user.click(shown().getByRole('button', { name: 'Open Alpha' }));
       await user.click(shown().getByRole('button', { name: 'Open Beta' }));
       expect(screen.getByText('2 selected')).toBeInTheDocument();
-      await user.click(screen.getByRole('button', { name: 'Download' }));
+      await user.click(screen.getByRole('button', { name: 'download' }));
       expect(screen.getByRole('dialog')).toHaveTextContent('Download 2 manga?');
     });
 
@@ -401,7 +401,7 @@ describe('MangaLibrary in the app', () => {
 
     it('leaves out a manga already downloaded', async () => {
       const { screen, shown, user } = await selectingOnServer();
-      await user.click(screen.getByRole('button', { name: 'All' }));
+      await user.click(screen.getByRole('button', { name: 'all' }));
       expect(screen.getByText('2 selected')).toBeInTheDocument();
       await user.click(shown().getByRole('button', { name: 'Open Gamma' }));
       expect(screen.getByText('2 selected')).toBeInTheDocument();
@@ -418,7 +418,7 @@ describe('MangaLibrary in the app', () => {
       await user.click(shown().getByRole('button', { name: 'Open Alpha' }));
       await user.click(screen.getByRole('button', { name: 'Cancel selection' }));
       expect(screen.queryByText(/selected$/)).not.toBeInTheDocument();
-      expect(screen.getByRole('heading', { name: 'Library' })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'library' })).toBeInTheDocument();
     });
   });
 });

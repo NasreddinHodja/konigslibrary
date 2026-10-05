@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Icon from '$lib/ui/Icon.svelte';
   import { convertFileSrc } from '@tauri-apps/api/core';
   import { getReaderContext } from '$lib/context';
   import { openNativeManga } from '$lib/sources';
@@ -8,13 +9,12 @@
   import { ZIP_EXT } from '$lib/utils/constants';
   import { isAndroid, isNative } from '$lib/utils/platform';
   import { describeOpenFileError } from '$lib/utils/errors';
-  import { Upload } from 'lucide-svelte';
 
   let {
     isDragOver = false,
-    iconOnly = false,
+    rail = false,
     tab = false
-  }: { isDragOver?: boolean; iconOnly?: boolean; tab?: boolean } = $props();
+  }: { isDragOver?: boolean; rail?: boolean; tab?: boolean } = $props();
 
   const reader = getReaderContext();
   // The dialog plugin has no folder picker on mobile, so Android picks a
@@ -22,7 +22,7 @@
   const pickFiles = isAndroid();
 
   // Native builds keep what they open; the browser only reads it.
-  const label = pickFiles ? 'ADD CHAPTERS' : isNative() ? 'ADD FOLDER' : 'OPEN FOLDER';
+  const label = pickFiles ? 'add chapters' : isNative() ? 'add folder' : 'open folder';
 
   let folderInput = $state<HTMLInputElement | null>(null);
 
@@ -93,52 +93,28 @@
   onchange={handleFolderChange}
   class="hidden"
 />
-{#if tab}
-  <!-- An entry in the mobile tab bar, styled like its neighbours. -->
+{#if tab || rail}
+  <!-- A boxed word in the mobile tab bar or the desktop rail, like its
+       neighbours; a drag over the window inverts it. -->
   <button
     type="button"
     onclick={handleClick}
-    class="flex flex-1 cursor-pointer flex-col items-center justify-center gap-1 self-stretch {isDragOver
-      ? ''
-      : 'text-dim hover:text-soft'}"
+    aria-label={rail ? label : undefined}
+    class="flex cursor-pointer flex-col items-center justify-center gap-1 border border-ink py-1 leading-4 {tab
+      ? 'flex-1 self-stretch'
+      : 'w-full'} {isDragOver ? 'bg-ink text-bg' : 'text-ink hover:bg-ink3 hover:text-hi'}"
   >
-    <Upload size={16} />
-    <span class="text-[11px] font-bold tracking-wide uppercase">Upload</span>
-  </button>
-{:else if iconOnly}
-  <button
-    type="button"
-    onclick={handleClick}
-    aria-label={pickFiles ? 'Add chapters' : 'Add manga folder'}
-    class="flex h-8 w-8 cursor-pointer items-center justify-center border-2 transition-colors {isDragOver
-      ? 'border-fg bg-fg/10'
-      : 'border-line-strong bg-bg hover:border-fg hover:bg-fg/10'}"
-  >
-    <Upload size={14} stroke-linecap="square" stroke-linejoin="miter" />
+    <Icon name="upload" />
+    upload
   </button>
 {:else}
   <button
     type="button"
     onclick={handleClick}
-    class="group flex w-full cursor-pointer items-center justify-between border-2 px-5 py-4 transition-colors duration-150 md:flex-col md:gap-4 md:py-12
-      {isDragOver
-      ? 'border-fg bg-fg/5'
-      : 'border-line-strong hover:border-fg/70 hover:bg-fg/[0.03]'}"
+    class="flex w-full cursor-pointer flex-col items-start gap-2 panel px-4 py-4 text-left md:items-center md:py-12
+      {isDragOver ? 'bg-ink3' : 'hover:bg-ink3'}"
   >
-    <div class="flex items-center gap-4">
-      <Upload
-        size={18}
-        strokeWidth={1.5}
-        stroke-linecap="square"
-        stroke-linejoin="miter"
-        class="shrink-0 transition-colors {isDragOver
-          ? 'text-soft'
-          : 'text-faint group-hover:text-dim'}"
-      />
-      <span class="text-sm font-bold tracking-widest">{label}</span>
-    </div>
-    <span class="text-xs tracking-widest text-faint"
-      >{pickFiles ? '.CBZ CHAPTERS' : 'COVER + .CBZ CHAPTERS'}</span
-    >
+    <span class="flex items-center gap-2 text-ink"><Icon name="upload" /> {label}</span>
+    <span class="text-dim">{pickFiles ? '.cbz chapters' : 'cover + .cbz chapters'}</span>
   </button>
 {/if}

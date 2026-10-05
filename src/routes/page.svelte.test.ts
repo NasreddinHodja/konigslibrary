@@ -152,7 +152,7 @@ describe('dropping', () => {
     renderPage();
     drop([chapterFile('Ch 1.cbz', 2), chapterFile('Ch 2.cbz', 2)]);
     expect(await screen.findByRole('heading', { level: 1, name: 'Berserk' })).toBeInTheDocument();
-    expect(screen.getByText('CHAPTERS (2)')).toBeInTheDocument();
+    expect(screen.getByText('chapters (2)')).toBeInTheDocument();
   });
 
   it('says why an archive would not open', async () => {

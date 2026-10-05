@@ -69,7 +69,7 @@ describe('account settings', () => {
     server([]);
     render(AccountSettings);
     expect(await screen.findByText('admin')).toBeInTheDocument();
-    expect(screen.getByText(/Logged in as/)).toHaveTextContent('Logged in as admin');
+    expect(screen.getByText(/logged in as/)).toHaveTextContent('logged in as admin');
   });
 
   it('offer to log in when no one is', async () => {
@@ -79,7 +79,7 @@ describe('account settings', () => {
     );
     render(AccountSettings);
     expect(await screen.findByText('Not logged in.')).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Log in' }));
+    await user.click(screen.getByRole('button', { name: 'log in' }));
     expect(nav.goto).toHaveBeenCalledWith('/login');
   });
 
@@ -89,7 +89,7 @@ describe('account settings', () => {
       url.pathname === '/api/auth/logout' ? new Response(null, { status: 204 }) : undefined
     );
     render(AccountSettings);
-    await user.click(await screen.findByRole('button', { name: 'Log out' }));
+    await user.click(await screen.findByRole('button', { name: 'log out' }));
     await vi.waitFor(() => expect(nav.goto).toHaveBeenCalledWith('/login'));
     expect(requests).toContain('POST /api/auth/logout');
     expect(localStorage.getItem('kl:serverToken')).toBeNull();
@@ -148,7 +148,7 @@ describe('account settings', () => {
     await screen.findByText('Firefox');
     await user.type(screen.getByLabelText('Current password'), 'hunter22');
     await user.type(screen.getByLabelText('New password'), 'correct horse');
-    await user.click(screen.getByRole('button', { name: 'Change password' }));
+    await user.click(screen.getByRole('button', { name: 'change password' }));
     await vi.waitFor(() => expect(screen.queryByText('Firefox')).not.toBeInTheDocument());
     expect(changed).toEqual([{ currentPassword: 'hunter22', newPassword: 'correct horse' }]);
     expect(getToasts().map((t) => t.label)).toContain(

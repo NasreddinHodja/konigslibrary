@@ -20,34 +20,35 @@
 <Modal
   label="Keyboard shortcuts"
   {onclose}
-  class="max-h-[calc(100vh-2rem)] max-w-lg overflow-y-auto bg-surface/85 p-6 shadow-xl backdrop-blur-2xl"
+  class="max-h-[calc(100vh-2rem)] max-w-lg overflow-y-auto p-4"
 >
-  <div class="mb-4 flex items-center justify-between">
-    <h2 class="text-lg font-bold">Keyboard shortcuts</h2>
-    <button class="px-2 py-1 text-sm text-dim hover:text-soft" onclick={onclose}> Close </button>
+  <div class="mb-3 flex items-center justify-between border-b border-ink">
+    <h2 class="text-2xl">keyboard shortcuts</h2>
+    <button class="cursor-pointer text-ink hover:text-hi hover:underline" onclick={onclose}>
+      close
+    </button>
   </div>
 
   {#each categories as [category, items] (category)}
-    <div class="mb-4">
-      <h3 class="mb-2 text-sm font-bold text-dim">{category}</h3>
-      <div class="space-y-1">
-        {#each items as binding (binding.action)}
-          <div class="flex items-center justify-between py-1">
-            <span class="text-sm text-soft">{binding.label}</span>
-            <div class="flex gap-1">
-              {#each binding.keys as key (key)}
-                <kbd class="min-w-7 border border-line px-1.5 py-0.5 text-center text-xs">
-                  {formatKey(key)}
-                </kbd>
-              {/each}
-            </div>
+    <div class="mb-3">
+      <h3 class="text-dim">{category.toLowerCase()}</h3>
+      {#each items as binding (binding.action)}
+        <div class="flex items-center justify-between gap-3 border-b border-ink3 py-1">
+          <span>{binding.label}</span>
+          <div class="flex gap-1">
+            {#each binding.keys as key (key)}
+              <kbd class="min-w-7 border border-ink px-1 text-center text-ink">{formatKey(key)}</kbd
+              >
+            {/each}
           </div>
-        {/each}
-      </div>
+        </div>
+      {/each}
     </div>
   {/each}
 
-  <p class="mt-2 text-xs text-dim">
-    Customize bindings in <a href="/settings" class="underline" onclick={onclose}>Settings</a>
+  <p class="text-dim">
+    Change them in <a href="/settings" class="text-ink underline hover:text-hi" onclick={onclose}
+      >Settings</a
+    >
   </p>
 </Modal>

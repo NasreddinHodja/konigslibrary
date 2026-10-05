@@ -1,6 +1,5 @@
 <script lang="ts">
-  import { ArrowLeft } from 'lucide-svelte';
-
+  import Icon from './Icon.svelte';
   let {
     label,
     href,
@@ -12,17 +11,11 @@
   } = $props();
 
   const linkClass =
-    'hit relative flex w-fit cursor-pointer items-center gap-1.5 text-xs tracking-widest text-dim hover:text-soft';
+    'hit relative flex w-fit cursor-pointer items-center gap-2 text-ink hover:text-hi hover:underline';
 </script>
 
 {#if href}
-  <a {href} class={linkClass}>
-    <ArrowLeft size={12} />
-    {label}
-  </a>
+  <a {href} class={linkClass}><Icon name="back" size={18} />{label}</a>
 {:else}
-  <button class={linkClass} {onclick}>
-    <ArrowLeft size={12} />
-    {label}
-  </button>
+  <button class={linkClass} {onclick}><Icon name="back" size={18} />{label}</button>
 {/if}

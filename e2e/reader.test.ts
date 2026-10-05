@@ -58,15 +58,16 @@ test('opens a chapter and pages through it', async ({ page }) => {
   await openManga(page);
   await openFirstChapter(page);
   await expect(page.getByRole('region', { name: 'Manga pages' })).toBeVisible();
-  await expect(page.getByText(`${MANGA} · ch1`)).toBeVisible();
-  await expect(page.getByRole('button', { name: '1 / 4' })).toBeVisible();
+  await expect(page.getByText(MANGA, { exact: true })).toBeVisible();
+  await expect(page.getByText('ch1', { exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: '1/4' })).toBeVisible();
 
   await page.keyboard.press('ArrowRight');
-  await expect(page.getByRole('button', { name: '2 / 4' })).toBeVisible();
+  await expect(page.getByRole('button', { name: '2/4' })).toBeVisible();
   await page.keyboard.press('ArrowRight');
-  await expect(page.getByRole('button', { name: '3 / 4' })).toBeVisible();
+  await expect(page.getByRole('button', { name: '3/4' })).toBeVisible();
   await page.keyboard.press('ArrowLeft');
-  await expect(page.getByRole('button', { name: '2 / 4' })).toBeVisible();
+  await expect(page.getByRole('button', { name: '2/4' })).toBeVisible();
 });
 
 test('dismisses the tutorial from the keyboard', async ({ page }) => {
@@ -97,7 +98,7 @@ test('picks up where the manga was left after a reload', async ({ page }) => {
   await openFirstChapter(page);
   await page.keyboard.press('ArrowRight');
   await page.keyboard.press('ArrowRight');
-  await expect(page.getByRole('button', { name: '3 / 4' })).toBeVisible();
+  await expect(page.getByRole('button', { name: '3/4' })).toBeVisible();
   // Progress is saved once the page has settled for a moment.
   await expect
     .poll(() => page.evaluate((m) => localStorage.getItem(`kl:progress:${m}`), MANGA))
@@ -105,7 +106,8 @@ test('picks up where the manga was left after a reload', async ({ page }) => {
 
   await page.reload();
   await openManga(page);
-  await page.getByRole('button', { name: 'RESUME: ch1, p.3' }).click();
-  await expect(page.getByText(`${MANGA} · ch1`)).toBeVisible();
-  await expect(page.getByRole('button', { name: '3 / 4' })).toBeVisible();
+  await page.getByRole('button', { name: 'resume ch1 p. 3' }).click();
+  await expect(page.getByText(MANGA, { exact: true })).toBeVisible();
+  await expect(page.getByText('ch1', { exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: '3/4' })).toBeVisible();
 });

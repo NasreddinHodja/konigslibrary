@@ -1,8 +1,8 @@
 <script lang="ts">
+  import Icon from './Icon.svelte';
   import { onMount } from 'svelte';
   import Button from '$lib/ui/Button.svelte';
   import ConfirmDialog from '$lib/ui/ConfirmDialog.svelte';
-  import { Copy } from 'lucide-svelte';
   import { errorMessage } from '$lib/utils/errors';
   import { getMangaDir } from '$lib/sources/native-library';
   import {
@@ -114,31 +114,32 @@
     setTimeout(() => (copied = false), 2000);
   }
 
-  const field =
-    'w-full border-2 bg-bg px-3 py-2 text-sm text-fg placeholder:text-dim pointer-coarse:py-3';
+  const field = 'h-8 w-full border border-ink bg-bg px-2 placeholder:text-dim pointer-coarse:h-10';
 </script>
 
-<div class="space-y-3">
-  <h3 class="text-sm font-bold text-dim">Share to LAN</h3>
-  <Button size="md" onclick={toggle} disabled={status === 'starting' || status === 'stopping'}>
-    {#if status === 'running'}
-      Stop sharing
-    {:else if status === 'starting'}
-      Starting…
-    {:else if status === 'stopping'}
-      Stopping…
-    {:else}
-      Share to LAN
-    {/if}
-  </Button>
+<div class="flex flex-col gap-3 border-t border-ink3 pt-3">
+  <h3 class="text-dim">share to lan</h3>
+  <div>
+    <Button onclick={toggle} disabled={status === 'starting' || status === 'stopping'}>
+      {#if status === 'running'}
+        stop sharing
+      {:else if status === 'starting'}
+        starting…
+      {:else if status === 'stopping'}
+        stopping…
+      {:else}
+        share to lan
+      {/if}
+    </Button>
+  </div>
 
   {#if status === 'error' && error}
-    <p class="text-sm text-error">{error}</p>
+    <p class="text-ink">► <span>{error}</span></p>
   {/if}
 
   {#if status === 'running' && url && setupNeeded}
-    <form class="max-w-sm space-y-3 border-2 border-line p-4" onsubmit={submitSetup}>
-      <p class="text-sm text-soft">Create the account other devices log in with.</p>
+    <form class="flex max-w-sm flex-col gap-3 border border-ink p-3" onsubmit={submitSetup}>
+      <p>Create the account other devices log in with.</p>
       <input
         class={field}
         bind:value={username}
@@ -149,7 +150,7 @@
         spellcheck="false"
         required
       />
-      <div class="space-y-1.5">
+      <div class="flex flex-col gap-1">
         <input
           class={field}
           type="password"
@@ -160,42 +161,34 @@
           autocomplete="new-password"
           required
         />
-        <p id="share-password-hint" class="text-xs text-dim">At least 8 characters.</p>
+        <p id="share-password-hint" class="text-dim">At least 8 characters.</p>
       </div>
-      <Button size="md" variant="primary" disabled={settingUp}>Create account</Button>
+      <div><Button variant="primary" disabled={settingUp}>create account</Button></div>
       {#if setupError}
-        <p role="alert" class="text-sm text-error">{setupError}</p>
+        <p role="alert" class="text-ink">► <span>{setupError}</span></p>
       {/if}
     </form>
   {:else if status === 'running' && url}
-    <div class="space-y-2 border-2 border-line p-4 text-sm">
+    <div class="flex flex-col gap-2 border border-ink p-3">
       <p class="text-dim">On the other device, enter this address, then log in.</p>
-      <div class="flex items-center gap-2">
-        <code class="border-2 bg-bg px-2 py-1 text-xs">{url}</code>
-        <button
-          class="hit relative border-2 p-1.5 text-dim hover:text-fg"
-          onclick={copyUrl}
-          aria-label="Copy address"
-        >
-          <Copy size={14} />
-        </button>
+      <div class="flex flex-wrap items-center gap-3">
+        <code class="text-ink">{url}</code>
+        <Button variant="text" onclick={copyUrl}><Icon name="copy" /> copy</Button>
         {#if copied}
-          <span class="text-xs text-dim">Copied</span>
+          <span class="text-dim">Copied</span>
         {/if}
       </div>
-      <button
-        class="text-xs tracking-widest text-dim hover:text-soft"
-        onclick={() => (confirmingReset = true)}
-      >
-        FORGOT THE PASSWORD?
-      </button>
+      <div>
+        <Button variant="text" onclick={() => (confirmingReset = true)}>forgot the password?</Button
+        >
+      </div>
     </div>
   {/if}
 
   {#if confirmingReset}
     <ConfirmDialog
       message="Reset the account? Every device is logged out, and you create a new account."
-      confirmLabel="Reset"
+      confirmLabel="reset"
       onconfirm={reset}
       oncancel={() => (confirmingReset = false)}
     />

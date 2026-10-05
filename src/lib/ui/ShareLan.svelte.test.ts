@@ -26,12 +26,12 @@ describe('share to LAN', () => {
     const calls = app();
     const user = userEvent.setup();
     render(ShareLan);
-    await user.click(screen.getByRole('button', { name: 'Share to LAN' }));
+    await user.click(screen.getByRole('button', { name: 'share to lan' }));
     expect(screen.queryByText(URL)).not.toBeInTheDocument();
 
     await user.type(await screen.findByRole('textbox', { name: 'Username' }), 'admin');
     await user.type(screen.getByLabelText('Password'), 'correct horse');
-    await user.click(screen.getByRole('button', { name: 'Create account' }));
+    await user.click(screen.getByRole('button', { name: 'create account' }));
 
     expect(await screen.findByText(URL)).toBeInTheDocument();
     expect(screen.queryByRole('textbox', { name: 'Username' })).not.toBeInTheDocument();
@@ -47,10 +47,10 @@ describe('share to LAN', () => {
     });
     const user = userEvent.setup();
     render(ShareLan);
-    await user.click(screen.getByRole('button', { name: 'Share to LAN' }));
+    await user.click(screen.getByRole('button', { name: 'share to lan' }));
     await user.type(await screen.findByRole('textbox', { name: 'Username' }), 'admin');
     await user.type(screen.getByLabelText('Password'), 'short');
-    await user.click(screen.getByRole('button', { name: 'Create account' }));
+    await user.click(screen.getByRole('button', { name: 'create account' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'The password needs at least 8 characters'
@@ -65,7 +65,7 @@ describe('share to LAN', () => {
     });
     render(ShareLan);
     expect(await screen.findByText(URL)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Copy address' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'copy' })).toBeInTheDocument();
     expect(screen.queryByRole('textbox', { name: 'Username' })).not.toBeInTheDocument();
   });
 
@@ -82,8 +82,8 @@ describe('share to LAN', () => {
       const calls = shared();
       const user = userEvent.setup();
       render(ShareLan);
-      await user.click(await screen.findByRole('button', { name: 'FORGOT THE PASSWORD?' }));
-      await user.click(screen.getByRole('button', { name: 'Reset' }));
+      await user.click(await screen.findByRole('button', { name: 'forgot the password?' }));
+      await user.click(screen.getByRole('button', { name: 'reset' }));
 
       expect(await screen.findByRole('textbox', { name: 'Username' })).toBeInTheDocument();
       expect(calls.map((c) => c.cmd)).toEqual([
@@ -97,8 +97,8 @@ describe('share to LAN', () => {
       const calls = shared();
       const user = userEvent.setup();
       render(ShareLan);
-      await user.click(await screen.findByRole('button', { name: 'FORGOT THE PASSWORD?' }));
-      await user.click(screen.getByRole('button', { name: 'Cancel' }));
+      await user.click(await screen.findByRole('button', { name: 'forgot the password?' }));
+      await user.click(screen.getByRole('button', { name: 'cancel' }));
 
       expect(screen.getByText(URL)).toBeInTheDocument();
       expect(calls.map((c) => c.cmd)).not.toContain('reset_lan_account');

@@ -183,7 +183,7 @@ describe('PageTurnViewer', () => {
       v.commands.nextPage();
       flushSync();
       expect(screen.queryByRole('button', { name: 'Next page' })).not.toBeInTheDocument();
-      await user.click(screen.getByRole('button', { name: 'Ch. 2' }));
+      await user.click(screen.getByRole('button', { name: 'next: ch. 2' }));
       expect(v.reader.state.selectedChapter).toBe('chapter_0002-00');
     });
   });

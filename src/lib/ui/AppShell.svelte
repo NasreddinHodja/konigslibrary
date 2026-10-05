@@ -1,8 +1,8 @@
 <script lang="ts">
+  import Icon from './Icon.svelte';
   import type { Snippet } from 'svelte';
   import { page } from '$app/state';
   import { backOrHome } from '$lib/ui/back';
-  import { LibraryBig, Settings } from 'lucide-svelte';
   import UploadButton from '$lib/browsers/UploadButton.svelte';
   import { getReaderContext } from '$lib/context';
 
@@ -17,6 +17,11 @@
   } = $props();
 
   const reader = getReaderContext();
+
+  const ITEM =
+    'flex cursor-pointer flex-col items-center justify-center gap-1 border border-ink py-1 leading-4';
+  const CURRENT = 'bg-ink text-bg';
+  const IDLE = 'text-ink hover:bg-ink3 hover:text-hi';
 
   // On the library page, closing the manga is enough: its history entry pops
   // itself. Elsewhere this leaves settings the way its back does.
@@ -62,87 +67,46 @@
   virtualizer) - pages just reserve space for the chrome via padding.
 -->
 <nav
-  class="nav-rail fixed top-0 bottom-0 left-0 z-20 hidden w-14 flex-col items-center border-r border-line bg-bg py-4 md:flex"
-  style="padding-top: calc(1rem + var(--safe-top)); padding-bottom: calc(1rem + var(--safe-bottom))"
+  class="nav-rail fixed top-0 bottom-0 left-0 z-20 hidden w-24 flex-col gap-2 border-r border-ink bg-bg p-2 md:flex"
+  style="padding-top: calc(0.5rem + var(--safe-top)); padding-bottom: calc(0.5rem + var(--safe-bottom))"
 >
-  <button
-    type="button"
-    onclick={goLibrary}
-    aria-label="Home"
-    class="flex h-7 w-7 cursor-pointer items-center justify-center border-2 border-fg text-xs font-bold hover:bg-fg hover:text-bg"
-  >
-    K
-  </button>
-
-  <div class="flex flex-1 flex-col items-center justify-center gap-7">
-    <button
-      type="button"
-      onclick={goLibrary}
-      aria-current={active === 'library' ? 'page' : undefined}
-      class="flex cursor-pointer flex-col items-center gap-1.5"
-    >
-      <div
-        class="flex h-8 w-8 items-center justify-center {active === 'library'
-          ? 'bg-fg text-bg'
-          : 'text-dim hover:bg-fg/10 hover:text-soft'}"
-      >
-        <LibraryBig size={15} />
-      </div>
-      <span class="text-[0.55rem] font-bold tracking-wide text-soft uppercase">Library</span>
-    </button>
-
-    <a
-      href="/settings"
-      aria-current={active === 'settings' ? 'page' : undefined}
-      class="flex flex-col items-center gap-1.5"
-    >
-      <div
-        class="flex h-8 w-8 items-center justify-center {active === 'settings'
-          ? 'bg-fg text-bg'
-          : 'text-dim hover:bg-fg/10 hover:text-soft'}"
-      >
-        <Settings size={15} />
-      </div>
-      <span class="text-[0.55rem] font-bold tracking-wide text-soft uppercase">Settings</span>
-    </a>
-  </div>
-
-  <UploadButton {isDragOver} iconOnly />
+  {@render items('')}
+  <div class="flex-1"></div>
+  <UploadButton {isDragOver} rail />
 </nav>
 
+<!-- Set 12px in from the sides and bottom, so a screen's rounded corners don't
+     clip the outer boxes. -->
 <nav
-  class="nav-tabs fixed inset-x-0 bottom-0 z-20 flex items-center border-t border-line bg-bg px-2 md:hidden {typing
+  class="nav-tabs fixed inset-x-0 bottom-0 z-20 flex items-stretch gap-2 border-t border-ink bg-bg px-3 pt-2 md:hidden {typing
     ? 'hidden'
     : ''}"
-  style="height: calc(3.75rem + var(--safe-bottom)); padding-bottom: var(--safe-bottom)"
+  style="height: calc(4.75rem + var(--safe-bottom)); padding-bottom: calc(0.75rem + var(--safe-bottom))"
 >
+  {@render items('flex-1', true)}
+</nav>
+
+<!-- The rail stacks library and settings; the tab bar puts upload between. -->
+{#snippet items(size: string, withUpload = false)}
   <button
     type="button"
     onclick={goLibrary}
     aria-current={active === 'library' ? 'page' : undefined}
-    class="flex flex-1 cursor-pointer flex-col items-center justify-center gap-1 self-stretch {active ===
-    'library'
-      ? ''
-      : 'text-dim hover:text-soft'}"
+    class="{ITEM} {size} {active === 'library' ? CURRENT : IDLE}"
   >
-    <LibraryBig size={16} />
-    <span class="text-[11px] font-bold tracking-wide uppercase">Library</span>
+    <Icon name="library" />
+    library
   </button>
-
-  <UploadButton {isDragOver} tab />
-
+  {#if withUpload}<UploadButton {isDragOver} tab />{/if}
   <a
     href="/settings"
     aria-current={active === 'settings' ? 'page' : undefined}
-    class="flex flex-1 flex-col items-center justify-center gap-1 self-stretch {active ===
-    'settings'
-      ? ''
-      : 'text-dim hover:text-soft'}"
+    class="{ITEM} {size} {active === 'settings' ? CURRENT : IDLE}"
   >
-    <Settings size={16} />
-    <span class="text-[11px] font-bold tracking-wide uppercase">Settings</span>
+    <Icon name="settings" />
+    settings
   </a>
-</nav>
+{/snippet}
 
 <!-- Backs the status bar, so content scrolling up passes under it and pinned
      list bars (ListPanel) read as one with it. -->

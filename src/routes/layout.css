@@ -26,21 +26,61 @@
 @theme {
   --ease-anim: cubic-bezier(0, 0, 0.2, 1);
   --duration-anim: 120ms;
-  --color-bg: oklch(0% 0 0);
-  --color-fg: oklch(100% 0 0);
-  --color-surface: oklch(0% 0 0);
-  --color-border: oklch(100% 0 0);
-  --color-muted: oklch(53% 0 0);
-  --color-reader-bg: oklch(0% 0 0);
-  /* Secondary text and hairlines, as the theme's text and border colours
-     thinned out, so every theme gets them at the same strength. */
-  --color-soft: color-mix(in oklab, var(--color-fg) 82%, transparent);
-  --color-dim: color-mix(in oklab, var(--color-fg) 67%, transparent);
-  --color-faint: color-mix(in oklab, var(--color-fg) 55%, transparent);
-  --color-line: color-mix(in oklab, var(--color-border) 21%, transparent);
-  --color-line-strong: color-mix(in oklab, var(--color-border) 38%, transparent);
-  --color-success: oklch(72% 0.15 152);
-  --color-error: oklch(65% 0.19 22);
+  /* The palette (docs/design/system.org): background, text and ink are the
+     theme's; the rest is mixed from them. These are one bark's, until
+     applyTheme sets the saved ones. */
+  --color-bg: #282c34;
+  --color-fg: #dcdfe4;
+  --color-ink: #c678dd;
+  --color-hi: #ddaeeb;
+  --color-dim: color-mix(in srgb, var(--color-fg) 67%, var(--color-bg));
+  --color-ink2: color-mix(in srgb, var(--color-ink) 60%, var(--color-bg));
+  --color-ink3: color-mix(in srgb, var(--color-ink) 30%, var(--color-bg));
+  /* A bitmap font is only crisp at its own height or twice it: 16px for
+     everything, 32px for titles. */
+  --font-sans: 'VGA', monospace;
+  --font-mono: 'VGA', monospace;
+  --text-xs: 16px;
+  --text-xs--line-height: 1.5;
+  --text-sm: 16px;
+  --text-sm--line-height: 1.5;
+  --text-base: 16px;
+  --text-base--line-height: 1.5;
+  --text-lg: 16px;
+  --text-lg--line-height: 1.5;
+  --text-xl: 32px;
+  --text-xl--line-height: 1.25;
+  --text-2xl: 32px;
+  --text-2xl--line-height: 1.25;
+  --text-3xl: 32px;
+  --text-3xl--line-height: 1.25;
+  --text-4xl: 32px;
+  --text-4xl--line-height: 1.25;
+  --tracking-wide: 0;
+  --tracking-wider: 0;
+  --tracking-widest: 0;
+  /* meth.cat's stepped hard shadow, and what's left of it pressed in. */
+  --shadow-raised: 2px 2px 0 var(--color-ink2), 4px 4px 0 var(--color-ink3);
+  --shadow-sunk: 2px 2px 0 var(--color-ink3);
+}
+
+/* What content sits in, over the texture: an ink frame, raised. */
+@utility panel {
+  border: 1px solid var(--color-ink);
+  background-color: var(--color-bg);
+  box-shadow: var(--shadow-raised);
+}
+
+/* A 50% checkerboard of the background, dithered over what's behind a
+   dialog. */
+@utility checker {
+  background-image: conic-gradient(
+    var(--color-bg) 25%,
+    transparent 0 50%,
+    var(--color-bg) 0 75%,
+    transparent 0
+  );
+  background-size: 2px 2px;
 }
 
 :root {
@@ -50,9 +90,24 @@
 }
 
 body {
-  @apply bg-bg text-fg antialiased;
-  font-family: 'Source Code Pro', monospace;
+  @apply bg-bg text-fg;
+  font-family: 'VGA', monospace;
+  /* Its pixels as drawn: no smoothing, and no bold smeared out of a font
+     that has none. */
+  -webkit-font-smoothing: none;
+  font-synthesis: none;
   overflow-x: clip;
+}
+
+/* The palette's dither texture (applyTheme), behind everything. On a layer of
+   its own: image-rendering is inherited, and covers mustn't be pixelated. */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background-image: var(--texture);
+  image-rendering: pixelated;
 }
 
 /* On touch screens a long press is an app's, not a document's: no selecting
@@ -97,15 +152,8 @@ body {
 }
 
 :focus-visible {
-  outline: 2px solid var(--color-fg);
+  outline: 1px dotted var(--color-hi);
   outline-offset: 2px;
-}
-
-/* Inputs use border-colour shift instead of an outline ring */
-input:focus-visible,
-textarea:focus-visible {
-  outline: none;
-  border-color: var(--color-fg);
 }
 
 /* Page crossfade from onNavigate in +layout.svelte; the nav chrome is named
@@ -135,9 +183,9 @@ textarea:focus-visible {
 .skeleton {
   background: linear-gradient(
     90deg,
-    color-mix(in oklab, var(--color-fg) 4%, transparent) 0%,
-    color-mix(in oklab, var(--color-fg) 10%, transparent) 50%,
-    color-mix(in oklab, var(--color-fg) 4%, transparent) 100%
+    var(--color-ink3) 0%,
+    var(--color-ink2) 50%,
+    var(--color-ink3) 100%
   );
   background-size: 400% 100%;
   animation: skeleton-shimmer 1.8s ease-in-out infinite;

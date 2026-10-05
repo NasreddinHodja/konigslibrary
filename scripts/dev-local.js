@@ -35,11 +35,21 @@ for (const signal of ['SIGINT', 'SIGTERM']) {
   process.on(signal, () => shutdown(0));
 }
 
+// The simulated library (dev:sim) keeps its own index and accounts inside it,
+// so it never takes over the real server's, which live in the repo root too.
+const simulated =
+  process.env.MANGA_DIR === 'dev-library'
+    ? {
+        KL_DB: process.env.KL_DB || 'dev-library/.konigslibrary.db',
+        KL_AUTH_DB: process.env.KL_AUTH_DB || 'dev-library/.konigslibrary-auth.db'
+      }
+    : {};
+
 start(
   'konigslibrary-server',
   'cargo',
   ['run', '--manifest-path', 'crates/Cargo.toml', '-p', 'klserver'],
-  { PORT: port, HOST: '127.0.0.1', NO_BROWSER: '1' }
+  { PORT: port, HOST: '127.0.0.1', NO_BROWSER: '1', ...simulated }
 );
 
 start('vite', 'vite', host ? ['dev', '--host'] : ['dev'], { LOCAL_BUILD: '1' });

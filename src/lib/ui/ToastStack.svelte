@@ -1,6 +1,7 @@
 <script lang="ts">
+  import Icon from './Icon.svelte';
   import { fly } from 'svelte/transition';
-  import { X, Check, AlertTriangle, LoaderCircle } from 'lucide-svelte';
+  import Spinner from './Spinner.svelte';
   import { getToasts, removeToast, areDownloadsFolded, type Toast } from '$lib/ui/toast.svelte';
   import {
     downloadProgress,
@@ -53,6 +54,11 @@
           : [each(t)]
     );
   });
+  /// Progress as the font's blocks: █ done, ░ to go.
+  function bar(done: number, total: number, width = 12) {
+    const n = total ? Math.round((Math.min(done, total) / total) * width) : 0;
+    return '█'.repeat(n) + '░'.repeat(width - n);
+  }
 </script>
 
 <!-- Always rendered: transitions are local, so toasts inside an {#if} on the
@@ -63,7 +69,7 @@
 >
   {#each shown as { toast, dismiss } (toast.id)}
     <div
-      class="flex min-w-72 items-start gap-3 border-2 bg-surface/85 px-4 py-3 shadow-lg backdrop-blur-2xl"
+      class="flex min-w-72 items-start gap-3 panel px-3 py-2"
       in:fly={{
         x: 100,
         duration: ANIM_DURATION,
@@ -73,34 +79,32 @@
       }}
       out:fly={{ x: 100, duration: ANIM_EXIT_DURATION, easing: ANIM_EASE_IN }}
     >
-      <!-- Every toast has the icon slot, so labels line up down the stack. It's
-             one label line tall (h-5), level with it, as is close. -->
-      <div class="flex h-5 w-3.5 shrink-0 items-center">
-        {#if toast.phase === 'done'}
-          <Check size={14} class="text-success" />
-        {:else if toast.phase === 'error'}
-          <AlertTriangle size={14} class="text-error" />
-        {:else}
-          <LoaderCircle size={14} class="animate-spin text-dim" />
-        {/if}
-      </div>
+      <!-- Every toast has the mark's slot, so labels line up down the stack. -->
+      <span class="flex size-6 shrink-0 items-center justify-center text-ink">
+        {#if toast.phase === 'done'}<Icon
+            name="check"
+          />{:else if toast.phase === 'error'}►{:else}<Spinner />{/if}
+      </span>
 
-      <div class="flex min-w-0 flex-1 flex-col gap-4">
+      <div class="flex min-w-0 flex-1 flex-col gap-1">
         <!-- Close and Cancel end each line at the same right edge. -->
         <div class="flex items-start justify-between gap-3">
-          <span class="text-sm leading-5">{toast.label}</span>
+          <span>{toast.label}</span>
           <!-- Hides the toast; whatever it reports carries on. -->
           <button
-            class="hit relative flex h-5 shrink-0 cursor-pointer items-center text-dim hover:text-fg"
+            class="hit relative flex shrink-0 cursor-pointer items-center justify-center text-ink hover:text-hi"
             onclick={dismiss}
             aria-label="Dismiss"
           >
-            <X size={14} />
+            <Icon name="close" />
           </button>
         </div>
-        <div class="flex items-baseline justify-between gap-3 text-xs">
+        <div class="flex items-baseline justify-between gap-3">
           {#if toast.phase === 'fetching' && (toast.id === FOLDED_ID || toast.group === 'download')}
-            <span class="text-dim tabular-nums">{toast.current} / {toast.total} chapters</span>
+            <span class="tabular-nums"
+              ><span class="text-ink">{bar(toast.current, toast.total)}</span>
+              <span class="text-dim">{toast.current} / {toast.total} chapters</span></span
+            >
           {:else if toast.phase === 'fetching'}
             <span class="text-dim tabular-nums">{toast.current} / {toast.total}</span>
           {:else if toast.phase === 'deleting'}
@@ -114,13 +118,13 @@
           {/if}
           {#if toast.cancel}
             <button
-              class="hit relative shrink-0 cursor-pointer font-bold tracking-wide text-dim hover:text-fg"
+              class="hit relative shrink-0 cursor-pointer text-ink hover:text-hi hover:underline"
               onclick={() => {
                 toast.cancel?.();
                 dismiss();
               }}
             >
-              CANCEL
+              cancel
             </button>
           {/if}
         </div>

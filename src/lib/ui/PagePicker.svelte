@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { X, Search } from 'lucide-svelte';
+  import Icon from './Icon.svelte';
   import { getReaderContext } from '$lib/context';
   import VirtualGrid from '$lib/ui/virtual/VirtualGrid.svelte';
   import CoverThumbnail from '$lib/ui/CoverThumbnail.svelte';
@@ -35,14 +35,14 @@
 
 <!-- Backdrop -->
 <div
-  class="fixed inset-0 z-50 flex items-center justify-center bg-reader-bg/60 p-4 backdrop-blur-sm"
+  class="fixed inset-0 z-50 flex items-center justify-center checker p-4"
   style="padding-bottom: calc(1rem + var(--safe-bottom, 0px))"
   role="presentation"
   onclick={onclose}
 >
   <!-- Modal -->
   <div
-    class="flex h-full max-h-[85vh] w-full max-w-2xl flex-col border-2 border-line-strong bg-bg"
+    class="flex h-full max-h-[85vh] w-full max-w-2xl flex-col panel"
     role="dialog"
     tabindex="-1"
     aria-modal="true"
@@ -52,27 +52,24 @@
     {@attach focusTrap}
   >
     <!-- Header -->
-    <div class="flex shrink-0 items-center gap-3 border-b border-line px-4 py-3">
+    <div class="flex shrink-0 items-center gap-3 border-b border-ink px-3 py-2">
       <div class="flex min-w-0 flex-1 flex-col">
-        <span class="text-xs font-bold tracking-widest text-dim">JUMP TO PAGE</span>
+        <span>jump to page</span>
         {#if chapterName}
-          <span class="truncate text-xs text-faint">{chapterName}</span>
+          <span class="truncate text-dim">{chapterName}</span>
         {/if}
       </div>
       <button
-        class="hit relative shrink-0 cursor-pointer p-1 text-dim hover:text-fg"
+        class="hit relative flex shrink-0 cursor-pointer items-center justify-center text-ink hover:text-hi"
         onclick={onclose}
         aria-label="Close"
       >
-        <X size={16} />
+        <Icon name="close" />
       </button>
     </div>
 
     <!-- Search bar -->
-    <div
-      class="flex shrink-0 items-center gap-3 border-b border-line px-4 py-3 pointer-coarse:py-3.5"
-    >
-      <Search size={14} class="shrink-0 text-dim" />
+    <div class="flex shrink-0 items-center gap-3 border-b border-ink px-3 py-2">
       <input
         {@attach (el) => {
           // After the dialog's focus trap has focused its first button.
@@ -82,14 +79,14 @@
         type="text"
         inputmode="numeric"
         placeholder="Page number…"
-        class="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-dim"
+        class="h-8 min-w-0 flex-1 border border-ink bg-bg px-2 placeholder:text-dim pointer-coarse:h-10"
       />
-      <span class="shrink-0 text-xs text-dim tabular-nums">{totalPages} pages</span>
+      <span class="shrink-0 text-dim tabular-nums">{totalPages} pages</span>
     </div>
 
     <!-- Grid -->
     {#if filteredIndices.length === 0}
-      <p class="flex-1 py-12 text-center text-sm text-dim">No pages match</p>
+      <p class="flex-1 py-12 text-center text-dim">No pages match</p>
     {:else}
       <!-- Keyed so a new search starts back at the top. -->
       {#key query}
@@ -107,8 +104,8 @@
                 onclick={() => pick(i)}
               >
                 {#snippet placeholder()}
-                  <div class="flex h-full w-full items-center justify-center opacity-20">
-                    <span class="text-xs">{i + 1}</span>
+                  <div class="flex h-full w-full items-center justify-center text-dim">
+                    <span>{i + 1}</span>
                   </div>
                 {/snippet}
               </CoverThumbnail>
