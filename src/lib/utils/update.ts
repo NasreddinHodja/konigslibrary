@@ -5,7 +5,10 @@ const LS_DISMISSED = 'kl:update:dismissed';
 
 export type UpdateInfo = {
   version: string;
+  current: string;
   downloadUrl: string;
+  /// The release's page, with its notes.
+  notesUrl: string;
 };
 
 type Release = {
@@ -54,7 +57,8 @@ export async function checkForUpdate(): Promise<UpdateInfo | null> {
     const apk = data.assets?.find((a) => a.name.endsWith('.apk'));
     const downloadUrl: string = apk?.browser_download_url ?? data.html_url;
     if (!downloadUrl.startsWith('https://github.com/')) return null;
-    return { version: latest, downloadUrl };
+    if (!data.html_url.startsWith('https://github.com/')) return null;
+    return { version: latest, current, downloadUrl, notesUrl: data.html_url };
   } catch {
     return null;
   }

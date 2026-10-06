@@ -18,7 +18,7 @@
   import { page } from '$app/state';
   import AppShell from '$lib/ui/AppShell.svelte';
   import ToastStack from '$lib/ui/ToastStack.svelte';
-  import UpdateBanner from '$lib/ui/UpdateBanner.svelte';
+  import UpdateDialog from '$lib/ui/UpdateDialog.svelte';
   import { showError } from '$lib/ui/toast.svelte';
   import { cancelAllDownloads } from '$lib/sources/download.svelte';
   import { describeOpenFileError } from '$lib/utils/errors';
@@ -182,7 +182,7 @@
   }}
 />
 
-<UpdateBanner />
+<UpdateDialog />
 <ToastStack />
 
 {#if helpOpen}
