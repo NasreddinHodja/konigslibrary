@@ -55,6 +55,15 @@ describe('the layout', () => {
       expect(nav.goto).not.toHaveBeenCalled();
       appPage.url = new URL('http://localhost/');
     });
+
+    it('leaves Settings open, to change the server', async () => {
+      appPage.url = new URL('http://localhost/settings');
+      renderLayout();
+      await sessionRefused();
+      await new Promise((r) => setTimeout(r, 20));
+      expect(nav.goto).not.toHaveBeenCalled();
+      appPage.url = new URL('http://localhost/');
+    });
   });
 
   describe('a long press on a touch screen', () => {

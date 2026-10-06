@@ -134,6 +134,16 @@ describe('the login screen', () => {
     expect(await screen.findByRole('heading', { name: 'log in' })).toBeInTheDocument();
   });
 
+  it("links to Settings when the server can't be reached, to change it", async () => {
+    localStorage.setItem('kl:serverUrl', SERVER);
+    render(Login);
+    await screen.findByRole('heading', { name: "can't reach the server" });
+    expect(screen.getByRole('link', { name: 'change server' })).toHaveAttribute(
+      'href',
+      '/settings'
+    );
+  });
+
   it('waits for a logged-in device to allow it, showing the code to match', async () => {
     const answers = [
       json({ status: 'pending' }, 202),

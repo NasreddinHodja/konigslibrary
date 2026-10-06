@@ -123,7 +123,12 @@
     {:else if mode === 'unreachable'}
       <h1 class="border-b border-ink text-2xl">can't reach the server</h1>
       <p role="alert" class="text-ink">► <span>{error}</span></p>
-      <div><Button onclick={check}>try again</Button></div>
+      <div class="flex items-center gap-4">
+        <Button onclick={check}>try again</Button>
+        {#if !isLocalServer}
+          <a href="/settings" class="text-ink hover:text-hi hover:underline">change server</a>
+        {/if}
+      </div>
     {:else}
       <div class="flex flex-col gap-1">
         <h1 class="border-b border-ink text-2xl">

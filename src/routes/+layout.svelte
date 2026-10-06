@@ -14,9 +14,10 @@
 
   let { children } = $props();
 
-  // The server turned a request away for want of a session.
+  // The server turned a request away for want of a session. Settings stays
+  // open: it's where the server is changed, which the login screen links to.
   $effect(() => {
-    if (sessionLost() && page.url.pathname !== '/login') goto('/login');
+    if (sessionLost() && !['/login', '/settings'].includes(page.url.pathname)) goto('/login');
   });
 
   const reader = createReader();
