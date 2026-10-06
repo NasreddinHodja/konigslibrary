@@ -1,10 +1,8 @@
 <script lang="ts">
   import { ICONS, type IconName } from './icons';
 
-  // A Cozette bitmap icon, pixel for pixel in the current colour, scaled by
-  // the whole number that brings its longer side nearest `size` px, so icons
-  // drawn on different grids come out about as big. Trimmed to its pixels,
-  // it centres in whatever holds it.
+  // A bitmap icon, pixel for pixel in the current colour, scaled by the
+  // whole number that brings its 9px grid nearest `size` px.
   let { name, size = 24 }: { name: IconName; size?: number } = $props();
 
   const rows = $derived(ICONS[name]);

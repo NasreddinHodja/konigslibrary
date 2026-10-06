@@ -6,7 +6,7 @@
   import Phone from './Phone.svelte';
   import Switch from './Switch.svelte';
   import Icon from './Icon.svelte';
-  import { ICON_SETS } from './icons';
+  import { ICON_SETS, SLOTS } from './icons';
   import { contrast } from './contrast';
   import { TITLES, coverUrl, ditheredCoverUrl, pageUrl, textureUrl } from './fakes';
   import { FOCUS, PALETTES, RAISED, opts, tokens, type Palette } from './options.svelte';
@@ -61,6 +61,32 @@
     { name: 'ink2', job: 'shadow', need: 0 },
     { name: 'ink3', job: 'shadow', need: 0 }
   ] as const;
+
+  /// The app's empty states, by the component that shows them.
+  const EMPTY = [
+    {
+      where: 'MangaLibrary, no sources',
+      icon: 'plug',
+      text: 'No manga sources configured',
+      hint: 'Set one up in Settings'
+    },
+    { where: 'MangaLibrary, search', icon: 'noResults', text: 'No results for "berserk"' },
+    { where: 'MangaLibrary, server tab', icon: 'offline', text: 'Server unreachable' },
+    {
+      where: 'MangaLibrary, device tab',
+      icon: 'book',
+      text: 'No manga on this device yet',
+      hint: 'Download some from the server'
+    },
+    { where: 'MangaLibrary, otherwise', icon: 'empty', text: 'No manga found' },
+    { where: 'MangaDetail, chapter search', icon: 'noResults', text: 'No chapters match "12"' },
+    { where: 'DirectoryBrowser', icon: 'folder', text: 'No subdirectories' },
+    {
+      where: 'PageTurnViewer, PageScrollViewer',
+      icon: 'warning',
+      text: 'Failed to load chapter: 404'
+    }
+  ];
 
   const PANEL = `border border-(--ink) bg-(--bg) ${RAISED}`;
   const FIELD = `h-8 w-full border border-(--ink) bg-(--bg) px-2 text-(--fg) placeholder:text-(--dim) pointer-coarse:h-10 ${FOCUS}`;
@@ -230,7 +256,7 @@
           label="icon font"
           options={Object.keys(ICON_SETS).map((k) => ({ key: k, label: k }))}
           value={opts.iconSet}
-          onpick={(k) => (opts.iconSet = k as typeof opts.iconSet)}
+          onpick={(k) => (opts.iconSet = k)}
         />
       </div>
       <div class="flex flex-col gap-1">
@@ -238,11 +264,13 @@
         <Switch
           label="icon size"
           options={[
+            { key: 'app', label: 'app' },
             { key: '1', label: '1x' },
-            { key: '2', label: '2x' }
+            { key: '2', label: '2x' },
+            { key: '3', label: '3x' }
           ]}
           value={String(opts.iconScale)}
-          onpick={(k) => (opts.iconScale = Number(k) as 1 | 2)}
+          onpick={(k) => (opts.iconScale = k === 'app' ? 'app' : (Number(k) as 1 | 2 | 3))}
         />
       </div>
     </div>
@@ -338,6 +366,21 @@
     <!-- Icons -->
     <section class="p-6 {PANEL}">
       {@render section('icons')}
+      <!-- Every slot in a row, at the size picked above, between words of
+           the font: where the pixel size, weight and box differ. -->
+      <div class="mb-8 flex flex-col gap-4">
+        {#each Object.keys(ICON_SETS) as name (name)}
+          <div class="flex flex-col gap-1">
+            <span class="text-(--dim)">{name}</span>
+            <div class="flex flex-wrap items-center gap-x-3 gap-y-2 text-(--ink)">
+              {#each SLOTS as slot (slot)}
+                <Icon name={slot} set={name} />
+              {/each}
+              <span class="text-(--fg)">Aa library</span>
+            </div>
+          </div>
+        {/each}
+      </div>
       <table class="w-full">
         <thead>
           <tr class="border-b border-(--ink)">
@@ -350,16 +393,17 @@
           </tr>
         </thead>
         <tbody>
-          {#each Object.keys(ICON_SETS.cozette.icons) as slot (slot)}
+          {#each SLOTS as slot (slot)}
             <tr class="border-b border-(--ink3)">
               <td class="py-2 pr-4">{slot}</td>
               {#each Object.keys(ICON_SETS) as name (name)}
                 <td class="py-2 pr-4 text-(--ink)">
                   <span class="flex items-end gap-3">
                     <Icon name={slot} set={name} scale={1} />
-                    <Icon name={slot} set={name} scale={2} />
+                    <Icon name={slot} set={name} scale="app" />
+                    <Icon name={slot} set={name} scale="app" target={48} />
                     <span class="flex items-center gap-2 border border-(--ink) px-2"
-                      ><Icon name={slot} set={name} scale={1} />{slot}</span
+                      ><Icon name={slot} set={name} scale="app" target={16} />{slot}</span
                     >
                   </span>
                 </td>
@@ -368,6 +412,55 @@
           {/each}
         </tbody>
       </table>
+    </section>
+
+    <!-- Empty states -->
+    <section class="p-6 {PANEL}">
+      {@render section('empty states')}
+      <p class="mb-6 text-(--dim)">
+        Where the app says there's nothing, or that something broke, with no icon today. Drawn in
+        the set picked above; cozette has none of these.
+      </p>
+      <div class="grid grid-cols-[repeat(auto-fill,minmax(16rem,1fr))] gap-4">
+        {#each EMPTY as e (e.where)}
+          <div class="flex flex-col border border-(--ink)">
+            <span class="border-b border-(--ink) px-2 text-(--dim)">{e.where}</span>
+            <div
+              class="flex flex-1 flex-col items-center justify-center gap-2 px-3 py-8 text-center"
+            >
+              <span class="text-(--ink)"><Icon name={e.icon} scale="app" target={48} /></span>
+              <p>{e.text}</p>
+              {#if e.hint}<p class="text-(--dim)">{e.hint}</p>{/if}
+            </div>
+          </div>
+        {/each}
+        <!-- An error line: ► today, the warning icon instead. -->
+        <div class="flex flex-col border border-(--ink)">
+          <span class="border-b border-(--ink) px-2 text-(--dim)">error line, everywhere</span>
+          <div class="flex flex-col gap-2 p-3">
+            <p class="text-(--ink)">► <span>Server unreachable</span></p>
+            <p class="flex items-center gap-2 text-(--ink)">
+              <Icon name="warning" scale="app" target={16} /><span>Server unreachable</span>
+            </p>
+          </div>
+        </div>
+        <!-- A cover that failed to load: words today. -->
+        <div class="flex flex-col border border-(--ink)">
+          <span class="border-b border-(--ink) px-2 text-(--dim)">CoverThumbnail, no cover</span>
+          <div class="flex gap-3 p-3">
+            <div
+              class="flex aspect-[2/3] w-24 items-center justify-center border border-(--ink) text-(--dim)"
+            >
+              no cover
+            </div>
+            <div
+              class="flex aspect-[2/3] w-24 items-center justify-center border border-(--ink) text-(--ink3)"
+            >
+              <Icon name="image" scale="app" target={32} />
+            </div>
+          </div>
+        </div>
+      </div>
     </section>
 
     <!-- Buttons -->

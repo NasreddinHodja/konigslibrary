@@ -209,10 +209,4 @@
       class="text-ink underline hover:text-hi">CC BY-SA 4.0</a
     >.
   </p>
-  <p class="leading-relaxed">
-    The icons are from
-    <a href="https://github.com/the-moonwitch/Cozette" class="text-ink underline hover:text-hi"
-      >Cozette</a
-    >, under the MIT licence.
-  </p>
 </div>

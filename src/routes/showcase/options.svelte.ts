@@ -54,8 +54,9 @@ export function tokens(p: Palette) {
 
 /// The showcase's switches, read by its parts.
 export const opts = $state({
-  iconSet: 'cozette' as const,
-  iconScale: 2 as 1 | 2,
+  /// Decided: grid9.
+  iconSet: 'grid9',
+  iconScale: 'app' as 1 | 2 | 3 | 'app',
   /// Decided: banded.
   caption: 'band' as 'band' | 'under',
   /// Decided: on.

@@ -3,16 +3,25 @@
   import { opts } from './options.svelte';
 
   // A bitmap icon from the picked set, drawn pixel for pixel in the current
-  // colour. `scale` multiplies the set's own size; a slot the set lacks shows
-  // as a dashed box.
+  // colour. `scale` multiplies the set's own size, or `app` scales it as the
+  // app's Icon does, by the whole number nearest `target` px; a slot the set
+  // lacks shows as a dashed box.
   let {
     name,
     scale = undefined,
-    set = undefined
-  }: { name: string; scale?: number; set?: string } = $props();
+    set = undefined,
+    target = 24
+  }: { name: string; scale?: number | 'app'; set?: string; target?: number } = $props();
 
   const rows = $derived(ICON_SETS[set ?? opts.iconSet].icons[name]);
-  const s = $derived(scale ?? opts.iconScale);
+  const picked = $derived(scale ?? opts.iconScale);
+  const s = $derived(
+    picked !== 'app'
+      ? picked
+      : rows
+        ? Math.max(1, Math.round(target / Math.max(rows.length, rows[0].length)))
+        : Math.round(target / 10)
+  );
 </script>
 
 {#if rows}
