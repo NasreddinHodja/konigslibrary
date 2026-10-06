@@ -12,7 +12,7 @@ describe('parseServerUrl', () => {
   });
 
   it('takes a bare domain for a server on the internet, over HTTPS', () => {
-    expect(parseServerUrl('klserver.nassu.red')).toBe('https://klserver.nassu.red');
+    expect(parseServerUrl('klserver.nassu.online')).toBe('https://klserver.nassu.online');
     expect(parseServerUrl('library.example.com:5511/manga')).toBe(
       'https://library.example.com:5511/manga'
     );
@@ -26,7 +26,7 @@ describe('parseServerUrl', () => {
   });
 
   it('keeps the scheme it is given', () => {
-    expect(parseServerUrl('http://klserver.nassu.red')).toBe('http://klserver.nassu.red');
+    expect(parseServerUrl('http://klserver.nassu.online')).toBe('http://klserver.nassu.online');
   });
 
   it('keeps a path the server sits under', () => {
