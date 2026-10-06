@@ -46,6 +46,8 @@
   });
   let tagsEl: HTMLDivElement | undefined = $state();
   let tagsCollapsedH = 0;
+  /// While less shrinks the row, the tags it will remove fade out.
+  let tagsFading = $state(false);
 
   /// The tags' laid-out height. Not scrollHeight: that counts overflow, and
   /// the more/less button's touch area (`hit`) reaches below the row.
@@ -68,6 +70,9 @@
     tagsExpanded = true;
     await tick();
     const to = naturalHeight(tagsEl);
+    // naturalHeight's read laid it out at auto; without another reflow the
+    // transition would start from auto, which doesn't animate.
+    void tagsEl.offsetHeight;
     requestAnimationFrame(() => {
       if (!tagsEl) return;
       tagsEl.style.transition = `height ${ANIM_DURATION}ms ease-out`;
@@ -88,8 +93,10 @@
     void tagsEl.offsetHeight; // force reflow so the browser registers the starting height
     tagsEl.style.transition = `height ${ANIM_DURATION}ms ease-out`;
     tagsEl.style.height = tagsCollapsedH + 'px';
+    tagsFading = true;
     setTimeout(() => {
       tagsExpanded = false;
+      tagsFading = false;
       tick().then(() => {
         if (tagsEl) resetTagsStyle(tagsEl);
       });
@@ -192,10 +199,20 @@
 </script>
 
 {#snippet fact(key: string, value: string)}
-  <div class="flex items-baseline gap-2">
-    <span class="shrink-0 text-dim">{key}</span>
-    <span class="min-w-4 flex-1 border-b border-dotted border-ink3"></span>
-    <span class="min-w-0 text-right wrap-break-word">{value}</span>
+  <!-- The leader runs under the whole first line; the key and the value's
+       text cover it, so it ends where a wrapped value's first line starts,
+       not at the left of the box the value wraps in. -->
+  <div class="relative flex items-baseline">
+    <span
+      aria-hidden="true"
+      class="pointer-events-none absolute inset-x-0 top-0 flex items-baseline"
+      ><span class="invisible">&nbsp;</span><span class="flex-1 border-b border-dotted border-ink3"
+      ></span></span
+    >
+    <span class="relative shrink-0 bg-bg pr-2 text-dim">{key}</span>
+    <span class="ml-4 min-w-0 flex-1 text-right wrap-break-word"
+      ><span class="relative bg-bg pl-2">{value}</span></span
+    >
   </div>
 {/snippet}
 
@@ -203,11 +220,18 @@
   <div class="flex flex-wrap items-baseline gap-x-2" bind:this={tagsEl}>
     <span class="text-dim">tags</span>
     {#if meta && meta.tags.length}
+      <!-- The fade is local: only tags added by more fade in, not the list as
+           it loads; less fades them out as the row shrinks. The comma fades
+           with its tag. -->
       <span
-        >{#each meta.tags.slice(0, tagsExpanded ? TAGS_EXPANDED : TAGS_COLLAPSED) as tag, i (tag)}{i >
-          0
-            ? ', '
-            : ''}<span>{tag}</span>{/each}</span
+        >{#each meta.tags.slice(0, tagsExpanded ? TAGS_EXPANDED : TAGS_COLLAPSED) as tag, i (tag)}<span
+            class="transition-opacity duration-(--duration-anim) ease-out {tagsFading &&
+            i >= TAGS_COLLAPSED
+              ? 'opacity-0'
+              : ''}"
+            in:fade={{ duration: ANIM_DURATION, easing: ANIM_EASE }}
+            >{i > 0 ? ', ' : ''}<span>{tag}</span></span
+          >{/each}</span
       >
       {#if tagsExpanded}
         <button
@@ -233,7 +257,6 @@
         {@render fact('status', meta.status || '—')}
         {@render fact('author', meta.authors.join(', ') || '—')}
         {@render fact('year', meta.year ? String(meta.year) : '—')}
-        {@render fact('filename', mangaName)}
         {@render tags()}
       </div>
     {:else}
@@ -243,7 +266,6 @@
           <Skeleton class="h-4 flex-1" />
         </div>
       {/each}
-      {@render fact('filename', mangaName)}
     {/if}
   </div>
 {/snippet}
@@ -335,7 +357,9 @@
       {#if metaError && !meta}
         {@render actions()}
       {:else}
-        <div class="flex gap-3">
+        <!-- On a phone the facts go under the cover: beside it they'd get about
+             21 characters a line. -->
+        <div class="flex gap-3 {isDesktop ? '' : 'flex-col'}">
           {@render cover(isDesktop ? 'h-56 w-40' : 'aspect-[2/3] w-28 self-start')}
           {@render facts()}
         </div>

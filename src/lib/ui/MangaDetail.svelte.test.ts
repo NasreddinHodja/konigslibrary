@@ -55,14 +55,14 @@ const tileNumbers = () =>
 
 describe('MangaDetail', () => {
   describe('metadata', () => {
-    it('shows the title, cover and details', async () => {
+    it('shows the title, cover and details, without the filename', async () => {
       await renderDetail();
       expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Berserk');
       expect(screen.getByRole('img', { name: 'Berserk' })).toHaveAttribute('src', 'blob:cover');
       expect(screen.getByText('Ongoing')).toBeInTheDocument();
       expect(screen.getByText('Kentaro Miura')).toBeInTheDocument();
       expect(screen.getByText('1989')).toBeInTheDocument();
-      expect(screen.getByText('berserk')).toBeInTheDocument();
+      expect(screen.queryByText('filename')).not.toBeInTheDocument();
     });
 
     it('shows four tags, and up to six more on request', async () => {
