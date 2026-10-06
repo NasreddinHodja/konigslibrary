@@ -37,7 +37,7 @@
   inert={!shown}
 >
   <button
-    class="hit relative flex shrink-0 cursor-pointer items-center justify-center text-ink hover:text-hi"
+    class="hit relative flex size-8 shrink-0 cursor-pointer items-center justify-center text-ink hover:text-hi pointer-coarse:size-10"
     onclick={onback}
     aria-label="Back"
   >

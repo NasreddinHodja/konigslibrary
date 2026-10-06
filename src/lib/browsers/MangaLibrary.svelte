@@ -704,8 +704,10 @@
 {#snippet titleRow()}
   <div class="flex h-10 items-center gap-3 border-b border-ink pointer-coarse:h-12">
     {#if selecting && tab}
-      <button class={WORD_BUTTON} onclick={stopSelecting} aria-label="Cancel selection"
-        ><Icon name="close" /></button
+      <button
+        class="{WORD_BUTTON} size-8 shrink-0 pointer-coarse:size-10"
+        onclick={stopSelecting}
+        aria-label="Cancel selection"><Icon name="close" /></button
       >
       <span class="tabular-nums">{selectedRows.length} selected</span>
       <span class="ml-auto flex items-center gap-3">
