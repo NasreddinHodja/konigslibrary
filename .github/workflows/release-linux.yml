@@ -81,7 +81,8 @@ jobs:
 
       # The headless server for a VPS or NAS: the same binary and client
       # build:sidecar made for the AppImage, which static_dir() finds next to
-      # it, with the systemd unit and the script that installs and updates it.
+      # it, with the systemd unit, the script that installs and updates it, and
+      # the timer that runs that daily.
       # Built on Ubuntu 24.04, so it needs that glibc or newer.
       - name: Package headless server
         id: server
@@ -90,7 +91,8 @@ jobs:
           dir="konigslibrary-server_${version}_linux_x86_64"
           mkdir -p "$dir"
           cp -r src-tauri/binaries/konigslibrary-server-assets/. "$dir/"
-          cp deploy/konigslibrary.service deploy/konigslibrary-update "$dir/"
+          cp deploy/konigslibrary.service deploy/konigslibrary-update \
+            deploy/konigslibrary-update.service deploy/konigslibrary-update.timer "$dir/"
           tar -czf "dist/$dir.tar.gz" "$dir"
           echo "path=dist/$dir.tar.gz" >> "$GITHUB_OUTPUT"
 

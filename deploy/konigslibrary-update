@@ -5,6 +5,8 @@
 #   konigslibrary-update v0.11.0    that release
 #   konigslibrary-update --rollback the release before the current one
 #
+# konigslibrary-update.timer runs it once a day.
+#
 # Each release is unpacked into /opt/konigslibrary/releases/<version> and
 # /opt/konigslibrary/current points at the one running, so an update never
 # overwrites the files being served, and a failed one goes back to the last.
@@ -46,7 +48,17 @@ switch() {
   mv -T "$ROOT/current.new" "$ROOT/current"
   install -m 644 "$ROOT/current/konigslibrary.service" /etc/systemd/system/konigslibrary.service
   ln -sfn "$ROOT/current/konigslibrary-update" /usr/local/sbin/konigslibrary-update
+  # The daily update, from v0.10.5 on. Enabled only when it's first
+  # installed, so turning it off sticks.
+  new_timer=
+  [ -f /etc/systemd/system/konigslibrary-update.timer ] || new_timer=1
+  for unit in konigslibrary-update.service konigslibrary-update.timer; do
+    [ -f "$ROOT/current/$unit" ] && install -m 644 "$ROOT/current/$unit" "/etc/systemd/system/$unit"
+  done
   systemctl daemon-reload
+  if [ -n "$new_timer" ] && [ -f /etc/systemd/system/konigslibrary-update.timer ]; then
+    systemctl enable --now konigslibrary-update.timer
+  fi
 }
 
 previous=$(running || true)
