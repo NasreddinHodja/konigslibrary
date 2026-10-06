@@ -379,7 +379,9 @@
           aria-label={descending ? 'Sort oldest first' : 'Sort newest first'}
         >
           <span class="flex items-center gap-2"
-            ><Icon name={descending ? 'down' : 'up'} />{descending ? 'newest' : 'oldest'}</span
+            ><Icon name={descending ? 'down' : 'up'} size={18} />{descending
+              ? 'newest'
+              : 'oldest'}</span
           >
         </button>
       {/snippet}
