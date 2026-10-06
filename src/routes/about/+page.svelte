@@ -12,7 +12,8 @@
 
   $effect(nativeBackOrHome);
 
-  const README = 'https://github.com/NasreddinHodja/konigslibrary#self-hosted-server';
+  const SELF_HOSTING =
+    'https://github.com/NasreddinHodja/konigslibrary/blob/main/docs/guide/install.org#self-hosted-server';
 
   const folder = `My Manga/
 ├── One Piece/
@@ -62,8 +63,8 @@
     <p class="leading-relaxed">
       Download the
       <a href={downloads.android} class="text-ink underline hover:text-hi">Android app</a>
-      and install it. Open a chapter <code>.cbz</code> from your phone, or download manga from your computer
-      (see "From your computer to your phone").
+      and install it. Open a chapter <code>.cbz</code> from your phone, or read and download manga from
+      your own server (see "From your own server") or your computer (see "From your computer to your phone").
     </p>
     <div class="grid gap-3 sm:grid-cols-3">
       <img src="/help/home-mobile.jpeg" alt="Home screen of the Android app" class="w-full" />
@@ -106,18 +107,26 @@
   </section>
 
   <section class="space-y-3">
-    <h3 class="underline">from your computer to your phone</h3>
+    <h3 class="underline">from your own server</h3>
     <p class="leading-relaxed">
-      With the desktop app open and your phone on the same Wi-Fi, go to Settings → Library → Share
-      to LAN. The first time, create the account your phone will log in with. Then enter the address
-      it shows in the Android app's Settings, or open it in the phone's browser, and log in.
+      Keep your manga on a server (a VPS, a NAS, a home server) and read it from anywhere. Set it up
+      with Docker or as a Linux service, behind HTTPS: see the
+      <a href={SELF_HOSTING} class="text-ink underline hover:text-hi">self-hosting guide</a>. Its
+      log shows a setup token the first time: open the server's page and create your account with
+      it. Then, in the apps' Settings → Server, enter its address, connect and log in. In a browser,
+      open the address and log in.
     </p>
   </section>
 
-  <p class="leading-relaxed text-dim">
-    Running it on a server with no screen (NAS, home server)? See the
-    <a href={README} class="text-ink underline hover:text-hi">README</a>.
-  </p>
+  <section class="space-y-3">
+    <h3 class="underline">from your computer to your phone</h3>
+    <p class="leading-relaxed">
+      At home, without a server: with the desktop app open and your phone on the same Wi-Fi, go to
+      Settings → Library → Share to LAN. The first time, create the account your phone will log in
+      with. Then enter the address it shows in the Android app's Settings, or open it in the phone's
+      browser, and log in.
+    </p>
+  </section>
 
   <h2 id="preparing" class="border-b border-ink pt-4 text-2xl">preparing your manga</h2>
 

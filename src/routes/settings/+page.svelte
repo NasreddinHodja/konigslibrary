@@ -343,7 +343,7 @@
               type="text"
               bind:this={serverUrlInput}
               bind:value={serverUrl}
-              placeholder="192.168.1.x:3000"
+              placeholder="https://library.example.com"
               onkeydown={handleServerUrlKey}
               aria-label="Server URL"
               aria-invalid={probeStatus === 'error'}

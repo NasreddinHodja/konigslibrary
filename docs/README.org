@@ -3,7 +3,7 @@
 
 * Guide
 
-- [[file:guide/install.org][Install]]: browser, desktop, Android, self-hosted server
+- [[file:guide/install.org][Install]]: browser, desktop, Android, and a self-hosted server: Docker, a Linux service, HTTPS
 - [[file:guide/library.org][Library]]: folder structure, metadata, chapter sorting
 - [[file:guide/keyboard.org][Keyboard shortcuts]]
 

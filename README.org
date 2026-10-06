@@ -2,7 +2,7 @@
 #+DESCRIPTION: Client-side manga reader
 #+OPTIONS: ^:{}
 
-Manga reader for ZIP and CBZ archives. Runs in the browser, as a desktop or Android app (Tauri), or as a self-hosted server.
+Manga reader for ZIP and CBZ archives. Runs in the browser, as a desktop or Android app (Tauri), or as a self-hosted server you read from anywhere: Docker for amd64 and arm64, or a Linux service that updates itself.
 
 #+html: <p><a href="https://github.com/NasreddinHodja/konigslibrary/actions/workflows/ci.yml"><img src="https://github.com/NasreddinHodja/konigslibrary/actions/workflows/ci.yml/badge.svg" alt="CI"></a></p>
 

@@ -9,7 +9,7 @@ Open the deployed site, then open a manga folder (see [[file:library.org][Librar
 
 The [[https://github.com/NasreddinHodja/konigslibrary/releases/latest][latest release]] has a Windows installer (=-setup.exe=) and a Linux AppImage.
 
-To read on a phone on the same network: Settings → Library → Share to LAN. The first time, it asks for a username and password: the account other devices log in with. Then enter the address it shows in the Android app's Settings, or open it in the phone's browser, and log in. It's plain HTTP, so anyone on the same network can read the password and sessions in transit. Lost the password? "Forgot the password?" under the address resets the account: every device is logged out, and you create a new one.
+To read the desktop's library on a phone at home: Settings → Library → Share to LAN. The first time, it asks for a username and password: the account other devices log in with. Then enter the address it shows in the Android app's Settings, or open it in the phone's browser, and log in. It's plain HTTP and only while the app is open, so it's for a network you trust; to read from anywhere, run a [[*Self-hosted server][self-hosted server]]. Lost the password? "Forgot the password?" under the address resets the account: every device is logged out, and you create a new one.
 
 If something goes wrong, Settings → Diagnostics → Copy logs copies the app's logs for a bug report. After a crash, the app offers to open a GitHub issue with the report on the next launch. Nothing is sent unless you submit it.
 
@@ -25,54 +25,47 @@ Every release file has a signed attestation that it was built by this repo's rel
 gh attestation verify <file> --repo NasreddinHodja/konigslibrary
 #+end_src
 
+The Docker image has one too, checked by its address:
+
+#+begin_src sh
+gh attestation verify oci://ghcr.io/nasreddinhodja/konigslibrary:latest --repo NasreddinHodja/konigslibrary
+#+end_src
+
 * Self-hosted server
 
-For a headless, always-on setup:
+=konigslibrary-server= serves a manga folder on its own disk to the apps and to browsers, from anywhere: a VPS, a NAS or a home server. It's one binary and the built frontend; its state is =konigslibrary.json= and two SQLite files.
 
-#+begin_src sh
-bun install
-MANGA_DIR=~/Manga bun run serve
+- [[*Docker][Docker]]: an image for amd64 and arm64, for a NAS or anything that runs containers.
+- [[*On a Linux server][On a Linux server]]: a sandboxed systemd service, installed and kept up to date by =konigslibrary-update=.
+- [[*From source][From source]]: build and run it from this repo.
+
+On the internet, put it behind [[*HTTPS][HTTPS]]: logins and sessions cross the network with every request. Without it, the server warns on start when it's on a public address.
+
+On first run, the server prints a setup token in its log: open its page and create the admin account with it. Then, in the apps' Settings → Server, enter its address (a domain without a scheme is taken as =https://=; an IP address, =localhost=, a name without dots or a =.local= one as =http://=), connect and log in; a browser logs in on the server's own page. Lost the password? Run =konigslibrary-server reset-admin= (with the same =KL_AUTH_DB=, if set) and restart: the admin and every session are gone, and a new setup token is printed. Docker and the Linux service have their own way to run it, below.
+
+** Docker
+
+Each release publishes =ghcr.io/nasreddinhodja/konigslibrary= for amd64 and arm64, tagged with its version and =latest=. It runs as user 1000, listens on port 5511, keeps =konigslibrary.json= and both databases in =/config=, and reads the manga from =/manga=. With Compose:
+
+#+begin_src yaml
+services:
+  konigslibrary:
+    image: ghcr.io/nasreddinhodja/konigslibrary:latest
+    # Passes on docker stop; the server doesn't handle signals as PID 1.
+    init: true
+    ports:
+      - '5511:5511'
+    volumes:
+      - ./config:/config
+      - /path/to/manga:/manga:ro
+    restart: unless-stopped
 #+end_src
 
-=bun run serve= builds the frontend into =build-local/=, builds the =konigslibrary-server= binary and runs it. Once built, the binary runs on its own:
+Create =./config= before the first start, owned by user 1000; if yours is another, add =user: '<uid>:<gid>'= with it. The setup token is in =docker logs konigslibrary=. To reset the admin: =docker exec konigslibrary /app/konigslibrary-server reset-admin=, then restart the container.
 
-#+begin_src sh
-KL_STATIC_DIR=./build-local MANGA_DIR=~/Manga NO_BROWSER=1 \
-  crates/target/release/konigslibrary-server
-#+end_src
+To update, pull the new image and recreate the container: =docker compose pull && docker compose up -d=. As on a server, a port open to the internet needs HTTPS in front: a reverse proxy with =KL_TRUSTED_PROXIES= set to its address (see [[*Behind a reverse proxy][Behind a reverse proxy]]), or =KL_TLS_CERT= and =KL_TLS_KEY=.
 
-=konigslibrary.service= in the repo is a systemd user unit that does this; for a server, see [[*On a server][On a server]].
-
-The manga directory can also be set from Settings in the UI, which saves it to =konigslibrary.json= in the working directory.
-
-On first run, the server prints a setup token: open its page and create the admin account with it. Other devices then log in with that account, at the =Network= address it prints. Lost the password? Run =konigslibrary-server reset-admin= (with the same =KL_AUTH_DB=, if set) and restart: the admin and every session are gone, and a new setup token is printed.
-
-** HTTPS
-
-To serve HTTPS itself, point =KL_TLS_CERT= at the certificate's full chain and =KL_TLS_KEY= at its private key, both PEM; Let's Encrypt's =fullchain.pem= and =privkey.pem= work as they are. The files are checked every minute, so a renewed certificate is picked up without a restart. A renewal caught half-written keeps the old certificate until both files load.
-
-Responses over HTTPS carry HSTS for two years, without =includeSubDomains=. Without these variables the server speaks plain HTTP, which on anything but a network you trust sends the password and sessions in the clear. When it does on a public address, with no =KL_TRUSTED_PROXIES= saying a proxy adds HTTPS in front, it prints a warning on start.
-
-** Behind a reverse proxy
-
-Tell the server which proxy to believe with =KL_TRUSTED_PROXIES=, and bind it where only the proxy reaches it. With nginx on the same host:
-
-#+begin_src nginx
-location / {
-    proxy_pass http://127.0.0.1:3000;
-    proxy_set_header Host $host;
-    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    proxy_set_header X-Forwarded-Proto $scheme;
-}
-#+end_src
-
-#+begin_src sh
-HOST=127.0.0.1 KL_TRUSTED_PROXIES=127.0.0.1 crates/target/release/konigslibrary-server
-#+end_src
-
-Without =KL_TRUSTED_PROXIES=, every client looks like the proxy: one person's failed logins, even with a wrong username, lock out every device that hasn't logged in before, and neither the =Secure= cookie flag nor HSTS is sent. =Host $host= matters only for browsers too old to send =Sec-Fetch-Site=, whose logins are otherwise refused as cross-site. See [[file:../api/http.org::*Behind a reverse proxy][HTTP server]] for exactly what's believed.
-
-** On a server
+** On a Linux server
 
 Each release has =konigslibrary-server_<version>_linux_x86_64.tar.gz=: the binary with the built frontend in =client/= next to it, where it finds it without =KL_STATIC_DIR=, plus =konigslibrary.service=, =konigslibrary-update= and the timer that runs it daily. It's built on Ubuntu 24.04, so it needs that glibc or newer.
 
@@ -113,29 +106,46 @@ sudo -u konigslibrary sh -c 'cd /var/lib/konigslibrary && /opt/konigslibrary/cur
 sudo systemctl restart konigslibrary
 #+end_src
 
-In the app, enter the address with its =https://=: without a scheme it's taken as =http://=.
+** From source
 
-** Docker
-
-Each release publishes =ghcr.io/nasreddinhodja/konigslibrary= for amd64 and arm64, tagged with its version and =latest=. It runs as user 1000, listens on port 5511, keeps =konigslibrary.json= and both databases in =/config=, and reads the manga from =/manga=. With Compose:
-
-#+begin_src yaml
-services:
-  konigslibrary:
-    image: ghcr.io/nasreddinhodja/konigslibrary:latest
-    # Passes on docker stop; the server doesn't handle signals as PID 1.
-    init: true
-    ports:
-      - '5511:5511'
-    volumes:
-      - ./config:/config
-      - /path/to/manga:/manga:ro
-    restart: unless-stopped
+#+begin_src sh
+bun install
+MANGA_DIR=~/Manga bun run serve
 #+end_src
 
-Create =./config= before the first start, owned by user 1000; if yours is another, add =user: '<uid>:<gid>'= with it. The setup token is in =docker logs konigslibrary=. To reset the admin: =docker exec konigslibrary /app/konigslibrary-server reset-admin=, then restart the container.
+=bun run serve= builds the frontend into =build-local/=, builds the =konigslibrary-server= binary and runs it. Once built, the binary runs on its own:
 
-To update, pull the new image and recreate the container: =docker compose pull && docker compose up -d=. As on a server, a port open to the internet needs HTTPS in front: a reverse proxy with =KL_TRUSTED_PROXIES= set to its address (see [[*Behind a reverse proxy][Behind a reverse proxy]]), or =KL_TLS_CERT= and =KL_TLS_KEY=.
+#+begin_src sh
+KL_STATIC_DIR=./build-local MANGA_DIR=~/Manga NO_BROWSER=1 \
+  crates/target/release/konigslibrary-server
+#+end_src
+
+=konigslibrary.service= at the repo's root is a systemd user unit that does this. The manga directory can also be set from Settings in the UI, which saves it to =konigslibrary.json= in the working directory.
+
+** HTTPS
+
+To serve HTTPS itself, point =KL_TLS_CERT= at the certificate's full chain and =KL_TLS_KEY= at its private key, both PEM; Let's Encrypt's =fullchain.pem= and =privkey.pem= work as they are. The files are checked every minute, so a renewed certificate is picked up without a restart. A renewal caught half-written keeps the old certificate until both files load.
+
+Responses over HTTPS carry HSTS for two years, without =includeSubDomains=. Without these variables the server speaks plain HTTP, which on anything but a network you trust sends the password and sessions in the clear. When it does on a public address, with no =KL_TRUSTED_PROXIES= saying a proxy adds HTTPS in front, it prints a warning on start.
+
+** Behind a reverse proxy
+
+Tell the server which proxy to believe with =KL_TRUSTED_PROXIES=, and bind it where only the proxy reaches it. Caddy gets the certificate itself and sends the headers the server needs; see [[*On a Linux server][On a Linux server]] for its two lines. With nginx on the same host:
+
+#+begin_src nginx
+location / {
+    proxy_pass http://127.0.0.1:5511;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+}
+#+end_src
+
+#+begin_src sh
+HOST=127.0.0.1 PORT=5511 KL_TRUSTED_PROXIES=127.0.0.1 crates/target/release/konigslibrary-server
+#+end_src
+
+Without =KL_TRUSTED_PROXIES=, every client looks like the proxy: one person's failed logins, even with a wrong username, lock out every device that hasn't logged in before, and neither the =Secure= cookie flag nor HSTS is sent. =Host $host= matters only for browsers too old to send =Sec-Fetch-Site=, whose logins are otherwise refused as cross-site. See [[file:../api/http.org::*Behind a reverse proxy][HTTP server]] for exactly what's believed.
 
 ** Upgrading from the access key
 

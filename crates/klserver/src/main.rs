@@ -1,9 +1,9 @@
-//! konigslibrary's local server.
+//! konigslibrary's server.
 //!
 //! Serves both deployments that need a backend: the desktop app's
-//! "Share to LAN" sidecar, and the standalone self-hosted install driven by
-//! `konigslibrary.service`. The browser-only deployment still needs no server
-//! at all — that path runs the same parser compiled to wasm.
+//! "Share to LAN" sidecar, and the self-hosted server (the systemd service in
+//! `deploy/`, or the Docker image). The browser-only deployment still needs no
+//! server at all — that path runs the same parser compiled to wasm.
 
 use std::net::SocketAddr;
 use std::path::PathBuf;

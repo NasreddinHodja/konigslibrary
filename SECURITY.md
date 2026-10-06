@@ -11,8 +11,9 @@ Only the latest release gets fixes.
 
 `konigslibrary-server`, and the desktop app's Share to LAN, serve your manga
 folder over HTTP or HTTPS, on `0.0.0.0:3000` by default (`HOST` and `PORT`
-change that). It may be on a home network or on the internet, behind a reverse
-proxy or not. What it guards:
+change that). Self-hosted, it's usually on the internet: on a VPS behind a
+reverse proxy (`deploy/konigslibrary.service` listens on `127.0.0.1:5511`), or
+in Docker on a NAS. Share to LAN is for a home network. What it guards:
 
 - **The library.** Only the admin's sessions can list or read it.
 - **The host's filesystem.** Settings can point the server at any folder and
@@ -123,7 +124,13 @@ files.
   password, session tokens and pages in the clear: anyone who can capture
   traffic on the network can take over a session. A certificate the apps
   accept needs a domain: Android 7+ apps trust only system CAs, so a
-  self-signed one won't do. Put a server on the internet only with HTTPS.
+  self-signed one won't do. Put a server on the internet only with HTTPS; one
+  serving plain HTTP on a public address with no trusted proxy warns on start,
+  but still serves.
+- **Updates trust GitHub.** `konigslibrary-update`, and its daily timer,
+  install the latest release over HTTPS from GitHub as root without checking
+  its attestation. Turn the timer off to review releases first
+  (`docs/guide/install.org`); `gh attestation verify` checks a download.
 - **One account.** Everyone you share with uses the admin's login, and every
   session can change the served folder and browse the host's directories.
 - **Approving needs a logged-in device.** While someone keeps guessing, a
