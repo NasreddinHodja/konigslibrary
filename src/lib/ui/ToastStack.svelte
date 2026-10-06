@@ -69,7 +69,7 @@
 >
   {#each shown as { toast, dismiss } (toast.id)}
     <div
-      class="flex min-w-72 items-start gap-3 panel px-3 py-2"
+      class="flex max-w-[min(24rem,calc(100vw-2rem))] min-w-72 items-start gap-3 panel px-3 py-2"
       in:fly={{
         x: 100,
         duration: ANIM_DURATION,
@@ -89,7 +89,7 @@
       <div class="flex min-w-0 flex-1 flex-col gap-1">
         <!-- Close and Cancel end each line at the same right edge. -->
         <div class="flex items-start justify-between gap-3">
-          <span>{toast.label}</span>
+          <span class="min-w-0 wrap-break-word">{toast.label}</span>
           <!-- Hides the toast; whatever it reports carries on. -->
           <button
             class="hit relative flex shrink-0 cursor-pointer items-center justify-center text-ink hover:text-hi"
