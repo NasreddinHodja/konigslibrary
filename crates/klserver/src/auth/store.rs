@@ -28,7 +28,12 @@ const MAX_APPROVALS: i64 = 20;
 /// chapter isn't a database write per page.
 const TOUCH_EVERY: i64 = 60 * 60;
 
-const SCHEMA: &str = "
+/// The schema, one step per release that changed it: step `n` takes a
+/// database from `user_version` `n` to `n + 1`. Steps are only ever added,
+/// never edited, since databases out there have already run them. The first
+/// is `IF NOT EXISTS` because databases from before versioning have its
+/// tables at version 0.
+const MIGRATIONS: &[&str] = &["
   -- One admin for now; the CHECK keeps it that way.
   CREATE TABLE IF NOT EXISTS admin (
     id INTEGER PRIMARY KEY CHECK (id = 1),
@@ -72,7 +77,31 @@ const SCHEMA: &str = "
     -- 'pending', 'allowed' or 'denied'.
     state TEXT NOT NULL
   );
-";
+"];
+
+/// Brings the database at `conn` up to the last of `migrations`, each step in
+/// a transaction with its version, so a failed one leaves the version before
+/// it. A database from a newer release is refused rather than used with a
+/// schema this one doesn't know.
+fn migrate(conn: &mut Connection, migrations: &[&str]) -> rusqlite::Result<()> {
+  let version: usize = conn.pragma_query_value(None, "user_version", |r| r.get(0))?;
+  if version > migrations.len() {
+    return Err(rusqlite::Error::SqliteFailure(
+      rusqlite::ffi::Error::new(rusqlite::ffi::SQLITE_ERROR),
+      Some(format!(
+        "the auth database is at version {version}, from a newer release; this one knows {}",
+        migrations.len()
+      )),
+    ));
+  }
+  for (n, step) in migrations.iter().enumerate().skip(version) {
+    let tx = conn.transaction()?;
+    tx.execute_batch(step)?;
+    tx.pragma_update(None, "user_version", n + 1)?;
+    tx.commit()?;
+  }
+  Ok(())
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Kind {
@@ -175,8 +204,8 @@ impl Store {
         )
       })?;
     }
-    let conn = Connection::open(path)?;
-    conn.execute_batch(SCHEMA)?;
+    let mut conn = Connection::open(path)?;
+    migrate(&mut conn, MIGRATIONS)?;
     Ok(Self {
       conn: Mutex::new(conn),
     })
@@ -512,6 +541,101 @@ mod tests {
       Store::open(&path).unwrap().admin().unwrap().username,
       "alice"
     );
+  }
+
+  fn version(conn: &Connection) -> usize {
+    conn
+      .pragma_query_value(None, "user_version", |r| r.get(0))
+      .unwrap()
+  }
+
+  #[test]
+  fn a_new_database_is_at_the_last_version() {
+    let tmp = tempfile::tempdir().unwrap();
+    let path = tmp.path().join("auth.db");
+    Store::open(&path).unwrap();
+    assert_eq!(version(&Connection::open(&path).unwrap()), MIGRATIONS.len());
+  }
+
+  #[test]
+  fn a_database_from_before_versioning_keeps_its_admin() {
+    let tmp = tempfile::tempdir().unwrap();
+    let path = tmp.path().join("auth.db");
+    // As v0.10.3 left it: the tables, at user_version 0.
+    let conn = Connection::open(&path).unwrap();
+    conn.execute_batch(MIGRATIONS[0]).unwrap();
+    conn
+      .execute(
+        "INSERT INTO admin (id, username, password_hash) VALUES (1, 'alice', 'h')",
+        [],
+      )
+      .unwrap();
+    drop(conn);
+
+    assert_eq!(
+      Store::open(&path).unwrap().admin().unwrap().username,
+      "alice"
+    );
+    assert_eq!(version(&Connection::open(&path).unwrap()), MIGRATIONS.len());
+  }
+
+  #[test]
+  fn a_new_step_runs_once_on_an_existing_database() {
+    let mut conn = Connection::open_in_memory().unwrap();
+    migrate(&mut conn, &MIGRATIONS[..1]).unwrap();
+    conn
+      .execute(
+        "INSERT INTO admin (id, username, password_hash) VALUES (1, 'alice', 'h')",
+        [],
+      )
+      .unwrap();
+
+    // Adding the column twice would fail.
+    let next = [
+      MIGRATIONS[0],
+      "ALTER TABLE admin ADD COLUMN theme TEXT NOT NULL DEFAULT 'paper'",
+    ];
+    migrate(&mut conn, &next).unwrap();
+    migrate(&mut conn, &next).unwrap();
+
+    let (username, theme): (String, String) = conn
+      .query_row("SELECT username, theme FROM admin", [], |r| {
+        Ok((r.get(0)?, r.get(1)?))
+      })
+      .unwrap();
+    assert_eq!((username.as_str(), theme.as_str()), ("alice", "paper"));
+    assert_eq!(version(&conn), 2);
+  }
+
+  #[test]
+  fn a_failed_step_leaves_the_version_before_it() {
+    let mut conn = Connection::open_in_memory().unwrap();
+    let broken = "CREATE TABLE half (x INTEGER); NOT SQL";
+    assert!(migrate(&mut conn, &[MIGRATIONS[0], broken]).is_err());
+    assert_eq!(version(&conn), 1);
+    // Nothing of the failed step stays, so it can run again.
+    let half: i64 = conn
+      .query_row(
+        "SELECT count(*) FROM sqlite_master WHERE name = 'half'",
+        [],
+        |r| r.get(0),
+      )
+      .unwrap();
+    assert_eq!(half, 0);
+  }
+
+  #[test]
+  fn a_database_from_a_newer_release_is_refused() {
+    let tmp = tempfile::tempdir().unwrap();
+    let path = tmp.path().join("auth.db");
+    Store::open(&path).unwrap();
+    Connection::open(&path)
+      .unwrap()
+      .pragma_update(None, "user_version", MIGRATIONS.len() + 1)
+      .unwrap();
+
+    let err = Store::open(&path).err().unwrap().to_string();
+    assert!(err.contains("newer release"), "{err}");
   }
 
   #[test]

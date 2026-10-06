@@ -1,0 +1,135 @@
+#!/bin/sh
+# Installs or updates the headless server from a GitHub release, as root:
+#
+#   konigslibrary-update            the latest release
+#   konigslibrary-update v0.11.0    that release
+#   konigslibrary-update --rollback the release before the current one
+#
+# Each release is unpacked into /opt/konigslibrary/releases/<version> and
+# /opt/konigslibrary/current points at the one running, so an update never
+# overwrites the files being served, and a failed one goes back to the last.
+# The auth database is copied before every update; the library database is a
+# cache and isn't. See docs/guide/install.org, "On a server".
+set -eu
+
+REPO=NasreddinHodja/konigslibrary
+ROOT=/opt/konigslibrary
+STATE=/var/lib/konigslibrary
+PING=http://127.0.0.1:5511/api/ping
+KEEP=3
+
+die() {
+  echo "konigslibrary-update: $*" >&2
+  exit 1
+}
+
+[ "$(id -u)" = 0 ] || die "run it as root"
+mkdir -p "$ROOT/releases"
+
+running() {
+  [ -L "$ROOT/current" ] && basename "$(readlink "$ROOT/current")"
+}
+
+# The server answers within a few seconds of starting, or something's wrong.
+healthy() {
+  i=0
+  while [ $i -lt 15 ]; do
+    curl -fsS -o /dev/null "$PING" 2>/dev/null && return 0
+    i=$((i + 1))
+    sleep 1
+  done
+  return 1
+}
+
+switch() {
+  ln -sfn "releases/$1" "$ROOT/current.new"
+  mv -T "$ROOT/current.new" "$ROOT/current"
+  install -m 644 "$ROOT/current/konigslibrary.service" /etc/systemd/system/konigslibrary.service
+  ln -sfn "$ROOT/current/konigslibrary-update" /usr/local/sbin/konigslibrary-update
+  systemctl daemon-reload
+}
+
+previous=$(running || true)
+
+if [ "${1:-}" = --rollback ]; then
+  [ -n "$previous" ] || die "nothing installed"
+  target=$(ls -1 "$ROOT/releases" | sort -V | grep -Fx -B1 "$previous" | grep -Fxv "$previous" || true)
+  [ -n "$target" ] || die "no other release to go back to"
+  switch "$target"
+  systemctl restart konigslibrary
+  # An older release refuses an auth database a newer one migrated: then the
+  # copy taken when leaving it goes back, and what changed since is lost.
+  if ! healthy && [ -f "$STATE/konigslibrary-auth.db.$target" ]; then
+    echo "$target doesn't start with this auth database; restoring its copy." >&2
+    systemctl stop konigslibrary
+    cp -p "$STATE/konigslibrary-auth.db.$target" "$STATE/konigslibrary-auth.db"
+    systemctl start konigslibrary
+  fi
+  healthy || die "$target doesn't answer either; see journalctl -u konigslibrary"
+  echo "Rolled back from $previous to $target."
+  exit 0
+fi
+
+tag=${1:-$(curl -fsSL "https://api.github.com/repos/$REPO/releases/latest" |
+  sed -n 's/.*"tag_name": *"\([^"]*\)".*/\1/p')}
+[ -n "$tag" ] || die "couldn't find the latest release"
+version=${tag#v}
+
+if [ "$version" = "$previous" ]; then
+  echo "$version is already running."
+  exit 0
+fi
+
+tmp=$(mktemp -d)
+trap 'rm -rf "$tmp"' EXIT
+name="konigslibrary-server_${version}_linux_x86_64"
+echo "Downloading $tag..."
+curl -fsSL -o "$tmp/$name.tar.gz" \
+  "https://github.com/$REPO/releases/download/$tag/$name.tar.gz" ||
+  die "no $name.tar.gz in release $tag"
+tar -xzf "$tmp/$name.tar.gz" -C "$tmp" --no-same-owner
+[ -x "$tmp/$name/konigslibrary-server" ] || die "the archive has no server binary"
+
+rm -rf "$ROOT/releases/$version"
+mv "$tmp/$name" "$ROOT/releases/$version"
+chown -R root:root "$ROOT/releases/$version"
+
+id konigslibrary >/dev/null 2>&1 ||
+  useradd --system --no-create-home --shell /usr/sbin/nologin konigslibrary
+mkdir -p /srv/manga
+
+# Stopped first, so the copy of the auth database is a whole one.
+systemctl stop konigslibrary 2>/dev/null || true
+if [ -f "$STATE/konigslibrary-auth.db" ]; then
+  cp -p "$STATE/konigslibrary-auth.db" "$STATE/konigslibrary-auth.db.${previous:-old}"
+fi
+
+switch "$version"
+systemctl enable konigslibrary >/dev/null 2>&1
+systemctl start konigslibrary
+
+if ! healthy; then
+  if [ -n "$previous" ] && [ -d "$ROOT/releases/$previous" ]; then
+    echo "$version doesn't answer; going back to $previous." >&2
+    systemctl stop konigslibrary
+    cp -p "$STATE/konigslibrary-auth.db.$previous" "$STATE/konigslibrary-auth.db"
+    switch "$previous"
+    systemctl start konigslibrary
+  fi
+  die "$version failed to start; see journalctl -u konigslibrary"
+fi
+
+# The last few releases stay for --rollback, with their auth database copies.
+ls -1 "$ROOT/releases" | sort -V | head -n "-$KEEP" | while read -r old; do
+  rm -rf "${ROOT:?}/releases/$old"
+  rm -f "$STATE/konigslibrary-auth.db.$old"
+done
+
+# Before releases/ and current/, the server was unpacked straight into /opt.
+rm -rf "${ROOT:?}/konigslibrary-server" "${ROOT:?}/client"
+
+if [ -n "$previous" ]; then
+  echo "Updated from $previous to $version."
+else
+  echo "Installed $version."
+fi

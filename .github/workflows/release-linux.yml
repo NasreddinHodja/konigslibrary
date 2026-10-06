@@ -79,10 +79,27 @@ jobs:
           ./appimagetool --comp xz "$appdir" "dist/$name"
           echo "path=dist/$name" >> "$GITHUB_OUTPUT"
 
+      # The headless server for a VPS or NAS: the same binary and client
+      # build:sidecar made for the AppImage, which static_dir() finds next to
+      # it, with the systemd unit and the script that installs and updates it.
+      # Built on Ubuntu 24.04, so it needs that glibc or newer.
+      - name: Package headless server
+        id: server
+        run: |
+          version=$(bun -p "require('./package.json').version")
+          dir="konigslibrary-server_${version}_linux_x86_64"
+          mkdir -p "$dir"
+          cp -r src-tauri/binaries/konigslibrary-server-assets/. "$dir/"
+          cp deploy/konigslibrary.service deploy/konigslibrary-update "$dir/"
+          tar -czf "dist/$dir.tar.gz" "$dir"
+          echo "path=dist/$dir.tar.gz" >> "$GITHUB_OUTPUT"
+
       # Signed build provenance, checked with `gh attestation verify`.
       - uses: actions/attest@v4
         with:
-          subject-path: '${{ steps.appimage.outputs.path }}'
+          subject-path: |
+            ${{ steps.appimage.outputs.path }}
+            ${{ steps.server.outputs.path }}
 
       # Only this workflow writes the release notes (see cliff.toml); the
       # Windows and Android ones leave the body alone.
@@ -96,5 +113,7 @@ jobs:
         uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ inputs.tag || github.ref_name }}
-          files: ${{ steps.appimage.outputs.path }}
+          files: |
+            ${{ steps.appimage.outputs.path }}
+            ${{ steps.server.outputs.path }}
           body: ${{ steps.notes.outputs.content }}
