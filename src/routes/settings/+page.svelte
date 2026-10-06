@@ -149,7 +149,9 @@
   $effect(() => {
     const url = parseServerUrl(serverUrl);
     connectError = null;
-    if (!url) {
+    // The connected server isn't probed: the account below already says
+    // whether it's reachable.
+    if (!url || url === getServerUrl()) {
       probeStatus = 'idle';
       return;
     }

@@ -6,7 +6,7 @@ import Settings from './+page.svelte';
 import { resetBindings, resolveKey } from '$lib/keyboard/keybindings.svelte';
 import { applyTheme, PRESETS } from '$lib/theme';
 import { getToasts } from '$lib/ui/toast.svelte';
-import { fakeServer, json } from '$lib/testing/server';
+import { fakeServer, json, serverDown } from '$lib/testing/server';
 import { mockApp } from '$lib/testing/tauri';
 
 // SvelteKit's router isn't running: navigation is recorded, and the page
@@ -321,6 +321,17 @@ describe('settings in the app', () => {
     await vi.waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('Server found'), {
       timeout: 2000
     });
+    expect(serverUrlBox()).toHaveAttribute('aria-invalid', 'false');
+  });
+
+  it("leaves the connected server's reachability to the account", async () => {
+    mockApp();
+    localStorage.setItem('kl:serverUrl', 'http://192.168.1.5:3000');
+    serverDown();
+    render(Settings);
+    expect(await screen.findByRole('alert')).toHaveTextContent('Failed to fetch');
+    await new Promise((r) => setTimeout(r, 600));
+    expect(screen.getAllByText('Failed to fetch')).toHaveLength(1);
     expect(serverUrlBox()).toHaveAttribute('aria-invalid', 'false');
   });
 
