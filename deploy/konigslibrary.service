@@ -1,6 +1,6 @@
 # The headless server on a VPS, behind a reverse proxy on the same host.
-# Unpack the release's konigslibrary-server_*_linux_x86_64.tar.gz into
-# /opt/konigslibrary (binary and client/ side by side) and put the manga in
+# Installed and updated by konigslibrary-update, which ships next to it in the
+# release's konigslibrary-server_*_linux_x86_64.tar.gz; the manga goes in
 # /srv/manga. See docs/guide/install.org, "On a server".
 [Unit]
 Description=konigslibrary manga server
@@ -21,7 +21,7 @@ Environment=PORT=5511
 Environment=KL_TRUSTED_PROXIES=127.0.0.1
 Environment=MANGA_DIR=/srv/manga
 Environment=NO_BROWSER=1
-ExecStart=/opt/konigslibrary/konigslibrary-server
+ExecStart=/opt/konigslibrary/current/konigslibrary-server
 Restart=on-failure
 RestartSec=3
 

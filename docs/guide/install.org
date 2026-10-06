@@ -74,20 +74,27 @@ Without =KL_TRUSTED_PROXIES=, every client looks like the proxy: one person's fa
 
 ** On a server
 
-Each release has =konigslibrary-server_<version>_linux_x86_64.tar.gz=: the binary with the built frontend in =client/= next to it, where it finds it without =KL_STATIC_DIR=. It's built on Ubuntu 24.04, so it needs that glibc or newer.
+Each release has =konigslibrary-server_<version>_linux_x86_64.tar.gz=: the binary with the built frontend in =client/= next to it, where it finds it without =KL_STATIC_DIR=, plus =konigslibrary.service= and =konigslibrary-update=. It's built on Ubuntu 24.04, so it needs that glibc or newer.
 
-=deploy/konigslibrary.service= is a sandboxed systemd system unit for it: it runs as a =konigslibrary= system user, from =/opt/konigslibrary=, keeps =konigslibrary.json= and both databases in =/var/lib/konigslibrary=, reads the manga from =/srv/manga= and can't write anywhere else. It listens on =127.0.0.1:5511= for a reverse proxy on the same host.
+=konigslibrary.service= is a sandboxed systemd system unit: it runs as a =konigslibrary= system user, keeps =konigslibrary.json= and both databases in =/var/lib/konigslibrary=, reads the manga from =/srv/manga= and can't write anywhere else. It listens on =127.0.0.1:5511= for a reverse proxy on the same host.
+
+=konigslibrary-update= installs and updates it, as root. The first time, from the release's archive:
 
 #+begin_src sh
-sudo useradd --system --no-create-home --shell /usr/sbin/nologin konigslibrary
-sudo mkdir -p /opt/konigslibrary /srv/manga
-curl -fsSL https://github.com/NasreddinHodja/konigslibrary/releases/download/v<version>/konigslibrary-server_<version>_linux_x86_64.tar.gz \
-  | sudo tar -xz -C /opt/konigslibrary --strip-components=1
-sudo install -m 644 deploy/konigslibrary.service /etc/systemd/system/
-sudo systemctl daemon-reload
-sudo systemctl enable --now konigslibrary
+tar -xzf konigslibrary-server_<version>_linux_x86_64.tar.gz
+sudo konigslibrary-server_<version>_linux_x86_64/konigslibrary-update v<version>
 sudo journalctl -u konigslibrary   # the setup token
 #+end_src
+
+It creates the user and =/srv/manga=, unpacks the release into =/opt/konigslibrary/releases/<version>=, points =/opt/konigslibrary/current= at it, installs the unit and links itself as =/usr/local/sbin/konigslibrary-update=. After that:
+
+#+begin_src sh
+sudo konigslibrary-update              # the latest release
+sudo konigslibrary-update v0.11.0      # a given one
+sudo konigslibrary-update --rollback   # the one before
+#+end_src
+
+An update stops the server, copies the auth database to =konigslibrary-auth.db.<old version>=, switches =current= and starts it. If the new one doesn't answer =/api/ping= within 15 seconds, it goes back to the old release and its copy of the database. The last three releases are kept. =--rollback= switches back and keeps the database, unless the older release refuses it: a release that changed the auth database's schema migrates it on start, and a release from before refuses a database newer than it knows. Then =--rollback= restores the copy taken when leaving that release, and logins, sessions and password changes since are lost.
 
 With Caddy, which gets the certificate and sends the headers the server needs:
 
@@ -97,10 +104,10 @@ library.example.com {
 }
 #+end_src
 
-To upgrade, unpack the new release over =/opt/konigslibrary= the same way and =sudo systemctl restart konigslibrary=. To reset the admin, run it as the service's user, from its directory:
+To reset the admin, run it as the service's user, from its directory:
 
 #+begin_src sh
-sudo -u konigslibrary sh -c 'cd /var/lib/konigslibrary && /opt/konigslibrary/konigslibrary-server reset-admin'
+sudo -u konigslibrary sh -c 'cd /var/lib/konigslibrary && /opt/konigslibrary/current/konigslibrary-server reset-admin'
 sudo systemctl restart konigslibrary
 #+end_src
 
