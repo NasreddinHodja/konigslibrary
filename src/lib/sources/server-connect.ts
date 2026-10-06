@@ -1,9 +1,20 @@
 import { getServerToken, setServer } from '$lib/utils/constants';
 
+/// Whether a typed host is on the local network: an IP address, `localhost`,
+/// a name without dots (IPv6 addresses have none), or an mDNS `.local` name.
+/// Those get `http://`, as Share to LAN serves; any other name is a server on
+/// the internet, and gets `https://`.
+function isLocalHost(host: string): boolean {
+  const name = host.replace(/:\d+$/, '');
+  return /^\d{1,3}(\.\d{1,3}){3}$/.test(name) || !name.includes('.') || /\.local$/i.test(name);
+}
+
 export function normalizeServerUrl(url: string): string {
   const trimmed = url.trim().replace(/\/+$/, '');
   if (!trimmed) return '';
-  return /^[a-z][a-z0-9+.-]*:\/\//i.test(trimmed) ? trimmed : `http://${trimmed}`;
+  if (/^[a-z][a-z0-9+.-]*:\/\//i.test(trimmed)) return trimmed;
+  const host = trimmed.split('/')[0];
+  return `${isLocalHost(host) ? 'http' : 'https'}://${trimmed}`;
 }
 
 /// The server URL in a typed or pasted address, without any query: a link

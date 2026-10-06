@@ -11,6 +11,24 @@ describe('parseServerUrl', () => {
     expect(parseServerUrl(' http://host:3000/ ')).toBe('http://host:3000');
   });
 
+  it('takes a bare domain for a server on the internet, over HTTPS', () => {
+    expect(parseServerUrl('klserver.nassu.red')).toBe('https://klserver.nassu.red');
+    expect(parseServerUrl('library.example.com:5511/manga')).toBe(
+      'https://library.example.com:5511/manga'
+    );
+  });
+
+  it('takes a bare local address over HTTP, as Share to LAN serves', () => {
+    expect(parseServerUrl('localhost:3000')).toBe('http://localhost:3000');
+    expect(parseServerUrl('nas:5511')).toBe('http://nas:5511');
+    expect(parseServerUrl('nas.local:5511')).toBe('http://nas.local:5511');
+    expect(parseServerUrl('[fe80::1]:3000')).toBe('http://[fe80::1]:3000');
+  });
+
+  it('keeps the scheme it is given', () => {
+    expect(parseServerUrl('http://klserver.nassu.red')).toBe('http://klserver.nassu.red');
+  });
+
   it('keeps a path the server sits under', () => {
     expect(parseServerUrl('https://example.com/manga/')).toBe('https://example.com/manga');
   });
