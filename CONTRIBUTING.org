@@ -75,6 +75,8 @@ Plain modules are tested in Node (=*.test.ts=). Components, and modules using ru
 
 =e2e/= drives the self-hosted app in Chromium with Playwright, against the library =dev:sim= generates: browsing, searching, reading, and progress across a reload. Each page it visits is also checked with axe for WCAG 2.1 A and AA violations; page zoom is exempt, since the reader pinches its pages itself. Its tests use the fixed =Order - …= manga, which don't change with =--count=. The first run needs =bunx playwright install chromium=.
 
+Coverage in October 2026: 92% of the Rust crates' lines, 76% of the frontend's; each CI run reports the current figures. Every test file was mutation-checked: each behaviour it covers was broken on purpose, to make sure a test fails.
+
 =bun run coverage:rust= needs =cargo-llvm-cov= and the =llvm-tools-preview= component.
 
 The budgets run on the public site's build: =STATIC_BUILD=1 bun run build=, then =bun scripts/bundle-budget.js= and =bunx lhci autorun=. Lighthouse needs Chrome or Chromium, through =CHROME_PATH= if it isn't found.
