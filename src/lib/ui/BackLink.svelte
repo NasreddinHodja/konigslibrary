@@ -11,11 +11,18 @@
   } = $props();
 
   const linkClass =
-    'hit relative flex w-fit cursor-pointer items-center gap-2 text-ink hover:text-hi hover:underline';
+    'hit relative flex w-fit cursor-pointer items-center text-ink hover:text-hi hover:underline';
+  // The chevron in the reader's back button's box, so it's as far from the
+  // edge as from the label.
+  const iconClass = 'flex size-8 shrink-0 items-center justify-center pointer-coarse:size-10';
 </script>
 
 {#if href}
-  <a {href} class={linkClass}><Icon name="back" size={18} />{label}</a>
+  <a {href} class={linkClass}
+    ><span class={iconClass}><Icon name="back" size={18} /></span>{label}</a
+  >
 {:else}
-  <button class={linkClass} {onclick}><Icon name="back" size={18} />{label}</button>
+  <button class={linkClass} {onclick}
+    ><span class={iconClass}><Icon name="back" size={18} /></span>{label}</button
+  >
 {/if}
