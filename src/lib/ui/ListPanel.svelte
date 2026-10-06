@@ -64,14 +64,17 @@
   let indicator: HTMLDivElement | undefined = $state();
   let embla: EmblaCarouselType | undefined;
 
-  /// Puts the tab underline at `progress` across the tabs, 0 being the first
-  /// and 1 the last: in step with the pages while they are dragged, the way
-  /// Android's tab bar tracks its pager. Set directly, not through state, so
-  /// it costs nothing per frame.
+  /// Puts the tab fill at `progress` across the tabs, 0 being the first and 1
+  /// the last: in step with the pages while they are dragged, the way
+  /// Android's tab bar tracks its pager. The fill is the whole bar inverted,
+  /// clipped to one tab's width, so the labels change colour where its edge
+  /// crosses them. Set directly, not through state, so it costs nothing per
+  /// frame.
   function moveIndicator(progress: number) {
     if (!indicator || tabs.length < 2) return;
     const p = Math.min(1, Math.max(0, progress));
-    indicator.style.transform = `translateX(${p * (tabs.length - 1) * 100}%)`;
+    const left = (p * (tabs.length - 1) * 100) / tabs.length;
+    indicator.style.clipPath = `inset(0 ${100 - left - 100 / tabs.length}% 0 ${left}%)`;
   }
 
   $effect(() => {
@@ -216,27 +219,36 @@
 
       {#if tabs.length > 1}
         <div class="relative flex border border-ink" role="tablist">
-          <!-- The current tab's fill, following the pages as they're dragged. -->
-          <div
-            bind:this={indicator}
-            class="pointer-events-none absolute inset-y-0 left-0 bg-ink will-change-transform"
-            style:width="{100 / tabs.length}%"
-          ></div>
           {#each tabs as t, i (t.key)}
             <button
               role="tab"
               aria-selected={activeTab === t.key}
-              class="relative h-8 flex-1 cursor-pointer pointer-coarse:h-10 {i > 0
+              class="relative h-8 flex-1 cursor-pointer text-ink hover:text-hi pointer-coarse:h-10 {i >
+              0
                 ? 'border-l border-ink'
-                : ''} {activeTab === t.key ? 'text-bg' : 'text-ink hover:text-hi'}"
+                : ''}"
               onclick={() => ontab?.(t.key)}
             >
-              <span class="inline-flex items-center gap-2">
-                {t.label}
-                {@render t.badge?.()}
-              </span>
+              {@render tabLabel(t)}
             </button>
           {/each}
+          <!-- The current tab's fill, following the pages as they're dragged:
+               the labels again, inverted, over the tabs. -->
+          <div
+            bind:this={indicator}
+            aria-hidden="true"
+            class="pointer-events-none absolute inset-0 flex bg-ink text-bg"
+          >
+            {#each tabs as t, i (t.key)}
+              <div
+                class="flex h-8 flex-1 items-center justify-center pointer-coarse:h-10 {i > 0
+                  ? 'border-l border-ink'
+                  : ''}"
+              >
+                {@render tabLabel(t)}
+              </div>
+            {/each}
+          </div>
         </div>
       {/if}
     </div>
@@ -276,6 +288,13 @@
     {@render toTop(farInFlow, () => root?.scrollIntoView({ behavior: 'smooth' }))}
   {/if}
 </div>
+
+{#snippet tabLabel(t: { label: string; badge?: Snippet })}
+  <span class="inline-flex items-center gap-2">
+    {t.label}
+    {@render t.badge?.()}
+  </span>
+{/snippet}
 
 {#snippet toTop(show: boolean, onclick: (e: MouseEvent) => void)}
   <!-- Takes no room. A `fill` page's list runs to the bottom of its scroll,
