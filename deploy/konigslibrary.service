@@ -1,0 +1,55 @@
+# The headless server on a VPS, behind a reverse proxy on the same host.
+# Unpack the release's konigslibrary-server_*_linux_x86_64.tar.gz into
+# /opt/konigslibrary (binary and client/ side by side) and put the manga in
+# /srv/manga. See docs/guide/install.org, "On a server".
+[Unit]
+Description=konigslibrary manga server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=konigslibrary
+Group=konigslibrary
+# konigslibrary.json and both databases live in the working directory:
+# /var/lib/konigslibrary, created and owned by the service.
+StateDirectory=konigslibrary
+StateDirectoryMode=0700
+WorkingDirectory=/var/lib/konigslibrary
+Environment=HOST=127.0.0.1
+Environment=PORT=5511
+Environment=KL_TRUSTED_PROXIES=127.0.0.1
+Environment=MANGA_DIR=/srv/manga
+Environment=NO_BROWSER=1
+ExecStart=/opt/konigslibrary/konigslibrary-server
+Restart=on-failure
+RestartSec=3
+
+# Sandbox: the whole system read-only except the state directory, the manga
+# read-only, no home directories, no way to gain privileges.
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadOnlyPaths=/srv/manga
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallFilter=~@privileged @resources
+CapabilityBoundingSet=
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

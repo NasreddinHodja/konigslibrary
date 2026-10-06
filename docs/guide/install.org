@@ -41,7 +41,7 @@ KL_STATIC_DIR=./build-local MANGA_DIR=~/Manga NO_BROWSER=1 \
   crates/target/release/konigslibrary-server
 #+end_src
 
-=konigslibrary.service= in the repo is a systemd user unit that does this.
+=konigslibrary.service= in the repo is a systemd user unit that does this; for a server, see [[*On a server][On a server]].
 
 The manga directory can also be set from Settings in the UI, which saves it to =konigslibrary.json= in the working directory.
 
@@ -71,6 +71,40 @@ HOST=127.0.0.1 KL_TRUSTED_PROXIES=127.0.0.1 crates/target/release/konigslibrary-
 #+end_src
 
 Without =KL_TRUSTED_PROXIES=, every client looks like the proxy: one person's failed logins, even with a wrong username, lock out every device that hasn't logged in before, and neither the =Secure= cookie flag nor HSTS is sent. =Host $host= matters only for browsers too old to send =Sec-Fetch-Site=, whose logins are otherwise refused as cross-site. See [[file:../api/http.org::*Behind a reverse proxy][HTTP server]] for exactly what's believed.
+
+** On a server
+
+Each release has =konigslibrary-server_<version>_linux_x86_64.tar.gz=: the binary with the built frontend in =client/= next to it, where it finds it without =KL_STATIC_DIR=. It's built on Ubuntu 24.04, so it needs that glibc or newer.
+
+=deploy/konigslibrary.service= is a sandboxed systemd system unit for it: it runs as a =konigslibrary= system user, from =/opt/konigslibrary=, keeps =konigslibrary.json= and both databases in =/var/lib/konigslibrary=, reads the manga from =/srv/manga= and can't write anywhere else. It listens on =127.0.0.1:5511= for a reverse proxy on the same host.
+
+#+begin_src sh
+sudo useradd --system --no-create-home --shell /usr/sbin/nologin konigslibrary
+sudo mkdir -p /opt/konigslibrary /srv/manga
+curl -fsSL https://github.com/NasreddinHodja/konigslibrary/releases/download/v<version>/konigslibrary-server_<version>_linux_x86_64.tar.gz \
+  | sudo tar -xz -C /opt/konigslibrary --strip-components=1
+sudo install -m 644 deploy/konigslibrary.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now konigslibrary
+sudo journalctl -u konigslibrary   # the setup token
+#+end_src
+
+With Caddy, which gets the certificate and sends the headers the server needs:
+
+#+begin_src caddy
+library.example.com {
+	reverse_proxy 127.0.0.1:5511
+}
+#+end_src
+
+To upgrade, unpack the new release over =/opt/konigslibrary= the same way and =sudo systemctl restart konigslibrary=. To reset the admin, run it as the service's user, from its directory:
+
+#+begin_src sh
+sudo -u konigslibrary sh -c 'cd /var/lib/konigslibrary && /opt/konigslibrary/konigslibrary-server reset-admin'
+sudo systemctl restart konigslibrary
+#+end_src
+
+In the app, enter the address with its =https://=: without a scheme it's taken as =http://=.
 
 ** Upgrading from the access key
 
