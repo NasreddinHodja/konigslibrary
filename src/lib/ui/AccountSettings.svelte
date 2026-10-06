@@ -124,7 +124,7 @@
   {#if loadError}
     <p role="alert" class="text-ink">► <span>{loadError}</span></p>
   {:else if me === undefined}
-    <Skeleton class="h-8 w-full" />
+    <Skeleton class="h-8 w-full pointer-coarse:h-10" />
   {:else if me === null}
     <div class="flex items-center justify-between gap-3">
       <p>Not logged in.</p>
