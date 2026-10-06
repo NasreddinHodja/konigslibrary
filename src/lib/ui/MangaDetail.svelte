@@ -301,9 +301,13 @@
 
 {#snippet chapterGrid()}
   {#if filteredChapters.length === 0}
-    <p class="py-8 text-center text-dim" in:fade={{ duration: ANIM_DURATION, easing: ANIM_EASE }}>
-      No chapters match "{search}"
-    </p>
+    <div
+      class="flex flex-col items-center gap-2 py-8 text-center text-dim"
+      in:fade={{ duration: ANIM_DURATION, easing: ANIM_EASE }}
+    >
+      <span class="mb-2 text-ink"><Icon name="noResults" size={48} /></span>
+      <p>No chapters match "{search}"</p>
+    </div>
   {:else}
     <!-- Android scrolls ahead of the main thread, so rows added from a
          scroll handler can arrive late on a fling: tiles are kept five

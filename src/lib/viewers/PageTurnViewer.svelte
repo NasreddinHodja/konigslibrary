@@ -450,7 +450,10 @@
   {#if chapter.loading}
     <Loader />
   {:else if chapter.error}
-    <p class="py-8 text-center text-sm text-dim">Failed to load chapter: {chapter.error}</p>
+    <div class="flex flex-col items-center gap-2 py-8 text-center text-sm text-dim">
+      <span class="mb-2 text-ink"><Icon name="warning" size={48} /></span>
+      <p>Failed to load chapter: {chapter.error}</p>
+    </div>
   {:else}
     {#each panels as panel (panel.key)}
       <div

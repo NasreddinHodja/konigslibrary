@@ -1,5 +1,6 @@
 <script lang="ts">
   import Icon from '$lib/ui/Icon.svelte';
+  import type { IconName } from '$lib/ui/icons';
   import { Channel } from '@tauri-apps/api/core';
   import { untrack } from 'svelte';
   import { fade, type TransitionConfig } from 'svelte/transition';
@@ -682,22 +683,31 @@
   {:else if !deviceError || t !== 'device'}
     <div class="flex flex-1 flex-col items-center justify-center gap-2 py-12 text-center">
       {#if tabs.length === 0}
+        {@render emptyIcon('plug')}
         <p>No manga sources configured</p>
         <p class="text-dim">
           <a href="/settings" class="text-ink underline hover:text-hi">Set one up in Settings</a>
         </p>
       {:else if searchQuery.trim()}
+        {@render emptyIcon('noResults')}
         <p>No results for "{searchQuery.trim()}"</p>
       {:else if t === 'server' && serverStatus() === 'offline'}
+        {@render emptyIcon('offline')}
         <p>Server unreachable</p>
       {:else if t === 'device' && !mangaDir}
+        {@render emptyIcon('book')}
         <p>No manga on this device yet</p>
         <p class="text-dim">Download some from the server</p>
       {:else}
+        {@render emptyIcon('empty')}
         <p>No manga found</p>
       {/if}
     </div>
   {/if}
+{/snippet}
+
+{#snippet emptyIcon(name: IconName)}
+  <span class="mb-2 text-ink"><Icon {name} size={48} /></span>
 {/snippet}
 
 <!-- The title row. One height in both modes, so the list doesn't jump. -->

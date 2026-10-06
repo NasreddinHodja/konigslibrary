@@ -122,7 +122,10 @@
         </button>
       {/each}
     {:else}
-      <p class="p-3 text-dim">No subdirectories</p>
+      <div class="flex flex-col items-center gap-2 p-6 text-center text-dim">
+        <span class="mb-2 text-ink"><Icon name="folder" size={48} /></span>
+        <p>No subdirectories</p>
+      </div>
     {/if}
   </div>
 

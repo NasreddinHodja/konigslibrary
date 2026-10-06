@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Icon from '$lib/ui/Icon.svelte';
   import { getReaderContext } from '$lib/context';
   import type { ViewerProps } from './types';
   import { DEFAULT_PAGE_RATIO, reducedMotion } from '$lib/utils/constants';
@@ -147,7 +148,10 @@
   {#if chapter.loading}
     <Loader />
   {:else if chapter.error}
-    <p class="py-8 text-center text-sm text-dim">Failed to load chapter: {chapter.error}</p>
+    <div class="flex flex-col items-center gap-2 py-8 text-center text-sm text-dim">
+      <span class="mb-2 text-ink"><Icon name="warning" size={48} /></span>
+      <p>Failed to load chapter: {chapter.error}</p>
+    </div>
   {:else}
     <div aria-hidden="true" style="height: {topPad}px; flex-shrink: 0"></div>
     {#each chapter.pageUrls as src, i (i)}
