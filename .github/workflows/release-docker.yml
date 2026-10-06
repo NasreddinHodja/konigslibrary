@@ -1,0 +1,171 @@
+name: Release Docker
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to build, e.g. v0.10.5'
+        required: true
+
+permissions:
+  contents: read
+  packages: write
+  # actions/attest: OIDC token for the Sigstore certificate, storing the
+  # attestation, and the artifact storage record.
+  id-token: write
+  attestations: write
+  artifact-metadata: write
+
+env:
+  IMAGE: ghcr.io/nasreddinhodja/konigslibrary
+
+jobs:
+  # The server binary, built natively on each architecture: no cross
+  # toolchain, and each links against Ubuntu 24.04's glibc, the image's.
+  server:
+    strategy:
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            arch: amd64
+          - runner: ubuntu-24.04-arm
+            arch: arm64
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: crates
+
+      - run: cargo build --manifest-path crates/Cargo.toml -p klserver --release
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: server-${{ matrix.arch }}
+          path: crates/target/release/konigslibrary-server
+          if-no-files-found: error
+
+  # The frontend the server serves; the same on every architecture.
+  client:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+
+      - uses: oven-sh/setup-bun@v2
+
+      # The archive parser is a Rust crate compiled to wasm, same as ci.yml.
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: crates
+
+      # Must match the wasm-bindgen version pinned in crates/klwasm/Cargo.toml.
+      - run: cargo install -f wasm-bindgen-cli --version 0.2.99
+
+      - run: bun install --frozen-lockfile
+
+      - run: bun run build:local
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: client
+          path: build-local
+          if-no-files-found: error
+
+  image:
+    needs: [server, client]
+    runs-on: ubuntu-24.04
+    outputs:
+      digest: ${{ steps.push.outputs.digest }}
+    steps:
+      # The Dockerfile from the workflow's own commit, so a manual run can
+      # package a tag from before it existed.
+      - uses: actions/checkout@v7
+
+      - uses: actions/download-artifact@v8
+        with:
+          path: artifacts
+
+      - name: Assemble the build context
+        run: |
+          mkdir -p context/config
+          mv artifacts/client context/client
+          for arch in amd64 arm64; do
+            mv "artifacts/server-$arch/konigslibrary-server" "context/konigslibrary-server-$arch"
+          done
+
+      - uses: docker/setup-buildx-action@v4
+
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # 1.2.3 and latest from tag v1.2.3.
+      - id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ${{ env.IMAGE }}
+          tags: |
+            type=semver,pattern={{version}},value=${{ inputs.tag || github.ref_name }}
+
+      - id: push
+        uses: docker/build-push-action@v7
+        with:
+          context: context
+          file: deploy/docker/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+      # Signed build provenance, checked with `gh attestation verify oci://…`.
+      - uses: actions/attest@v4
+        with:
+          subject-name: ${{ env.IMAGE }}
+          subject-digest: ${{ steps.push.outputs.digest }}
+          push-to-registry: true
+
+  # The pushed image, started on each architecture: it has to answer and
+  # print the setup token, or the release fails.
+  smoke:
+    needs: image
+    strategy:
+      matrix:
+        runner: [ubuntu-24.04, ubuntu-24.04-arm]
+    runs-on: ${{ matrix.runner }}
+    steps:
+      # A package new to ghcr may start out private.
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run the image
+        env:
+          REF: ${{ env.IMAGE }}@${{ needs.image.outputs.digest }}
+        run: |
+          docker run -d --name kl --init -p 5511:5511 "$REF"
+          for _ in $(seq 30); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:5511/api/ping || true)
+            [ "$code" = 204 ] && break
+            sleep 1
+          done
+          docker logs kl
+          [ "$code" = 204 ] || { echo "No answer from /api/ping"; exit 1; }
+          docker logs kl 2>&1 | grep -q 'setup token' || { echo "No setup token"; exit 1; }
