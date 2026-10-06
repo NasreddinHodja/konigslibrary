@@ -51,7 +51,7 @@ On first run, the server prints a setup token: open its page and create the admi
 
 To serve HTTPS itself, point =KL_TLS_CERT= at the certificate's full chain and =KL_TLS_KEY= at its private key, both PEM; Let's Encrypt's =fullchain.pem= and =privkey.pem= work as they are. The files are checked every minute, so a renewed certificate is picked up without a restart. A renewal caught half-written keeps the old certificate until both files load.
 
-Responses over HTTPS carry HSTS for two years, without =includeSubDomains=. Without these variables the server speaks plain HTTP, which on anything but a network you trust sends the password and sessions in the clear.
+Responses over HTTPS carry HSTS for two years, without =includeSubDomains=. Without these variables the server speaks plain HTTP, which on anything but a network you trust sends the password and sessions in the clear. When it does on a public address, with no =KL_TRUSTED_PROXIES= saying a proxy adds HTTPS in front, it prints a warning on start.
 
 ** Behind a reverse proxy
 
@@ -74,7 +74,7 @@ Without =KL_TRUSTED_PROXIES=, every client looks like the proxy: one person's fa
 
 ** On a server
 
-Each release has =konigslibrary-server_<version>_linux_x86_64.tar.gz=: the binary with the built frontend in =client/= next to it, where it finds it without =KL_STATIC_DIR=, plus =konigslibrary.service= and =konigslibrary-update=. It's built on Ubuntu 24.04, so it needs that glibc or newer.
+Each release has =konigslibrary-server_<version>_linux_x86_64.tar.gz=: the binary with the built frontend in =client/= next to it, where it finds it without =KL_STATIC_DIR=, plus =konigslibrary.service=, =konigslibrary-update= and the timer that runs it daily. It's built on Ubuntu 24.04, so it needs that glibc or newer.
 
 =konigslibrary.service= is a sandboxed systemd system unit: it runs as a =konigslibrary= system user, keeps =konigslibrary.json= and both databases in =/var/lib/konigslibrary=, reads the manga from =/srv/manga= and can't write anywhere else. It listens on =127.0.0.1:5511= for a reverse proxy on the same host.
 
@@ -94,7 +94,9 @@ sudo konigslibrary-update v0.11.0      # a given one
 sudo konigslibrary-update --rollback   # the one before
 #+end_src
 
-An update stops the server, copies the auth database to =konigslibrary-auth.db.<old version>=, switches =current= and starts it. If the new one doesn't answer =/api/ping= within 15 seconds, it goes back to the old release and its copy of the database. The last three releases are kept. =--rollback= switches back and keeps the database, unless the older release refuses it: a release that changed the auth database's schema migrates it on start, and a release from before refuses a database newer than it knows. Then =--rollback= restores the copy taken when leaving that release, and logins, sessions and password changes since are lost.
+An update stops the server, copies the auth database to =konigslibrary-auth.db.<old version>=, switches =current= and starts it. If the new one doesn't answer =/api/ping= within 15 seconds, it goes back to the old release and its copy of the database. The last three releases are kept.
+
+=konigslibrary-update.timer= runs it once a day, at a random time in the hour after midnight, and catches up after the server was off. It's enabled the first time it's installed; to update only by hand, =sudo systemctl disable --now konigslibrary-update.timer=, and later updates leave it off. What it did is in =journalctl -u konigslibrary-update=. =--rollback= switches back and keeps the database, unless the older release refuses it: a release that changed the auth database's schema migrates it on start, and a release from before refuses a database newer than it knows. Then =--rollback= restores the copy taken when leaving that release, and logins, sessions and password changes since are lost.
 
 With Caddy, which gets the certificate and sends the headers the server needs:
 
@@ -112,6 +114,28 @@ sudo systemctl restart konigslibrary
 #+end_src
 
 In the app, enter the address with its =https://=: without a scheme it's taken as =http://=.
+
+** Docker
+
+Each release publishes =ghcr.io/nasreddinhodja/konigslibrary= for amd64 and arm64, tagged with its version and =latest=. It runs as user 1000, listens on port 5511, keeps =konigslibrary.json= and both databases in =/config=, and reads the manga from =/manga=. With Compose:
+
+#+begin_src yaml
+services:
+  konigslibrary:
+    image: ghcr.io/nasreddinhodja/konigslibrary:latest
+    # Passes on docker stop; the server doesn't handle signals as PID 1.
+    init: true
+    ports:
+      - '5511:5511'
+    volumes:
+      - ./config:/config
+      - /path/to/manga:/manga:ro
+    restart: unless-stopped
+#+end_src
+
+Create =./config= before the first start, owned by user 1000; if yours is another, add =user: '<uid>:<gid>'= with it. The setup token is in =docker logs konigslibrary=. To reset the admin: =docker exec konigslibrary /app/konigslibrary-server reset-admin=, then restart the container.
+
+To update, pull the new image and recreate the container: =docker compose pull && docker compose up -d=. As on a server, a port open to the internet needs HTTPS in front: a reverse proxy with =KL_TRUSTED_PROXIES= set to its address (see [[*Behind a reverse proxy][Behind a reverse proxy]]), or =KL_TLS_CERT= and =KL_TLS_KEY=.
 
 ** Upgrading from the access key
 

@@ -29,6 +29,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     return reset_admin(&config);
   }
   let proxies = TrustedProxies::parse(&std::env::var("KL_TRUSTED_PROXIES").unwrap_or_default())?;
+  let proxied = !proxies.is_empty();
   // Unlike the library database, no fallback: sessions in a temp directory
   // would vanish, and the admin with them.
   let tls = tls::Files::from_env()?;
@@ -78,6 +79,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
   // keeps its sidecar's output in a log users paste into bug reports.
   let setup_token = state.auth.setup_token().filter(|_| preset.is_none());
   print_banner(scheme, bound.port(), setup_token.as_deref());
+  if let Some(warning) = tls::plain_http_warning(tls.is_some(), proxied, bound.ip(), outward_ip()) {
+    eprintln!("[konigslibrary] Warning: {warning}\n");
+  }
   if std::env::var("NO_BROWSER").is_err() {
     open_browser(scheme, bound.port());
   }
@@ -147,19 +151,21 @@ fn print_banner(scheme: &str, port: u16, setup_token: Option<&str>) {
 /// Every non-loopback IPv4 address on the host, so the user can see which URL
 /// to open on their phone.
 fn lan_addresses() -> Vec<String> {
-  // Reading the routing table would need a dependency; asking the OS which
-  // local address it would use to reach the internet gets the same answer for
-  // the single-interface case that matters here. No packet is sent.
-  let Ok(socket) = std::net::UdpSocket::bind("0.0.0.0:0") else {
-    return Vec::new();
-  };
-  if socket.connect("8.8.8.8:80").is_err() {
-    return Vec::new();
-  }
-  match socket.local_addr() {
-    Ok(addr) if !addr.ip().is_loopback() => vec![addr.ip().to_string()],
-    _ => Vec::new(),
-  }
+  outward_ip()
+    .filter(|ip| !ip.is_loopback())
+    .map(|ip| ip.to_string())
+    .into_iter()
+    .collect()
+}
+
+/// The IPv4 address the host reaches the internet from. Reading the routing
+/// table would need a dependency; asking the OS which local address it would
+/// use gets the same answer for the single-interface case that matters here.
+/// No packet is sent.
+fn outward_ip() -> Option<std::net::IpAddr> {
+  let socket = std::net::UdpSocket::bind("0.0.0.0:0").ok()?;
+  socket.connect("8.8.8.8:80").ok()?;
+  socket.local_addr().ok().map(|addr| addr.ip())
 }
 
 fn open_browser(scheme: &str, port: u16) {

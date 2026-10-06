@@ -68,6 +68,10 @@ impl TrustedProxies {
     Ok(Self(ranges))
   }
 
+  pub fn is_empty(&self) -> bool {
+    self.0.is_empty()
+  }
+
   fn trusts(&self, ip: IpAddr) -> bool {
     let ip = canonical(ip);
     self.0.iter().any(|&range| in_range(ip, range))

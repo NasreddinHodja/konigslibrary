@@ -1,0 +1,10 @@
+# Runs konigslibrary-update for konigslibrary-update.timer: the latest release,
+# if it isn't the one running, with its health check and rollback.
+[Unit]
+Description=Update konigslibrary to the latest release
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/konigslibrary-update
