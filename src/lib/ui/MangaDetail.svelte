@@ -360,7 +360,7 @@
         <!-- On a phone the facts go under the cover: beside it they'd get about
              21 characters a line. -->
         <div class="flex gap-3 {isDesktop ? '' : 'flex-col'}">
-          {@render cover(isDesktop ? 'h-56 w-40' : 'aspect-[2/3] w-28 self-start')}
+          {@render cover(isDesktop ? 'h-56 w-40' : 'aspect-[2/3] w-28 self-center')}
           {@render facts()}
         </div>
         {@render actions()}
