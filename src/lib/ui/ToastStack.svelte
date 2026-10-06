@@ -59,6 +59,17 @@
     const n = total ? Math.round((Math.min(done, total) / total) * width) : 0;
     return '█'.repeat(n) + '░'.repeat(width - n);
   }
+
+  /// The VGA font's cell width, in pixels: a bar line holds its width over
+  /// this many blocks.
+  const CHAR_WIDTH = 9;
+  /// Each download toast's bar line, in pixels, so the bar fills it; 12
+  /// blocks until it's measured.
+  const barWidths: Record<string, number> = $state({});
+  function blocks(id: string) {
+    const w = barWidths[id];
+    return w ? Math.max(1, Math.floor(w / CHAR_WIDTH)) : 12;
+  }
 </script>
 
 <!-- Always rendered: transitions are local, so toasts inside an {#if} on the
@@ -87,24 +98,17 @@
       </span>
 
       <div class="flex min-w-0 flex-1 flex-col gap-1">
-        <!-- Close and Cancel end each line at the same right edge. -->
-        <div class="flex items-start justify-between gap-3">
-          <span class="min-w-0 wrap-break-word">{toast.label}</span>
-          <!-- Hides the toast; whatever it reports carries on. -->
-          <button
-            class="hit relative flex shrink-0 cursor-pointer items-center justify-center text-ink hover:text-hi"
-            onclick={dismiss}
-            aria-label="Dismiss"
-          >
-            <Icon name="close" />
-          </button>
-        </div>
-        <div class="flex items-baseline justify-between gap-3">
+        <span class="wrap-break-word">{toast.label}</span>
+        <div>
           {#if toast.phase === 'fetching' && (toast.id === FOLDED_ID || toast.group === 'download')}
-            <span class="tabular-nums"
-              ><span class="text-ink">{bar(toast.current, toast.total)}</span>
-              <span class="text-dim">{toast.current} / {toast.total} chapters</span></span
+            <!-- The bar across the whole line, the count under it. -->
+            <div
+              class="overflow-hidden whitespace-nowrap text-ink"
+              bind:clientWidth={barWidths[toast.id]}
             >
+              {bar(toast.current, toast.total, blocks(toast.id))}
+            </div>
+            <span class="text-dim tabular-nums">{toast.current} / {toast.total} chapters</span>
           {:else if toast.phase === 'fetching'}
             <span class="text-dim tabular-nums">{toast.current} / {toast.total}</span>
           {:else if toast.phase === 'deleting'}
@@ -116,19 +120,30 @@
           {:else if toast.phase === 'error'}
             <span class="break-all text-dim">{toast.errorMessage ?? 'Failed'}</span>
           {/if}
-          {#if toast.cancel}
-            <button
-              class="hit relative shrink-0 cursor-pointer text-ink hover:text-hi hover:underline"
-              onclick={() => {
-                toast.cancel?.();
-                dismiss();
-              }}
-            >
-              cancel
-            </button>
-          {/if}
         </div>
+        <!-- A line of its own: beside the progress it pushed the count onto two. -->
+        {#if toast.cancel}
+          <button
+            class="hit relative cursor-pointer self-start text-ink hover:text-hi hover:underline"
+            onclick={() => {
+              toast.cancel?.();
+              dismiss();
+            }}
+          >
+            cancel
+          </button>
+        {/if}
       </div>
+
+      <!-- A column of its own, so every line, the bar's too, stops short of
+           it. Hides the toast; whatever it reports carries on. -->
+      <button
+        class="hit relative flex shrink-0 cursor-pointer items-center justify-center text-ink hover:text-hi"
+        onclick={dismiss}
+        aria-label="Dismiss"
+      >
+        <Icon name="close" size={15} />
+      </button>
     </div>
   {/each}
 </div>
