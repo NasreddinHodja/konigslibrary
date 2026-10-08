@@ -112,7 +112,7 @@ describe('settings on the web', () => {
       render(Settings);
       await user.click(screen.getByRole('button', { name: /paper/ }));
       await user.click(screen.getByRole('button', { name: 'reset colours' }));
-      expect(rootColor('--color-bg')).toBe('#282c34');
+      expect(rootColor('--color-bg')).toBe('#f3f2fa');
     });
   });
 

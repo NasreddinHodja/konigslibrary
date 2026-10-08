@@ -14,6 +14,8 @@ export type ThemePreset = Theme & { id: string; name: string };
 const LS_THEME = 'kl:theme';
 
 export const PRESETS: ThemePreset[] = [
+  { id: 'dawn', name: 'dawn', bg: '#f3f2fa', fg: '#1d2140', ink: '#8a2560' },
+  { id: 'dusk', name: 'dusk', bg: '#171a2b', fg: '#ece6f3', ink: '#f7b2d6' },
   { id: 'onebark', name: 'one bark', bg: '#282c34', fg: '#dcdfe4', ink: '#c678dd' },
   { id: 'bubblegum', name: 'bubblegum', bg: '#000000', fg: '#ffe0f0', ink: '#ff8fc8' },
   { id: 'paper', name: 'paper', bg: '#f4f0e8', fg: '#141414', ink: '#141414' },

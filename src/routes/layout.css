@@ -27,12 +27,12 @@
   --ease-anim: cubic-bezier(0, 0, 0.2, 1);
   --duration-anim: 120ms;
   /* The palette (docs/design/system.org): background, text and ink are the
-     theme's; the rest is mixed from them. These are one bark's, until
+     theme's; the rest is mixed from them. These are dawn's, until
      applyTheme sets the saved ones. */
-  --color-bg: #282c34;
-  --color-fg: #dcdfe4;
-  --color-ink: #c678dd;
-  --color-hi: #ddaeeb;
+  --color-bg: #f3f2fa;
+  --color-fg: #1d2140;
+  --color-ink: #8a2560;
+  --color-hi: #53163a;
   --color-dim: color-mix(in srgb, var(--color-fg) 67%, var(--color-bg));
   --color-ink2: color-mix(in srgb, var(--color-ink) 60%, var(--color-bg));
   --color-ink3: color-mix(in srgb, var(--color-ink) 30%, var(--color-bg));

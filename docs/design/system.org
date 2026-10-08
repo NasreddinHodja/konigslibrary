@@ -29,10 +29,12 @@ A palette is three colours, picked in Settings: background, text, ink. Everythin
 - Hover moves ink to =hi=, a lighter shade of the same hue, never to =fg=.
 - No success or error colour: an error is the ink with =►= in front, and a broken field gets a dashed border.
 
-Presets, one bark the default; =custom= takes any three. Contrast against =bg=, computed from these values (text on ink or =hi=, as on a primary button, is the same ratio):
+Presets, dawn the default; =custom= takes any three. Contrast against =bg=, computed from these values (text on ink or =hi=, as on a primary button, is the same ratio):
 
 | preset    | bg        | text      | ink       |   fg | dim |  ink |   hi |
 |-----------+-----------+-----------+-----------+------+-----+------+------|
+| dawn      | =#f3f2fa= | =#1d2140= | =#8a2560= | 14.1 | 5.1 |  7.5 | 12.2 |
+| dusk      | =#171a2b= | =#ece6f3= | =#f7b2d6= | 14.1 | 6.9 | 10.1 | 12.6 |
 | bubblegum | =#000000= | =#ffe0f0= | =#ff8fc8= | 17.2 | 7.6 | 10.0 | 13.5 |
 | paper     | =#f4f0e8= | =#141414= | =#141414= | 16.2 | 5.8 | 16.2 |  7.7 |
 | one bark  | =#282c34= | =#dcdfe4= | =#c678dd= | 10.5 | 5.6 |  4.8 |  7.5 |
