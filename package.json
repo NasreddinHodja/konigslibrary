@@ -2,7 +2,7 @@
   "name": "konigslibrary",
   "description": "Manga reader for ZIP and CBZ archives: browser, desktop, Android, and a self-hosted server",
   "packageManager": "bun@1.2.0",
-  "version": "0.11.4",
+  "version": "0.11.5",
   "type": "module",
   "license": "MIT",
   "repository": {
