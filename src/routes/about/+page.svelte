@@ -209,4 +209,16 @@
       class="text-ink underline hover:text-hi">CC BY-SA 4.0</a
     >.
   </p>
+  <p class="leading-relaxed">
+    The background is Youve-Been-Bit-2 from Bowie J. Poag's
+    <a
+      href="https://github.com/BenjaminHCCarr/PropagandaTiles"
+      class="text-ink underline hover:text-hi">Propaganda</a
+    >
+    tiles, dithered, under the
+    <a
+      href="https://www.gnu.org/licenses/old-licenses/gpl-2.0.html"
+      class="text-ink underline hover:text-hi">GNU GPL 2.0 or later</a
+    >.
+  </p>
 </div>

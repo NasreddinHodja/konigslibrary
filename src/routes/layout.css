@@ -84,6 +84,9 @@
 }
 
 :root {
+  /* static/bg.png, dawn's; another palette's from applyTheme. At 2x. */
+  --texture: url('/bg.png');
+  --texture-size: 512px 512px;
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-right: env(safe-area-inset-right, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
@@ -99,14 +102,15 @@ body {
   overflow-x: clip;
 }
 
-/* The palette's dither texture (applyTheme), behind everything. On a layer of
-   its own: image-rendering is inherited, and covers mustn't be pixelated. */
+/* The palette's texture (applyTheme), behind everything. On a layer of its
+   own: image-rendering is inherited, and covers mustn't be pixelated. */
 body::before {
   content: '';
   position: fixed;
   inset: 0;
   z-index: -1;
   background-image: var(--texture);
+  background-size: var(--texture-size);
   image-rendering: pixelated;
 }
 

@@ -28,7 +28,7 @@ Element.prototype.scrollTo ??= () => {};
 
 globalThis.IntersectionObserver ??= FakeIntersectionObserver;
 
-// No canvas: the theme's dither texture is left out, as the app does where
+// No canvas: another palette's texture is left out, as the app does where
 // a canvas can't be had. jsdom's own logs "not implemented" for each.
 HTMLCanvasElement.prototype.getContext = () => null;
 

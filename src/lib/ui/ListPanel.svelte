@@ -181,7 +181,9 @@
     bind:this={bar}
     class="z-10 {fill ? 'shrink-0' : 'sticky -mt-3 -mr-1 pt-3 pr-1'}"
     style={fill ? undefined : 'top: var(--safe-top)'}
-    style:background={docked ? 'var(--color-bg) var(--texture) fixed' : undefined}
+    style:background={docked
+      ? 'var(--color-bg) var(--texture) 0 0 / var(--texture-size) fixed'
+      : undefined}
     style:image-rendering={docked ? 'pixelated' : undefined}
   >
     <div class="flex flex-col gap-3 panel p-3">

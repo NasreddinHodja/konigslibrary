@@ -1,5 +1,5 @@
-// Ordered dither: grey levels drawn as two colours, the way the palette's
-// texture and the manga page's cover backdrop are made.
+// Ordered dither: grey levels drawn as two colours, the way the manga
+// page's cover backdrop is made.
 
 /// Bayer's 8x8 thresholds, 0 to 1.
 const BAYER = (() => {
@@ -50,40 +50,6 @@ function dither(
   g.putImageData(img, 0, 0);
   return new Promise((resolve) =>
     el.toBlob((blob) => resolve(blob && URL.createObjectURL(blob)), 'image/png')
-  );
-}
-
-function random(seed: number) {
-  let s = seed;
-  return () => (s = (s * 16807) % 2147483647) / 2147483647;
-}
-
-/// A seamless tile of soft clouds, mostly `dark`, for behind the panels.
-export function textureUrl(dark: string, light: string, size = 256): Promise<string | null> {
-  const r = random(42);
-  const grids = [4, 8, 16].map((n) => ({ n, v: Array.from({ length: n * n }, () => r()) }));
-  const smooth = (t: number) => t * t * (3 - 2 * t);
-  // Value noise on a grid that wraps, so the tile repeats without a seam.
-  const noise = ({ n, v }: { n: number; v: number[] }, x: number, y: number) => {
-    const fx = (x / size) * n;
-    const fy = (y / size) * n;
-    const [x0, y0] = [Math.floor(fx), Math.floor(fy)];
-    const [tx, ty] = [smooth(fx - x0), smooth(fy - y0)];
-    const at = (i: number, j: number) => v[(j % n) * n + (i % n)];
-    const top = at(x0, y0) * (1 - tx) + at(x0 + 1, y0) * tx;
-    const bottom = at(x0, y0 + 1) * (1 - tx) + at(x0 + 1, y0 + 1) * tx;
-    return top * (1 - ty) + bottom * ty;
-  };
-  return dither(
-    size,
-    size,
-    (x, y) => {
-      const v =
-        noise(grids[0], x, y) * 0.55 + noise(grids[1], x, y) * 0.3 + noise(grids[2], x, y) * 0.15;
-      return Math.max(0, (v - 0.45) * 1.6) ** 1.5;
-    },
-    dark,
-    light
   );
 }
 

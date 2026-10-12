@@ -47,7 +47,7 @@ The theme today has six colours (bg, fg, surface, border, muted, reader backgrou
 * Panels and texture
 
 - Content sits in panels: =bg= fill, 1px =ink= border, and meth.cat's stepped hard shadow, =2px 2px 0 ink2, 4px 4px 0 ink3=. The same shadow raises the primary button, dialogs, toasts and the reader HUD's panel. No soft shadows, no blur, no rounding.
-- Behind the panels, a dither texture: soft clouds, ordered-dithered (Bayer 8×8) into =bg= and =ink2=, generated in the browser in the palette's colours, tiled, fixed, drawn pixelated.
+- Behind the panels, a dither texture: =static/bg.png=, Youve-Been-Bit-2 from Bowie J. Poag's [[https://github.com/BenjaminHCCarr/PropagandaTiles][Propaganda]] tiles (GPL-2.0-or-later, =static/bg.LICENSE.txt=), greyed, halved to 256px and Bayer-dithered into two colours with 21% of it light, its light parts in whichever of =bg= and =ink2= is lighter (=bg= on a light palette, =ink2= on a dark one); redrawn in the palette's =bg= and =ink2= for any palette but dawn, tiled, fixed, drawn pixelated at 2x.
 - A dialog's backdrop is a 50% checkerboard of =bg= over the screen.
 - Titles are 32px with a 1px ink rule under them; a heading inside a panel is 16px and underlined.
 

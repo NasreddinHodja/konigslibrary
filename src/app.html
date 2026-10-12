@@ -28,6 +28,12 @@
           if (t.bg) r.style.setProperty('--color-bg', t.bg);
           if (t.fg) r.style.setProperty('--color-fg', t.fg);
           if (t.ink || t.border) r.style.setProperty('--color-ink', t.ink || t.border);
+          // Dawn's texture under another palette would flash (applyTheme redraws it).
+          if (
+            String(t.bg).toLowerCase() !== '#f3f2fa' ||
+            String(t.ink || t.border).toLowerCase() !== '#8a2560'
+          )
+            r.style.setProperty('--texture', 'none');
         }
       } catch (e) {}
     </script>
