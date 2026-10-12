@@ -218,9 +218,10 @@
   </AppShell>
 {:else if chapters.length === 0}
   <div class="flex h-dvh w-full flex-col items-center" out:fadeOut in:fadeInAfter>
+    <!-- In a panel, as everything over the texture is: bare, the ink is lost in it. -->
     <a
       href="/about"
-      class="hit fixed z-10 text-ink hover:text-hi hover:underline"
+      class="hit fixed z-10 panel px-2 text-ink hover:text-hi hover:underline"
       style="top: calc(1rem + var(--safe-top)); right: calc(1rem + var(--safe-right))"
     >
       how to use
