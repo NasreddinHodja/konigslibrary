@@ -82,9 +82,9 @@ describe('settings on the web', () => {
     it('applies a preset, and keeps it for next time', async () => {
       const user = userEvent.setup();
       render(Settings);
-      await user.click(screen.getByRole('button', { name: /paper/ }));
-      expect(rootColor('--color-bg')).toBe('#f4f0e8');
-      expect(JSON.parse(localStorage.getItem('kl:theme')!)).toMatchObject({ bg: '#f4f0e8' });
+      await user.click(screen.getByRole('button', { name: /dusk/ }));
+      expect(rootColor('--color-bg')).toBe('#171a2b');
+      expect(JSON.parse(localStorage.getItem('kl:theme')!)).toMatchObject({ bg: '#171a2b' });
     });
 
     it('changes one colour', async () => {
@@ -110,7 +110,7 @@ describe('settings on the web', () => {
     it('goes back to the default colours', async () => {
       const user = userEvent.setup();
       render(Settings);
-      await user.click(screen.getByRole('button', { name: /paper/ }));
+      await user.click(screen.getByRole('button', { name: /dusk/ }));
       await user.click(screen.getByRole('button', { name: 'reset colours' }));
       expect(rootColor('--color-bg')).toBe('#f3f2fa');
     });

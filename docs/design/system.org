@@ -36,11 +36,9 @@ Presets, dawn the default; =custom= takes any three. Contrast against =bg=, comp
 | dawn      | =#f3f2fa= | =#1d2140= | =#8a2560= | 14.1 | 5.1 |  7.5 | 12.2 |
 | dusk      | =#171a2b= | =#ece6f3= | =#f7b2d6= | 14.1 | 6.9 | 10.1 | 12.6 |
 | bubblegum | =#000000= | =#ffe0f0= | =#ff8fc8= | 17.2 | 7.6 | 10.0 | 13.5 |
-| paper     | =#f4f0e8= | =#141414= | =#141414= | 16.2 | 5.8 | 16.2 |  7.7 |
 | one bark  | =#282c34= | =#dcdfe4= | =#c678dd= | 10.5 | 5.6 |  4.8 |  7.5 |
-| white     | =#000000= | =#ffffff= | =#ffffff= | 21.0 | 9.1 | 21.0 | 11.5 |
 
-Every text token clears 4.5:1 in every preset. =ink2= is under 4.5 in all but white and paper, which is why it's never text. A =custom= palette can fail; the showcase's colour panel shows its ratios.
+Every text token clears 4.5:1 in every preset. =ink2= is under 4.5 in every preset, which is why it's never text. A =custom= palette can fail; the showcase's colour panel shows its ratios.
 
 The theme today has six colours (bg, fg, surface, border, muted, reader background); it becomes these three, and a saved theme carries over as bg, fg and border-as-ink.
 
