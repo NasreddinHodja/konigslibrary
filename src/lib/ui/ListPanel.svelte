@@ -200,7 +200,7 @@
       <label
         class="flex h-8 items-center gap-2 border border-ink px-2 focus-within:outline-1 focus-within:outline-offset-2 focus-within:outline-hi focus-within:outline-dotted pointer-coarse:h-10"
       >
-        <span class="text-ink"><Icon name="search" /></span>
+        <span class="text-ink"><Icon name="search" size={18} /></span>
         <input
           type="text"
           {placeholder}
