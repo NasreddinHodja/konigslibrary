@@ -90,9 +90,21 @@ describe('account settings', () => {
     );
     render(AccountSettings);
     await user.click(await screen.findByRole('button', { name: 'log out' }));
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'log out' }));
     await vi.waitFor(() => expect(nav.goto).toHaveBeenCalledWith('/login'));
     expect(requests).toContain('POST /api/auth/logout');
     expect(localStorage.getItem('kl:serverToken')).toBeNull();
+  });
+
+  it('stay logged in when the log out is cancelled', async () => {
+    const user = userEvent.setup();
+    const requests = server([]);
+    render(AccountSettings);
+    await user.click(await screen.findByRole('button', { name: 'log out' }));
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'cancel' }));
+    await vi.waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(requests).not.toContain('POST /api/auth/logout');
+    expect(nav.goto).not.toHaveBeenCalled();
   });
 
   it('list the logged-in devices, this one marked', async () => {
@@ -115,6 +127,7 @@ describe('account settings', () => {
     render(AccountSettings);
     await devices();
     await user.click(await screen.findByRole('button', { name: 'Log out Firefox' }));
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'log out' }));
     await vi.waitFor(() =>
       expect(screen.queryByRole('button', { name: 'Log out Firefox' })).not.toBeInTheDocument()
     );
@@ -129,6 +142,7 @@ describe('account settings', () => {
     );
     render(AccountSettings);
     await user.click(await screen.findByRole('button', { name: 'Log out Firefox' }));
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'log out' }));
     await vi.waitFor(() => expect(getToasts().map((t) => t.label)).toContain('No such session'));
     expect(screen.getByRole('button', { name: 'Log out Firefox' })).toBeInTheDocument();
   });

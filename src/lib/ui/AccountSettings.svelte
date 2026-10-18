@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onDestroy, onMount } from 'svelte';
   import Button from '$lib/ui/Button.svelte';
+  import ConfirmDialog from '$lib/ui/ConfirmDialog.svelte';
   import Skeleton from '$lib/ui/Skeleton.svelte';
   import { goto } from '$app/navigation';
   import { showError, showSuccess } from '$lib/ui/toast.svelte';
@@ -32,6 +33,9 @@
   let newPassword = $state('');
   let changing = $state(false);
   let passwordError: string | null = $state(null);
+
+  let confirmingLogout = $state(false);
+  let pendingRevoke: Session | null = $state(null);
 
   async function loadSessions() {
     try {
@@ -80,6 +84,7 @@
   }
 
   async function logOut() {
+    confirmingLogout = false;
     try {
       await logout();
     } catch {
@@ -107,6 +112,7 @@
   }
 
   async function revoke(session: Session) {
+    pendingRevoke = null;
     try {
       await revokeSession(session.id);
       sessions = sessions.filter((s) => s.id !== session.id);
@@ -133,7 +139,7 @@
   {:else}
     <div class="flex items-center justify-between gap-3">
       <p>logged in as <span class="text-ink">{me.username}</span></p>
-      <Button onclick={logOut}>log out</Button>
+      <Button onclick={() => (confirmingLogout = true)}>log out</Button>
     </div>
 
     <form class="flex max-w-sm flex-col gap-2" onsubmit={submitPassword}>
@@ -215,7 +221,7 @@
             {#if !session.current}
               <button
                 class="hit relative flex h-8 shrink-0 cursor-pointer items-center border border-ink px-3 text-ink hover:bg-ink hover:text-bg pointer-coarse:h-10"
-                onclick={() => revoke(session)}
+                onclick={() => (pendingRevoke = session)}
                 aria-label="Log out {session.device}"
               >
                 log out
@@ -227,3 +233,22 @@
     </div>
   {/if}
 </div>
+
+{#if confirmingLogout}
+  <ConfirmDialog
+    message="Log out of this device?"
+    confirmLabel="log out"
+    onconfirm={logOut}
+    oncancel={() => (confirmingLogout = false)}
+  />
+{/if}
+
+{#if pendingRevoke}
+  {@const session = pendingRevoke}
+  <ConfirmDialog
+    message={`Log out "${session.device}"?`}
+    confirmLabel="log out"
+    onconfirm={() => revoke(session)}
+    oncancel={() => (pendingRevoke = null)}
+  />
+{/if}
