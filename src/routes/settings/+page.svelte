@@ -30,7 +30,7 @@
   import AccountSettings from '$lib/ui/AccountSettings.svelte';
   import Skeleton from '$lib/ui/Skeleton.svelte';
   import DirectoryBrowser from '$lib/ui/DirectoryBrowser.svelte';
-  import { PRESETS, getTheme, setTheme } from '$lib/theme';
+  import { PRESETS, getTheme, mix, setTheme } from '$lib/theme';
   import type { Theme } from '$lib/theme';
   import { backOrHome, nativeBackOrHome } from '$lib/ui/back';
   import { readLogs } from '$lib/utils/diagnostics';
@@ -397,17 +397,28 @@
     <div class="grid grid-cols-[repeat(auto-fill,minmax(10rem,1fr))] gap-2">
       {#each PRESETS as preset (preset.id)}
         <button
-          class="flex cursor-pointer items-center gap-2 border border-ink p-1 text-left {activePresetId ===
+          class="flex cursor-pointer flex-col gap-1 border border-ink p-1 text-left {activePresetId ===
           preset.id
             ? 'bg-ink text-bg'
             : 'text-ink hover:bg-ink3 hover:text-hi'}"
           onclick={() => applyPreset(preset)}
         >
-          <!-- The preset's three colours. -->
-          <span class="flex shrink-0 border border-ink3">
-            <span class="size-5" style:background={preset.bg}></span>
-            <span class="size-5" style:background={preset.fg}></span>
-            <span class="size-5" style:background={preset.ink}></span>
+          <!-- The library page in the preset's colours: title, search box, covers. -->
+          <span
+            class="flex aspect-[4/3] w-full flex-col gap-1.5 border border-ink3 p-2"
+            style:background={preset.bg}
+          >
+            <span class="h-1.5 w-1/2" style:background={preset.fg}></span>
+            <span class="h-2.5 w-full border" style:border-color={preset.ink}></span>
+            <span class="grid flex-1 grid-cols-3 gap-1">
+              {#each { length: 6 }, i (i)}
+                <span
+                  class="border"
+                  style:border-color={preset.ink}
+                  style:background={i === 0 ? preset.ink : mix(preset.ink, preset.bg, 0.3)}
+                ></span>
+              {/each}
+            </span>
           </span>
           {preset.name}
         </button>
